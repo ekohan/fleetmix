@@ -1,0 +1,25 @@
+numpy<2
+pandas
+matplotlib
+scikit-learn
+gurobipy
+geopy
+scipy
+jupyter
+scikit-learn-extra
+folium
+pulp
+numba
+cython
+haversine
+joblib
+tqdm
+openpyxl
+seaborn
+folium
+pyvrp
+rich
+vrplib
+# Testing dependencies
+hypothesis
+pytest-xdist

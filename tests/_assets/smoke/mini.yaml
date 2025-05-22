@@ -1,0 +1,30 @@
+# Minimal config for smoke tests
+vehicles:
+  A:
+    capacity: 1000
+    fixed_cost: 100
+variable_cost_per_hour: 5.0
+avg_speed: 30
+max_route_time: 4
+service_time: 10
+
+depot:
+  latitude: 0.0
+  longitude: 0.0
+
+goods:
+  - Dry
+
+clustering:
+  max_depth: 1
+  method: minibatch_kmeans
+  distance: euclidean
+  geo_weight: 1.0
+  demand_weight: 0.0
+  route_time_estimation: Legacy
+
+demand_file: mini_demand.csv
+light_load_penalty: 0
+light_load_threshold: 0.0
+compartment_setup_cost: 0
+format: excel 

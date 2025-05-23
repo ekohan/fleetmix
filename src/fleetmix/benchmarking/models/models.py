@@ -37,5 +37,4 @@ class CVRPSolution:
     """Container for CVRP solution data."""
     routes: List[List[int]]
     cost: float
-    num_vehicles: int
-    expected_vehicles: int 
+    num_vehicles: int 

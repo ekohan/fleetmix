@@ -21,5 +21,7 @@ pyvrp
 rich
 vrplib
 # Testing dependencies
+pytest
+pytest-cov
 hypothesis
 pytest-xdist

@@ -34,6 +34,10 @@ fi
 echo "Installing requirements..."
 pip install -r requirements.txt
 
+# Install the fleetmix package in editable mode
+echo "Installing fleetmix package in editable mode..."
+pip install -e .
+
 # Create database and import sales data
 echo "Creating database and importing sales data..."
 python data/import_data.py

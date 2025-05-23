@@ -1,13 +1,12 @@
 from enum import Enum
 from pathlib import Path
-import time
 import pandas as pd
 
 from fleetmix.benchmarking.converters.vrp import convert_vrp_to_fsm
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.clustering import generate_clusters_for_configurations
-import fleetmix.optimization as _optimization_module
+from fleetmix.optimization import solve_fsm_problem
 
 class VRPType(Enum):
     CVRP = 'cvrp'
@@ -39,8 +38,7 @@ def run_optimization(
         params=params
     )
 
-    solve_fn = _optimization_module.solve_fsm_problem
-    solution = solve_fn(
+    solution = solve_fsm_problem(
         clusters_df=clusters_df,
         configurations_df=configs_df,
         customers_df=customers_df,

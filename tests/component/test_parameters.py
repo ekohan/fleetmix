@@ -61,8 +61,8 @@ def test_get_parameter_overrides_filters_none():
 
 def test_small_cluster_size_overrides(tmp_path):
     params = Parameters.from_yaml('src/fleetmix/config/default_config.yaml')
-    assert params.small_cluster_size == 7
-    assert params.nearest_merge_candidates == 10
+    assert params.small_cluster_size == 100
+    assert params.nearest_merge_candidates == 100
 
     # Create a minimal YAML with overridden values
     yaml_content = (

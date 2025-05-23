@@ -1,41 +1,42 @@
-"""Batch runner for all MCVRP instances: convert to FSM, optimize, and save JSON results."""
+"""
+Batch runner for all MCVRP instances: convert to FSM, optimize, and save JSON results.
+
+This module is a thin wrapper around the unified VRP-to-FSM pipeline interface (vrp_to_fsm.py).
+It processes all MCVRP instances in the datasets/mcvrp directory, applying the same conversion
+and optimization logic but in batch mode with JSON output.
+
+"""
 import time
 from pathlib import Path
 
-import sys
-
 from fleetmix.utils.logging import setup_logging
-from fleetmix.benchmarking.converters.mcvrp import convert_mcvrp_to_fsm
-from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-from fleetmix.clustering import generate_clusters_for_configurations
-from fleetmix.cli.main import solve_fsm_problem
+from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
 
 def main():
+    """Run all MCVRP instances using the unified VRP-to-FSM pipeline."""
     setup_logging()
     inst_dir = Path(__file__).parent.parent / "benchmarking" / "datasets" / "mcvrp"
-    # results_dir will be determined by the params object, initialized per instance
-    # The directory params.results_dir should already be created by Parameters.__post_init__
 
     for dat_path in sorted(inst_dir.glob("*.dat")):
         instance = dat_path.stem
         print(f"Running instance {instance}...")
-        customers_df, params = convert_mcvrp_to_fsm(dat_path)
-        configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
-        clusters_df = generate_clusters_for_configurations(
-            customers=customers_df,
-            configurations_df=configs_df,
-            params=params
+        
+        # Use the unified pipeline interface for conversion
+        customers_df, params = convert_to_fsm(
+            VRPType.MCVRP,
+            instance_path=dat_path
         )
+        
+        # Use the unified pipeline interface for optimization
         start_time = time.time()
-        solution = solve_fsm_problem(
-            clusters_df=clusters_df,
-            configurations_df=configs_df,
+        solution, configs_df = run_optimization(
             customers_df=customers_df,
-            parameters=params,
+            params=params,
             verbose=False
         )
 
+        # Save results as JSON for later batch analysis
         output_path = params.results_dir / f"mcvrp_{instance}.json"
         save_optimization_results(
             execution_time=time.time() - start_time,

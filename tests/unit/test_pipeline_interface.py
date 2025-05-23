@@ -46,17 +46,18 @@ def stub_everything(monkeypatch):
     )
     # Stub solver in pipeline
     monkeypatch.setattr(
-        'fleetmix.pipeline.vrp_interface._optimization_module.solve_fsm_problem',
+        'fleetmix.pipeline.vrp_interface.solve_fsm_problem',
         lambda *args, **kw: DummySolution()
     )
     yield
 
 
 def test_convert_to_fsm_cvrp():
+    from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
     df, params = convert_to_fsm(
         VRPType.CVRP,
         instance_names=['foo'],
-        benchmark_type=None,
+        benchmark_type=CVRPBenchmarkType.NORMAL,
         num_goods=2
     )
     assert isinstance(df, pd.DataFrame)

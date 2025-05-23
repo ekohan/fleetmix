@@ -53,7 +53,7 @@ python -m fleetmix.cli.main \
 
 ```mermaid
 graph LR
-    A[Customer CSV / VRP instance] --> B[Clustering • route‑time check]
+    A[Read Demand] --> B[Generate feasible clusters]
     B --> C[MILP fleet‑selection]
     C --> D[Merge improvement phase]
     D --> E["Results (JSON | XLSX | HTML)"]
@@ -87,7 +87,7 @@ python -m fleetmix.cli.vrp_to_fsm \
   
 ```bash
 python -m fleetmix.cli.run_all_mcvrp                # 153 MCVRP instances
-python -m fleetmix.cli.run_all_cvrp                 # TODO: selected CVRP adaptations
+python -m fleetmix.cli.run_all_cvrp                 # TODO: check number of X-Instances, are we missing some?
 python -m fleetmix.cli.run_upper_and_lower_bounds   # TODO: bounds check
 ```
 
@@ -108,15 +108,15 @@ Upper‑ and lower‑bound reference solutions are generated automatically for s
 
 ## Library API
 
-_TODO: Check this section. Consider removing.
+_TODO: Check this section. Consider removing.?
 
 ```python
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.config.parameters import Parameters
 
-params = Parameters.from_yaml('configs/bogota.yaml')
-customers = load_customer_demand('data/bogota_2024.csv')
+params = Parameters.from_yaml('configs/bogota.yaml') 
+customers = load_customer_demand('data/bogota_2024.csv') # 
 solution = solve_fsm_problem(
     clusters_df=#TODO:...
     configurations_df=#TODO:...,
@@ -124,7 +124,7 @@ solution = solve_fsm_problem(
     parameters=params,
     verbose=True,
 )
-print(solution['total_fixed_cost'] + solution['total_variable_cost'])
+print(solution['total_fixed_cost'] + solution['total_variable_cost']) 
 ```
 
 ---
@@ -143,6 +143,8 @@ src/fleetmix/
   pipeline/              # thin orchestration wrappers
  tests/                  # >150 unit / integration tests
  docs/                   # code↔paper map • design notes (_TODO)
+ data/                   # _TODO: explain
+ tools/                  # _TODO: explain
 ```
 
 ---
@@ -153,7 +155,8 @@ See `docs/mapping.md` for a line‑by‑line crosswalk between paper sections an
 
 ---
 
-## Contributing
+## Contributing 
+TODO: Contributing.MD?
 
 1. Fork → feature branch → PR against **main**.
 2. `pytest -q --cov=src` **must** stay green.

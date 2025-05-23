@@ -23,10 +23,11 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
+        env:
+          PIP_CONSTRAINT: requirements.txt
         run: |
           python -m pip install --upgrade pip
-          # Use requirements.txt as a constraint file for all installations
-          pip install --constraint requirements.txt -e ".[test]" "pulp[cbc]"
+          pip install -e ".[test]" "pulp[cbc]"
 
       - name: Run tests with coverage
         env:

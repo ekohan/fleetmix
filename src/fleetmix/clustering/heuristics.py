@@ -91,7 +91,7 @@ def get_clustering_model(n_clusters: int, method: str):
     if method == 'minibatch_kmeans':
         return MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
     elif method == 'kmedoids':
-        return KMedoids(n_clusters=n_clusters, method='pam', random_state=42)
+        return KMedoids(n_clusters=n_clusters, random_state=42)
     elif method.startswith('agglomerative'):
         return AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
     elif method == 'gaussian_mixture':

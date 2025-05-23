@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.class
+
+# Data files
+data/opperar.db
+
+# Python virtual environments
+venv/
+fleetmix-env/
+
+# Results
+results/*.xlsx
+results/*.json
+results/*.html
+results/*.csv
+
+# Testing
+.hypothesis/
+.coverage*
+coverage/*
+coverage/coverage-summary.json
+src/*.egg-info/
+
+# Etc
+*tex
+*.pdf
+*.docx
+*.xml
+*.egg-info/
+
+# TODO: do add the paper
+paper_wip.txt

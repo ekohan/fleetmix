@@ -19,7 +19,7 @@ def main():
     setup_logging()
     inst_dir = Path(__file__).parent.parent / "benchmarking" / "datasets" / "cvrp"
 
-    for vrp_path in sorted(inst_dir.glob("*.vrp")):
+    for vrp_path in sorted(inst_dir.glob("X-n*.vrp")):
         instance = vrp_path.stem
         print(f"Running CVRP instance {instance}...")
         

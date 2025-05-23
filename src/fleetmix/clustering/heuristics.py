@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from sklearn.metrics import pairwise_distances
-import kmedoids
+from sklearn_extra.cluster import KMedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
@@ -21,6 +21,13 @@ from fleetmix.utils.route_time import estimate_route_time
 from .common import Cluster, ClusteringSettings
 
 logger = logging.getLogger(__name__)
+
+# Product weights for demand profile calculations - equal weighting for all product types
+PRODUCT_WEIGHTS = {
+    'Frozen': 1.0 / 3.0,    # Equal priority (1/3)
+    'Chilled': 1.0 / 3.0,   # Equal priority (1/3)
+    'Dry': 1.0 / 3.0        # Equal priority (1/3)
+}
 
 def compute_cluster_metric_input(
     customers: pd.DataFrame,
@@ -54,20 +61,15 @@ def compute_composite_distance(
     demands = customers[[f'{g}_Demand' for g in goods]].fillna(0).values
     demand_profiles = np.zeros_like(demands, dtype=float)
     
-    # Convert to proportions (fixing the broadcasting issue)
+    # Convert to proportions
     total_demands = demands.sum(axis=1)
     nonzero_mask = total_demands > 0
     for i in range(len(goods)):
         demand_profiles[nonzero_mask, i] = demands[nonzero_mask, i] / total_demands[nonzero_mask]
     
     # Apply temperature sensitivity weights
-    product_weights = {
-        'Frozen': 0.5,    # Highest priority
-        'Chilled': 0.3,   # Medium priority
-        'Dry': 0.2        # Lower priority
-    }
     for i, good in enumerate(goods):
-        demand_profiles[:, i] *= product_weights.get(good, 1.0)
+        demand_profiles[:, i] *= PRODUCT_WEIGHTS.get(good, 1.0)
     
     # Compute demand similarity using cosine distance
     demand_dist = pairwise_distances(demand_profiles, metric='cosine')
@@ -89,7 +91,7 @@ def get_clustering_model(n_clusters: int, method: str):
     if method == 'minibatch_kmeans':
         return MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
     elif method == 'kmedoids':
-        return kmedoids.KMedoids(n_clusters=n_clusters, random_state=42)
+        return KMedoids(n_clusters=n_clusters, random_state=42)
     elif method.startswith('agglomerative'):
         return AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
     elif method == 'gaussian_mixture':

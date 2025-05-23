@@ -55,7 +55,7 @@ def test_parse_fills_defaults(tmp_path):
     assert inst.num_vehicles == 2
 
 
-def test_parse_solution_logs_warning(tmp_path, caplog):
+def test_parse_solution_logs_info(tmp_path, caplog):
     # Create dummy files
     vrp_file = tmp_path / 'A-k3.vrp'
     sol_file = tmp_path / 'A-k3.sol'
@@ -63,18 +63,17 @@ def test_parse_solution_logs_warning(tmp_path, caplog):
     sol_file.write_text('')
 
     parser = CVRPParser(str(vrp_file))
-    # instance_name has '-k3', so expected_vehicles=3
-    caplog.set_level(logging.WARNING)
+    # instance_name has '-k3', but BKS has 2 routes
+    caplog.set_level(logging.INFO)
     sol = parser.parse_solution()
     assert isinstance(sol, CVRPSolution)
-    # actual routes = 2, expected 3 -> warning about mismatch
+    # actual routes = 2 (BKS)
     assert sol.num_vehicles == 2
-    assert sol.expected_vehicles == 3
-    # Should log a warning about differing k
-    # Use record_tuples to check for warning messages more robustly
+    # Should log info about BKS vs k difference
+    # Use record_tuples to check for info messages more robustly
     assert any(
         rec[0] == 'fleetmix.benchmarking.parsers.cvrp' and 
-        rec[1] == logging.WARNING and
+        rec[1] == logging.INFO and
         'differs' in rec[2].lower()
         for rec in caplog.record_tuples
-    ), "Expected warning about vehicle count mismatch" 
+    ), "Expected info message about BKS vs k mismatch" 

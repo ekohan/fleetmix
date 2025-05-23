@@ -18,8 +18,8 @@ def test_parse_instance_and_solution(small_vrp_path):
     assert hasattr(solution, 'routes')
     assert hasattr(solution, 'cost')
     assert hasattr(solution, 'num_vehicles')
-    # expected_vehicles should match instance.num_vehicles from file name
-    assert solution.expected_vehicles == instance.num_vehicles
+    # When parsing BKS solution, num_vehicles should match instance.num_vehicles (both are BKS)
+    assert solution.num_vehicles == instance.num_vehicles
     # actual number of routes may differ; ensure it's a non-negative integer and matches len(routes)
     assert isinstance(solution.num_vehicles, int) and solution.num_vehicles >= 0
     assert isinstance(solution.routes, list)

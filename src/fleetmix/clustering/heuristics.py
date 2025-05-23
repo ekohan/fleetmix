@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from sklearn.metrics import pairwise_distances
-from sklearn_extra.cluster import KMedoids
+import kmedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
@@ -89,7 +89,7 @@ def get_clustering_model(n_clusters: int, method: str):
     if method == 'minibatch_kmeans':
         return MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
     elif method == 'kmedoids':
-        return KMedoids(n_clusters=n_clusters, random_state=42)
+        return kmedoids.KMedoids(n_clusters=n_clusters, random_state=42)
     elif method.startswith('agglomerative'):
         return AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
     elif method == 'gaussian_mixture':

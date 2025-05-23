@@ -6,7 +6,7 @@ gurobipy
 geopy
 scipy
 jupyter
-kmedoids
+scikit-learn-extra
 folium
 pulp
 numba

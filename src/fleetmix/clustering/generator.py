@@ -123,6 +123,17 @@ def generate_clusters_for_configurations(
     logger.info(f"Combining and deduplicating {len(all_clusters_dicts)} raw clusters from all configurations...")
     combined_clusters_df = pd.DataFrame(all_clusters_dicts)
     unique_clusters_df = _deduplicate_clusters(combined_clusters_df)
+    
+    # Check if no clusters were generated
+    if unique_clusters_df.empty:
+        error_msg = "No feasible clusters could be generated!\n"
+        error_msg += "Possible causes:\n"
+        error_msg += "- Vehicle capacities are too small for customer demands\n"
+        error_msg += "- Time windows are too restrictive\n"
+        error_msg += "- Service times + travel times exceed time limits\n"
+        error_msg += "- No vehicles have the right compartment configuration for customer demands\n"
+        error_msg += "\nPlease review your configuration and customer data."
+        raise ValueError(error_msg)
 
     # Validate cluster coverage
     validate_cluster_coverage(unique_clusters_df, customers)

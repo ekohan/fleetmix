@@ -7,6 +7,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from warnings import warn
 
 from fleetmix.utils.logging import setup_logging
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
@@ -86,6 +87,9 @@ def _print_info() -> None:
 
 
 def main() -> None:
+    # Add deprecation warning
+    warn("Direct script execution is deprecated. Use 'fleetmix convert' instead", FutureWarning)
+    
     setup_logging()
     logger = logging.getLogger(__name__)
     parser = _build_parser()

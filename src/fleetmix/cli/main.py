@@ -14,6 +14,10 @@ from fleetmix.optimization import solve_fsm_problem
 
 def main():
     """Run the FSM optimization pipeline."""
+    # Add deprecation warning
+    from warnings import warn
+    warn("Direct script execution is deprecated. Use 'fleetmix optimize' instead", FutureWarning)
+    
     # Parse arguments and load parameters
     parser = parse_args()
     args = parser.parse_args()

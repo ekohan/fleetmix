@@ -7,6 +7,8 @@ from pathlib import Path
 import time
 import argparse
 import numpy as np
+import logging
+from warnings import warn
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.logging import setup_logging, ProgressTracker, Colors, Symbols
@@ -65,6 +67,9 @@ def print_solution_details(solution: VRPSolution) -> None:
 
 def main():
     """Run VRP benchmarking."""
+    # Add deprecation warning
+    warn("Direct script execution is deprecated. Use 'fleetmix benchmark' instead", FutureWarning)
+    
     args = parse_benchmark_args()
     
     if args.info:

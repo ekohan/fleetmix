@@ -118,9 +118,50 @@ def solve_fsm_problem(
     
     # Check solution status
     if model.status != pulp.LpStatusOptimal:
-        print(f"Optimization status: {pulp.LpStatus[model.status]}")
-        print("The model is infeasible. Please check for customers not included in any cluster or other constraint issues.")
-        sys.exit(1)
+        status_name = pulp.LpStatus[model.status]
+        
+        # Enhanced error message for infeasible problems
+        if status_name == "Infeasible":
+            # Check if any clusters have no feasible vehicles
+            clusters_without_vehicles = []
+            for _, cluster in clusters_df.iterrows():
+                cluster_id = cluster['Cluster_ID']
+                has_feasible_vehicle = False
+                
+                for _, config in configurations_df.iterrows():
+                    # Check if vehicle can serve cluster
+                    total_demand = sum(cluster['Total_Demand'].values())
+                    goods_required = set(g for g in parameters.goods if cluster['Total_Demand'][g] > 0)
+                    
+                    if total_demand <= config['Capacity']:
+                        # Check goods compatibility
+                        if all(config[g] == 1 for g in goods_required):
+                            has_feasible_vehicle = True
+                            break
+                
+                if not has_feasible_vehicle:
+                    clusters_without_vehicles.append(cluster_id)
+            
+            error_msg = "Optimization problem is infeasible!\n"
+            
+            if clusters_without_vehicles:
+                error_msg += f"\nClusters without feasible vehicles: {clusters_without_vehicles}\n"
+                error_msg += "Possible causes:\n"
+                error_msg += "- Vehicle capacities are too small for cluster demands\n"
+                error_msg += "- No vehicles have the right compartment mix\n"
+                error_msg += "- Consider adding larger vehicles or more compartment configurations\n"
+            else:
+                error_msg += "\nAll clusters have feasible vehicles, but constraints conflict.\n"
+                error_msg += "Possible causes:\n" 
+                error_msg += "- Not enough vehicles (check max_vehicles parameter)\n"
+                error_msg += "- Customer coverage constraints cannot be satisfied\n"
+                error_msg += "- Try relaxing penalties or adding more vehicle types\n"
+            
+            raise ValueError(error_msg)
+        else:
+            print(f"Optimization status: {status_name}")
+            print("The model is infeasible. Please check for customers not included in any cluster or other constraint issues.")
+            sys.exit(1)
 
     # Extract and validate solution
     selected_clusters = _extract_solution(clusters_df, y_vars, x_vars)

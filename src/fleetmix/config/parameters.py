@@ -61,16 +61,49 @@ class Parameters:
             if not resolved_config_path.exists():
                 raise FileNotFoundError(f"Config file not found: {resolved_config_path}")
         
-        with open(resolved_config_path) as f:
-            data = yaml.safe_load(f)
+        try:
+            with open(resolved_config_path) as f:
+                data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise ValueError(
+                f"Error parsing YAML file {resolved_config_path}:\n{str(e)}\n"
+                f"Please check the YAML syntax (indentation, quotes, etc.)"
+            )
+        except Exception as e:
+            raise ValueError(f"Error reading config file {resolved_config_path}: {str(e)}")
         
         data['config_file_path'] = resolved_config_path
+
+        # Check for required fields
+        required_fields = ['vehicles', 'goods', 'depot', 'demand_file', 'clustering']
+        missing_fields = [field for field in required_fields if field not in data]
+        
+        if missing_fields:
+            raise ValueError(
+                f"Missing required fields in config file {resolved_config_path}:\n"
+                f"  {', '.join(missing_fields)}\n"
+                f"Please ensure all required fields are present in the YAML file."
+            )
 
         try:
             instance =  cls(**data)
         except TypeError as e:
-            logger.error(f"Error creating Parameters instance from {resolved_config_path}. Missing or mismatched keys in YAML? Error: {e}")
-            raise
+            # Parse the error to extract the specific field
+            error_str = str(e)
+            if "missing" in error_str:
+                raise ValueError(
+                    f"Missing required configuration fields in {resolved_config_path}:\n"
+                    f"  {error_str}\n"
+                    f"Please check the YAML file structure matches the expected format."
+                )
+            elif "unexpected keyword" in error_str:
+                raise ValueError(
+                    f"Unknown configuration fields in {resolved_config_path}:\n"
+                    f"  {error_str}\n"
+                    f"Please check for typos in field names."
+                )
+            else:
+                raise ValueError(f"Error creating Parameters from {resolved_config_path}: {error_str}")
         return instance
 
     def __post_init__(self):

@@ -6,46 +6,82 @@ Fast, reproducible tooling for **multi‑compartment vehicle fleet design** in u
 
 ---
 
-## Why fleetmix ?
+## Why fleetmix?
 
-* **Scales** — >1 000 customers solved in seconds via a *cluster‑first → MILP‑second* matheuristic.
+* **Scales** — >1,000 customers solved in seconds via a *cluster‑first → MILP‑second* matheuristic.
 * **Extensible** — pluggable clustering engines, route‑time estimators, and solver back‑ends.
 * **Reproducible** — every experiment in the journal article reruns with one script.
+* **User-friendly** — Clean CLI interface and Python API for easy integration.
 
 ---
 
 ## Table of Contents
 
-1. [Quick Start](#quick-start)
-2. [Architecture Overview](#architecture-overview)
-3. [Command‑Line Usage](#command-line-usage)
-4. [Benchmarking Suite](#benchmarking-suite)
-5. [Library API](#library-api)
-6. [Repository Layout](#repository-layout)
-7. [Paper ↔ Code Map](#paper-↔-code-map)
-8. [Contributing](#contributing)
-9. [Citation](#citation)
-10. [License](#license)
+1. [Installation](#installation)
+2. [Quick Start](#quick-start)
+3. [Architecture Overview](#architecture-overview)
+4. [Command‑Line Usage](#command-line-usage)
+5. [Python API](#python-api)
+6. [Benchmarking Suite](#benchmarking-suite)
+7. [Repository Layout](#repository-layout)
+8. [Paper ↔ Code Map](#paper-↔-code-map)
+9. [Contributing](#contributing)
+10. [Citation](#citation)
+11. [License](#license)
 
 ---
 
-## Quick Start
+## Installation
 
+### From PyPI (coming soon)
 ```bash
-# 1 · clone & setup environment (virtualenv, dependencies, data import)
+pip install fleetmix
+```
+
+### From Source (Development)
+```bash
+# Clone and setup environment
 git clone https://github.com/ekohan/fleetmix.git && cd fleetmix
 ./init.sh
 
 # Install the package in editable mode
 pip install -e .
-
-# 2 · run smoke example (tiny 2-customer CSV)
-python -m fleetmix.cli.main \
-       --demand-file tests/_assets/smoke/mini_demand.csv \
-       --config tests/_assets/smoke/mini.yaml
 ```
 
-> **TODO**: bundle a richer sample dataset and a one-liner `fleetmix demo`.
+---
+
+## Quick Start
+
+### Command Line Interface
+
+```bash
+# Run optimization on customer demand data
+fleetmix optimize --demand customers.csv --config fleet.yaml
+
+# Run MCVRP benchmark suite
+fleetmix benchmark mcvrp
+
+# Convert VRP instance to FSM format
+fleetmix convert --type cvrp --instance X-n101-k25 --benchmark-type split
+
+# Check version
+fleetmix version
+```
+
+### Python API
+
+```python
+import fleetmix
+
+# Run optimization
+solution = fleetmix.optimize(
+    demand="customers.csv",
+    config="fleet_config.yaml"
+)
+
+print(f"Total cost: ${solution['total_cost']:,.2f}")
+print(f"Vehicles used: {len(solution['vehicles_used'])}")
+```
 
 ---
 
@@ -65,30 +101,109 @@ graph LR
 
 ## Command‑Line Usage
 
-### Optimise a fleet
+### Main Commands
+
+#### `fleetmix optimize`
+Run fleet optimization on customer demand data.
 
 ```bash
-python -m fleetmix.cli.main --help          # full parameter list
-python -m fleetmix.cli.main \               # typical run
-  --demand-file data/bogota_2024.csv \      # CSV with customer demand
-  --config configs/bogota.yaml \            # YAML holds most parameters
-  --avg-speed 35 \                          # example CLI override
-  --verbose
+fleetmix optimize \
+  --demand customers.csv \      # Customer demand CSV file
+  --config fleet.yaml \         # Configuration YAML file
+  --output results/ \           # Output directory
+  --format excel \              # Output format (excel or json)
+  --verbose                     # Enable verbose output
 ```
 
-### Convert VRP benchmarks → FSM format
+#### `fleetmix benchmark`
+Run standard VRP benchmark suites.
 
 ```bash
-python -m fleetmix.cli.vrp_to_fsm \
-       --vrp-type cvrp --instance X-n101-k25 --benchmark-type split
+# Run all MCVRP instances
+fleetmix benchmark mcvrp
+
+# Run all CVRP instances  
+fleetmix benchmark cvrp
 ```
 
-### Reproduce all paper experiments (Henke & Uchoa sets)
-  
+#### `fleetmix convert`
+Convert VRP benchmark instances to FSM format and optimize.
+
 ```bash
-python -m fleetmix.cli.run_all_mcvrp                # 153 MCVRP instances
-python -m fleetmix.cli.run_all_cvrp                 # TODO: check number of X-Instances, are we missing some?
-python -m fleetmix.cli.run_upper_and_lower_bounds   # TODO: bounds check
+# Convert MCVRP instance
+fleetmix convert --type mcvrp --instance 10_3_3_3_\(01\)
+
+# Convert CVRP instance with specific benchmark type
+fleetmix convert \
+  --type cvrp \
+  --instance X-n101-k25 \
+  --benchmark-type split \
+  --num-goods 3
+```
+
+### Legacy Scripts (Deprecated)
+
+The following direct script executions still work but will show deprecation warnings:
+
+```bash
+# Old way (deprecated)
+python -m fleetmix.cli.main --demand-file data/customers.csv
+
+# New way (recommended)
+fleetmix optimize --demand data/customers.csv
+```
+
+---
+
+## Python API
+
+### Basic Usage
+
+```python
+import fleetmix
+import pandas as pd
+
+# Option 1: Using file paths
+solution = fleetmix.optimize(
+    demand="customers.csv",
+    config="config.yaml",
+    output_dir="results",
+    format="excel"
+)
+
+# Option 2: Using DataFrame directly
+customers_df = pd.DataFrame({
+    'Customer_ID': [1, 2, 3],
+    'Latitude': [40.7128, 40.7580, 40.7614],
+    'Longitude': [-74.0060, -73.9855, -73.9776],
+    'Dry_Demand': [100, 150, 200],
+    'Chilled_Demand': [50, 75, 100],
+    'Frozen_Demand': [25, 50, 0]
+})
+
+solution = fleetmix.optimize(
+    demand=customers_df,
+    config="config.yaml"
+)
+
+# Access solution details
+print(f"Total cost: ${solution['total_cost']:,.2f}")
+print(f"Fixed cost: ${solution['total_fixed_cost']:,.2f}")
+print(f"Variable cost: ${solution['total_variable_cost']:,.2f}")
+print(f"Vehicles used: {solution['vehicles_used']}")
+```
+
+### Error Handling
+
+The API provides helpful error messages for common issues:
+
+```python
+try:
+    solution = fleetmix.optimize(demand="customers.csv", config="config.yaml")
+except FileNotFoundError as e:
+    print(f"File error: {e}")
+except ValueError as e:
+    print(f"Configuration or optimization error: {e}")
 ```
 
 ---
@@ -106,45 +221,24 @@ Upper‑ and lower‑bound reference solutions are generated automatically for s
 
 ---
 
-## Library API
-
-_TODO: Check this section. Consider removing.?
-
-```python
-from fleetmix.optimization import solve_fsm_problem
-from fleetmix.utils.data_processing import load_customer_demand
-from fleetmix.config.parameters import Parameters
-
-params = Parameters.from_yaml('configs/bogota.yaml') 
-customers = load_customer_demand('data/bogota_2024.csv') # 
-solution = solve_fsm_problem(
-    clusters_df=#TODO:...
-    configurations_df=#TODO:...,
-    customers_df=customers,
-    parameters=params,
-    verbose=True,
-)
-print(solution['total_fixed_cost'] + solution['total_variable_cost']) 
-```
-
----
-
 ## Repository Layout
 
 ```
 src/fleetmix/
+  api.py                 # Python API facade
+  app.py                 # CLI application (Typer)
   clustering/            # capacity & time‑feasible cluster generation
   optimization/          # MILP core pulp / gurobi backend
   post_optimization/     # merge‑phase heuristic
   benchmarking/          # datasets • converters • baseline solvers
-  cli/                   # entry points & convenience drivers
+  cli/                   # legacy entry points (deprecated)
   utils/                 # I/O, logging, route‑time estimation, etc.
   config/                # default_config.yaml + Parameters dataclass
   pipeline/              # thin orchestration wrappers
- tests/                  # >150 unit / integration tests
- docs/                   # code↔paper map • design notes (_TODO)
- data/                   # _TODO: explain
- tools/                  # _TODO: explain
+tests/                   # >150 unit / integration tests
+docs/                    # code↔paper map • design notes
+data/                    # sample data files
+tools/                   # utility scripts
 ```
 
 ---
@@ -155,8 +249,7 @@ See `docs/mapping.md` for a line‑by‑line crosswalk between paper sections an
 
 ---
 
-## Contributing 
-TODO: Contributing.MD?
+## Contributing
 
 1. Fork → feature branch → PR against **main**.
 2. `pytest -q --cov=src` **must** stay green.

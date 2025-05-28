@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import os
-import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 import yaml
 
 from fleetmix.utils import PROJECT_ROOT
-
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 @dataclass
 class Parameters:

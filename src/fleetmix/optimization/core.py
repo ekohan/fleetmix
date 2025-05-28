@@ -41,7 +41,6 @@ Typical usage
 >>> print(solution['total_cost'])
 """
 
-import logging
 import time
 from typing import Dict, Tuple, Set, Any
 import pandas as pd
@@ -53,7 +52,8 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 def solve_fsm_problem(
     clusters_df: pd.DataFrame,
@@ -266,7 +266,7 @@ def _create_model(
 
         # If V_k[k] is empty, handle accordingly
         if not V_k[k]:
-            logger.warning(f"Cluster {k} cannot be served by any vehicle configuration.")
+            logger.debug(f"Cluster {k} cannot be served by any vehicle configuration.")
             # Force y_k to 0 (cluster cannot be selected)
             V_k[k].add('NoVehicle')  # Placeholder
             x_vars['NoVehicle', k] = pulp.LpVariable(f"x_NoVehicle_{k}", cat='Binary')
@@ -372,7 +372,6 @@ def _validate_solution(
     """
     Validate that all customers are served in the solution.
     """
-    logger = logging.getLogger(__name__)
 
     all_customers_set = set(customers_df['Customer_ID'])
     served_customers = set()

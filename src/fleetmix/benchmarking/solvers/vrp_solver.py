@@ -13,20 +13,18 @@ from pyvrp import (
 from pyvrp.stop import MaxIterations
 from haversine import haversine
 from joblib import Parallel, delayed
-import logging
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.logging import (
-    FleetmixLogger, log_progress, log_detail, log_debug, log_warning, 
+    FleetmixLogger,
+    log_progress, log_detail, log_debug,
     log_error, Colors, Symbols
 )
 from fleetmix.utils.route_time import estimate_route_time
 from fleetmix.core_types import BenchmarkType, VRPSolution
-
-# Add logging to track utilization
-logging.basicConfig(level=logging.WARNING)
+logger = FleetmixLogger.get_logger(__name__)
 
 class VRPSolver:
     """Single-compartment VRP solver implementation."""
@@ -268,11 +266,11 @@ class VRPSolver:
             # Log route status
             if not is_feasible:
                 if utilization > 100:
-                    logging.warning(f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}")
+                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}")
                 if route_time > self.params.max_route_time:
-                    logging.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {self.params.max_route_time}){Colors.RESET}")
+                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {self.params.max_route_time}){Colors.RESET}")
             elif verbose:
-                logging.info(f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}")
+                logger.info(f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}")
             
             feasible_routes.append([route[i] for i in range(len(route))])
             route_times.append(route_time)
@@ -322,7 +320,7 @@ class VRPSolver:
                 
                 # Ensure load does not exceed capacity
                 if load > vehicle_capacity:
-                    logging.warning(f"Route {route_idx} exceeds vehicle capacity: {load}/{vehicle_capacity}")
+                    logger.warning(f"Route {route_idx} exceeds vehicle capacity: {load}/{vehicle_capacity}")
                     load = vehicle_capacity
 
                 vehicle_loads.append(load)

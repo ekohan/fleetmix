@@ -563,17 +563,20 @@ def version() -> None:
 
 
 def _setup_logging_from_flags(verbose: bool = False, quiet: bool = False, debug: bool = False):
-    """Setup logging based on CLI flags."""
+    """Setup logging based on CLI flags or environment variable."""
+    level_from_flags: Optional[LogLevel] = None
     if debug:
-        level = LogLevel.DEBUG
+        level_from_flags = LogLevel.DEBUG
     elif verbose:
-        level = LogLevel.VERBOSE
+        level_from_flags = LogLevel.VERBOSE
     elif quiet:
-        level = LogLevel.QUIET
+        level_from_flags = LogLevel.QUIET
+
+    if level_from_flags is not None:
+        setup_logging(level_from_flags)
     else:
-        level = LogLevel.NORMAL
-    
-    setup_logging(level)
+        # No flags set, let setup_logging handle it (will check env var)
+        setup_logging()
 
 
 if __name__ == "__main__":

@@ -64,8 +64,8 @@ class FleetmixLogger:
         cls._current_level = level
         
         # Update all existing loggers
-        for logger in cls._loggers.values():
-            cls._configure_logger_level(logger, level)
+        for logger_instance in cls._loggers.values():
+            cls._configure_logger_level(logger_instance, level)
     
     @classmethod
     def get_level(cls) -> LogLevel:
@@ -73,15 +73,34 @@ class FleetmixLogger:
         return cls._current_level
     
     @classmethod
-    def _configure_logger_level(cls, logger: logging.Logger, level: LogLevel):
-        """Configure logger level based on FleetmixLogger level."""
-        if level == LogLevel.QUIET:
+    def _configure_logger_level(cls, logger: logging.Logger, level_param: LogLevel):
+        """Configure logger level based on FleetmixLogger level_param."""
+        
+        effective_loglevel = level_param
+        
+        # Check environment variable for globally set level (e.g., from main process)
+        env_level_name = os.getenv('FLEETMIX_EFFECTIVE_LOG_LEVEL')
+        if env_level_name:
+            try:
+                level_from_env = LogLevel[env_level_name]
+                # If level_param is the default (likely in a new subprocess inheriting default _current_level),
+                # and env var specifies a non-default level, prioritize env var.
+                if level_param == LogLevel.NORMAL and level_from_env != LogLevel.NORMAL:
+                    effective_loglevel = level_from_env
+                # If level_param is already non-NORMAL (e.g. set_level was called explicitly in this process),
+                # it might take precedence, or we might always sync with env var if it's considered authoritative.
+                # For now, this logic prioritizes env var if current is default.
+            except KeyError:
+                # Invalid value in env var, ignore
+                pass 
+
+        if effective_loglevel == LogLevel.QUIET:
             logger.setLevel(logging.ERROR)
-        elif level == LogLevel.NORMAL:
+        elif effective_loglevel == LogLevel.NORMAL:
             logger.setLevel(logging.INFO)
-        elif level == LogLevel.VERBOSE:
+        elif effective_loglevel == LogLevel.VERBOSE:
             logger.setLevel(logging.INFO)  # Same as normal, but affects output content
-        elif level == LogLevel.DEBUG:
+        elif effective_loglevel == LogLevel.DEBUG:
             logger.setLevel(logging.DEBUG)
     
     @classmethod
@@ -163,6 +182,8 @@ def setup_logging(level: Optional[LogLevel] = None):
     
     # Set the global level
     FleetmixLogger.set_level(level)
+    # Store the determined level in an environment variable for subprocesses
+    os.environ['FLEETMIX_EFFECTIVE_LOG_LEVEL'] = level.name
     
     # Configure root logger
     logger = logging.getLogger()
@@ -175,6 +196,19 @@ def setup_logging(level: Optional[LogLevel] = None):
     # Add console handler
     console = logging.StreamHandler()
     console.setFormatter(SimpleFormatter())
+    
+    # Set the handler's level based on the desired Fleetmix log level
+    if level == LogLevel.QUIET:
+        console.setLevel(logging.ERROR)
+    elif level == LogLevel.NORMAL:
+        console.setLevel(logging.INFO)
+    elif level == LogLevel.VERBOSE:
+        console.setLevel(logging.INFO)  # Or logging.DEBUG if VERBOSE means more than INFO
+    elif level == LogLevel.DEBUG:
+        console.setLevel(logging.DEBUG)
+    else: # Default case, should align with default LogLevel.NORMAL
+        console.setLevel(logging.INFO)
+        
     logger.addHandler(console)
     
     # Suppress third-party noise

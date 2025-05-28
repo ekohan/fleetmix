@@ -36,7 +36,6 @@ Returns the *best* improved solution dictionary, identical in structure to the o
 ``fleetmix.optimization.solve_fsm_problem`` but with potentially lower total cost.
 """
 
-import logging
 from typing import Dict, Tuple
 import pandas as pd
 import numpy as np
@@ -46,9 +45,9 @@ from dataclasses import replace
 from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
 from fleetmix.config.parameters import Parameters
 
-from fleetmix.utils.logging import Colors, Symbols
+from fleetmix.utils.logging import FleetmixLogger, Symbols
 
-logger = logging.getLogger(__name__)
+logger = FleetmixLogger.get_logger(__name__)
 
 # Cache for merged cluster route times
 _merged_route_time_cache: Dict[Tuple[str, ...], Tuple[float, list | None]] = {}
@@ -116,7 +115,7 @@ def improve_solution(
     reason = ''
     # Iterate with explicit counter to correctly log attempts
     for iters in range(1, params.max_improvement_iterations + 1):
-        logger.info(f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.max_improvement_iterations}")
+        logger.debug(f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.max_improvement_iterations}")
         selected_clusters = best.get('selected_clusters', best.get('clusters'))
         if selected_clusters is None:
             logger.error("Cannot find clusters in solution.")
@@ -136,11 +135,11 @@ def improve_solution(
             params
         )
         if merged_clusters.empty:
-            logger.info("→ No valid merged clusters generated")
+            logger.debug("→ No valid merged clusters generated")
             reason = "no candidate merges"
             break
 
-        logger.info(f"→ Generated {len(merged_clusters)} merged cluster options")
+        logger.debug(f"→ Generated {len(merged_clusters)} merged cluster options")
         combined_clusters = pd.concat([selected_clusters, merged_clusters], ignore_index=True)
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
@@ -159,7 +158,7 @@ def improve_solution(
             best_ids  = set(best['selected_clusters']['Cluster_ID'])
             same_choice = (trial_ids == best_ids)
 
-        logger.info(f"→ Trial cost={trial_cost:.2f}, best cost={best_cost:.2f}, Δ={(trial_cost-best_cost):.2f}")
+        logger.debug(f"→ Trial cost={trial_cost:.2f}, best cost={best_cost:.2f}, Δ={(trial_cost-best_cost):.2f}")
         if not cost_better:
             reason = "no cost improvement"
             break
@@ -175,7 +174,7 @@ def improve_solution(
         reason = "iteration cap reached"
         iters = params.max_improvement_iterations
 
-    logger.info(f"Merge phase finished after {iters} iteration(s): {reason}")
+    logger.debug(f"Merge phase finished after {iters} iteration(s): {reason}")
     return best
 
 def generate_merge_phase_clusters(
@@ -209,7 +208,7 @@ def generate_merge_phase_clusters(
         return pd.DataFrame()
     target_meta = cluster_meta
 
-    logger.info(f"→ Found {len(small_meta)} small clusters")
+    logger.debug(f"→ Found {len(small_meta)} small clusters")
 
     # Precompute numpy arrays for vectorized capacity & goods checks
     goods_arr = target_meta[params.goods].to_numpy()
@@ -298,7 +297,7 @@ def generate_merge_phase_clusters(
             new_clusters.append(new_cluster)
     
     # Log prune statistics before returning
-    logger.info(
+    logger.debug(
         f"→ Merge prune stats: attempted={stats['attempted']}, "
         f"invalid_time={stats['invalid_time']}, "
         f"invalid_capacity={stats['invalid_capacity']}, "

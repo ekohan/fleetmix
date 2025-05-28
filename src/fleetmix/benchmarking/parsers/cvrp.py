@@ -1,12 +1,12 @@
 """Parser for CVRP instance files."""
 
-import logging
 from pathlib import Path
 import vrplib
 
 from ..models import CVRPInstance, CVRPSolution
 
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 class CVRPParser:
     """Parser for standard CVRP instance files using VRPLIB."""

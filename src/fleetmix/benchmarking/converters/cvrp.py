@@ -9,16 +9,19 @@ from pathlib import Path
 from typing import List, Dict, Union
 
 import pandas as pd
+import numpy as np
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 import fleetmix.benchmarking.parsers.cvrp as cvrp_parser
+from fleetmix.utils.logging import log_detail, log_debug, log_progress
 
 class CVRPBenchmarkType(Enum):
-    NORMAL = "normal"    # Type 1: Single instance, single good
-    SPLIT = "split"      # Type 2: Single instance, split demand
-    SCALED = "scaled"    # Type 3: Single instance scaled
-    COMBINED = "combined"  # Type 4: Multiple instances combined
+    """Types of CVRP benchmarks supported."""
+    NORMAL = "normal"      # Standard conversion with balanced demands
+    SPLIT = "split"        # Split products across customers  
+    SCALED = "scaled"      # Scale demands to fill vehicles
+    COMBINED = "combined"  # Use all conversion types
 
 
 def convert_cvrp_to_fsm(
@@ -65,9 +68,9 @@ def _convert_normal(instance) -> tuple:
     """Type 1: Normal conversion - single good (dry)"""
     # Print total demand for debugging
     total_demand = sum(instance.demands.values())
-    print(f"Total CVRP demand: {total_demand}")
-    print(f"CVRP capacity per vehicle: {instance.capacity}")
-    print(f"Minimum theoretical vehicles needed: {total_demand / instance.capacity:.2f}")
+    log_detail(f"Total CVRP demand: {total_demand}")
+    log_detail(f"CVRP capacity per vehicle: {instance.capacity}")
+    log_detail(f"Minimum theoretical vehicles needed: {total_demand / instance.capacity:.2f}")
     
     customers_data = _create_customer_data(
         instance,
@@ -77,7 +80,7 @@ def _convert_normal(instance) -> tuple:
     # Verify converted demand
     df = pd.DataFrame(customers_data)
     total_converted = df['Dry_Demand'].sum()
-    print(f"Total converted demand: {total_converted}")
+    log_detail(f"Total converted demand: {total_converted}")
     
     params = _create_base_params(instance)
     params.expected_vehicles = instance.num_vehicles
@@ -91,10 +94,10 @@ def _convert_normal(instance) -> tuple:
         }
     }
     
-    print(f"\nVehicle Configuration:")
-    print(f"Capacity: {instance.capacity}")
-    print(f"Fixed Cost: {params.vehicles['CVRP']['fixed_cost']}")
-    print(f"Compartments: {params.vehicles['CVRP']['compartments']}")
+    log_detail(f"\nVehicle Configuration:")
+    log_detail(f"Capacity: {instance.capacity}")
+    log_detail(f"Fixed Cost: {params.vehicles['CVRP']['fixed_cost']}")
+    log_detail(f"Compartments: {params.vehicles['CVRP']['compartments']}")
     
     return pd.DataFrame(customers_data), params
 

@@ -38,7 +38,7 @@ def test_cli_optimize_basic():
     
     # Should fail but with our error message
     assert result.returncode == 1
-    assert "Demand file not found" in result.stdout or "Config file not found" in result.stdout
+    assert "Demand file not found" in result.stderr or "Config file not found" in result.stderr
     return  # Skip the rest for now
     
     # Create a simple config file
@@ -110,7 +110,7 @@ def test_cli_optimize_missing_file():
     )
     
     assert result.returncode == 1
-    assert "Demand file not found" in result.stdout
+    assert "Demand file not found" in result.stderr
 
 
 def test_cli_benchmark_mcvrp():

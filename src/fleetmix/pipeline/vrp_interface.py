@@ -7,6 +7,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
+from fleetmix.utils.logging import log_progress, log_success, log_detail
 
 class VRPType(Enum):
     CVRP = 'cvrp'
@@ -47,9 +48,9 @@ def run_optimization(
     )
 
     # Console output
-    print("\nOptimization Results:")
-    print(f"Total Cost: ${solution['total_cost']:,.2f}")
-    print(f"Vehicles Used: {sum(solution['vehicles_used'].values())}")
-    print(f"Expected Vehicles: {params.expected_vehicles}")
+    log_progress("Optimization Results:")
+    log_detail(f"Total Cost: ${solution['total_cost']:,.2f}")
+    log_detail(f"Vehicles Used: {sum(solution['vehicles_used'].values())}")
+    log_detail(f"Expected Vehicles: {params.expected_vehicles}")
 
     return solution, configs_df 

@@ -1,7 +1,6 @@
 """
 API facade for Fleetmix - provides a single entry point for programmatic usage.
 """
-import logging
 from pathlib import Path
 from typing import Union, Optional, Dict, Any
 import pandas as pd
@@ -12,8 +11,9 @@ from fleetmix.utils.vehicle_configurations import generate_vehicle_configuration
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
+from fleetmix.utils.logging import FleetmixLogger, log_warning
 
-logger = logging.getLogger(__name__)
+logger = FleetmixLogger.get_logger('fleetmix.api')
 
 
 def optimize(
@@ -196,7 +196,7 @@ def optimize(
                         
                     raise ValueError(error_msg)
                 else:
-                    logger.warning(f"Solver returned non-optimal status: {solution['solver_status']}")
+                    log_warning(f"Solver returned non-optimal status: {solution['solver_status']}")
                     
         except ValueError:
             raise
@@ -228,7 +228,7 @@ def optimize(
                     format=format
                 )
             except Exception as e:
-                logger.error(f"Failed to save results: {str(e)}")
+                log_warning(f"Failed to save results: {str(e)}")
                 # Don't fail the entire operation if saving fails
                 
         return solution

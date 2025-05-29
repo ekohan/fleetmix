@@ -157,7 +157,8 @@ def solve_fsm_problem(
                 error_msg += "- Customer coverage constraints cannot be satisfied\n"
                 error_msg += "- Try relaxing penalties or adding more vehicle types\n"
             
-            raise ValueError(error_msg)
+            print(error_msg)
+            sys.exit(1)
         else:
             print(f"Optimization status: {status_name}")
             print("The model is infeasible. Please check for customers not included in any cluster or other constraint issues.")

@@ -553,6 +553,42 @@ def convert(
             console.print_exception()
         raise typer.Exit(1)
 
+@app.command()
+def gui(
+    port: int = typer.Option(8501, "--port", "-p", help="Port to run GUI on"),
+) -> None:
+    """
+    Launch the web-based GUI for optimization.
+    
+    This starts a Streamlit web interface where you can:
+    - Upload customer demand data
+    - Configure optimization parameters
+    - Monitor optimization progress
+    - View and download results
+    """
+    console.print("[bold cyan]Launching Fleetmix GUI...[/bold cyan]")
+    
+    try:
+        import streamlit
+        import subprocess
+        import sys
+        from pathlib import Path
+        
+        gui_file = Path(__file__).parent / "gui.py"
+        cmd = [sys.executable, "-m", "streamlit", "run", str(gui_file), "--server.port", str(port)]
+        
+        console.print(f"[green]✓[/green] GUI running at: http://localhost:{port}")
+        console.print("[dim]Press Ctrl+C to stop the server[/dim]")
+        
+        try:
+            subprocess.run(cmd)
+        except KeyboardInterrupt:
+            console.print("\n[yellow]GUI server stopped[/yellow]")
+            
+    except ImportError:
+        console.print("[red]Error: GUI dependencies not installed[/red]")
+        console.print("Install with: pip install fleetmix")
+        raise typer.Exit(1)
 
 @app.command()
 def version() -> None:

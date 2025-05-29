@@ -83,6 +83,25 @@ print(f"Total cost: ${solution['total_cost']:,.2f}")
 print(f"Vehicles used: {len(solution['vehicles_used'])}")
 ```
 
+### Web Interface
+
+Fleetmix includes a web-based GUI for interactive optimization:
+
+```bash
+# Launch web interface
+fleetmix gui
+
+# Or specify a custom port
+fleetmix gui --port 8080
+```
+
+The GUI provides:
+- Drag-and-drop CSV upload
+- Interactive parameter configuration
+- Real-time optimization progress
+- Visual results with maps
+- Excel/JSON export
+
 ---
 
 ## Architecture Overview
@@ -116,7 +135,7 @@ fleetmix optimize \
 ```
 
 #### `fleetmix benchmark`
-Run standard VRP benchmark suites.
+Run the **full benchmark suites** shipped with Fleetmix (batch-mode over all instances). Use `fleetmix convert` for one-off runs on individual instances.
 
 ```bash
 # Run all MCVRP instances
@@ -127,7 +146,7 @@ fleetmix benchmark cvrp
 ```
 
 #### `fleetmix convert`
-Convert VRP benchmark instances to FSM format and optimize.
+Convert a **single** CVRP / MCVRP instance—either from the built-in datasets *or your own .vrp/.dat file*—into FSM format, run optimisation, and export results. Ideal for ad-hoc experimentation; use `fleetmix benchmark` for full-suite runs.
 
 ```bash
 # Convert MCVRP instance

@@ -8,6 +8,7 @@ applying the same conversion and optimization logic but in batch mode with JSON 
 """
 import time
 from pathlib import Path
+from warnings import warn
 
 from fleetmix.utils.logging import setup_logging
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
@@ -15,7 +16,10 @@ from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.utils.save_results import save_optimization_results
 
 def main():
-    """Run all CVRP instances using the unified VRP-to-FSM pipeline with normal benchmark type."""
+    """Run benchmarks for all CVRP instances."""
+    # Add deprecation warning
+    warn("Direct script execution is deprecated. Use 'fleetmix benchmark cvrp' instead", FutureWarning)
+    
     setup_logging()
     inst_dir = Path(__file__).parent.parent / "benchmarking" / "datasets" / "cvrp"
 

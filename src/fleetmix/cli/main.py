@@ -5,7 +5,9 @@ import time
 from pathlib import Path
 
 from fleetmix.utils.cli import parse_args, load_parameters, print_parameter_help
-from fleetmix.utils.logging import setup_logging, ProgressTracker, Colors
+from fleetmix.utils.logging import (
+    setup_logging, ProgressTracker, LogLevel, log_progress, log_success, log_detail
+)
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.utils.save_results import save_optimization_results
@@ -14,6 +16,10 @@ from fleetmix.optimization import solve_fsm_problem
 
 def main():
     """Run the FSM optimization pipeline."""
+    # Add deprecation warning
+    from warnings import warn
+    warn("Direct script execution is deprecated. Use 'fleetmix optimize' instead", FutureWarning)
+    
     # Parse arguments and load parameters
     parser = parse_args()
     args = parser.parse_args()
@@ -23,7 +29,16 @@ def main():
         print_parameter_help()
         return
     
-    setup_logging()
+    # Setup logging with appropriate level
+    if hasattr(args, 'debug') and args.debug:
+        setup_logging(LogLevel.DEBUG)
+    elif args.verbose:
+        setup_logging(LogLevel.VERBOSE)
+    elif hasattr(args, 'quiet') and args.quiet:
+        setup_logging(LogLevel.QUIET)
+    else:
+        setup_logging(LogLevel.NORMAL)
+        
     params = load_parameters(args)
     
     # Define optimization steps
@@ -40,11 +55,11 @@ def main():
 
     # Step 1: Load customer data
     customers = load_customer_demand(params.demand_file)
-    progress.advance(f"Loaded {Colors.BOLD}{len(customers)}{Colors.RESET} customers")
+    progress.advance(f"Loaded {len(customers)} customers")
 
     # Step 2: Generate vehicle configurations
     configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
-    progress.advance(f"Generated {Colors.BOLD}{len(configs_df)}{Colors.RESET} vehicle configurations")
+    progress.advance(f"Generated {len(configs_df)} vehicle configurations")
 
     # Step 3: Generate clusters
     clusters_df = generate_clusters_for_configurations(
@@ -52,7 +67,7 @@ def main():
         configurations_df=configs_df,
         params=params
     )
-    progress.advance(f"Created {Colors.BOLD}{len(clusters_df)}{Colors.RESET} clusters")
+    progress.advance(f"Created {len(clusters_df)} clusters")
 
     # Step 4: Solve optimization problem
     solution = solve_fsm_problem(
@@ -62,9 +77,8 @@ def main():
         parameters=params,
         verbose=args.verbose
     )
-    progress.advance(
-        f"Optimized fleet: {Colors.BOLD}${solution['total_fixed_cost'] + solution['total_variable_cost'] + solution['total_penalties']:,.2f}{Colors.RESET} total cost"
-    )
+    total_cost = solution['total_fixed_cost'] + solution['total_variable_cost'] + solution['total_penalties']
+    progress.advance(f"Optimized fleet: ${total_cost:,.2f} total cost")
 
     # Step 5: Save results
     save_optimization_results(
@@ -85,7 +99,7 @@ def main():
         parameters=params,
         format=args.format
     )
-    progress.advance(f"Results saved {Colors.GRAY}(execution time: {time.time() - start_time:.1f}s){Colors.RESET}")
+    progress.advance(f"Results saved (execution time: {time.time() - start_time:.1f}s)")
     progress.close()
 
 if __name__ == "__main__":

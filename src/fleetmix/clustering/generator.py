@@ -6,10 +6,8 @@ optimization process. This is the main entry point for the cluster-first phase o
 cluster-first, fleet-design second heuristic.
 """
 
-import logging
 from typing import Dict, List, Tuple
 import pandas as pd
-import numpy as np
 from joblib import Parallel, delayed
 from multiprocessing import Manager
 import itertools
@@ -21,13 +19,14 @@ from .heuristics import (
     get_feasible_customers_subset,
     create_initial_clusters,
     process_clusters_recursively,
-    compute_composite_distance,
-    estimate_num_initial_clusters,
-    get_cached_demand,
-    get_cached_route_time
+    compute_composite_distance, # TODO: remove
+    estimate_num_initial_clusters, # TODO: remove
+    get_cached_demand, # TODO: remove
+    get_cached_route_time # TODO: remove
 )
 
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 def generate_clusters_for_configurations(
     customers: pd.DataFrame,
@@ -123,6 +122,17 @@ def generate_clusters_for_configurations(
     logger.info(f"Combining and deduplicating {len(all_clusters_dicts)} raw clusters from all configurations...")
     combined_clusters_df = pd.DataFrame(all_clusters_dicts)
     unique_clusters_df = _deduplicate_clusters(combined_clusters_df)
+    
+    # Check if no clusters were generated
+    if unique_clusters_df.empty:
+        error_msg = "No feasible clusters could be generated!\n"
+        error_msg += "Possible causes:\n"
+        error_msg += "- Vehicle capacities are too small for customer demands\n"
+        error_msg += "- Time windows are too restrictive\n"
+        error_msg += "- Service times + travel times exceed time limits\n"
+        error_msg += "- No vehicles have the right compartment configuration for customer demands\n"
+        error_msg += "\nPlease review your configuration and customer data."
+        raise ValueError(error_msg)
 
     # Validate cluster coverage
     validate_cluster_coverage(unique_clusters_df, customers)
@@ -204,7 +214,7 @@ def _deduplicate_clusters(clusters_df: pd.DataFrame) -> pd.DataFrame:
     """Removes duplicate clusters based on the set of customers."""
     if clusters_df.empty:
         return clusters_df
-    logger.info(f"Starting deduplication with {len(clusters_df)} clusters.")
+    logger.debug(f"Starting deduplication with {len(clusters_df)} clusters.")
     # Create a column of frozensets for efficient duplicate checking
     # The lambda handles cases where 'Customers' might not be a list/tuple, creating an empty set
     clusters_df['Customer_Set'] = clusters_df['Customers'].apply(
@@ -214,9 +224,9 @@ def _deduplicate_clusters(clusters_df: pd.DataFrame) -> pd.DataFrame:
     deduplicated_df = clusters_df.drop_duplicates(subset=['Customer_Set'], keep='first').drop(columns=['Customer_Set'])
     
     if len(deduplicated_df) < len(clusters_df):
-        logger.info(f"Finished deduplication: Removed {len(clusters_df) - len(deduplicated_df)} duplicate clusters, {len(deduplicated_df)} unique clusters remain.")
+        logger.debug(f"Finished deduplication: Removed {len(clusters_df) - len(deduplicated_df)} duplicate clusters, {len(deduplicated_df)} unique clusters remain.")
     else:
-        logger.info(f"Finished deduplication: No duplicate clusters found ({len(deduplicated_df)} clusters).")
+        logger.debug(f"Finished deduplication: No duplicate clusters found ({len(deduplicated_df)} clusters).")
     return deduplicated_df
 
 def _get_clustering_settings_list(params: Parameters) -> List[ClusteringSettings]:

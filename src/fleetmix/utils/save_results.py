@@ -25,10 +25,9 @@ import ast
 import folium
 from typing import Dict
 from fleetmix.core_types import BenchmarkType, VRPSolution
-import logging
+from fleetmix.utils.logging import FleetmixLogger
 
-# Add logging to track load percentages
-logging.basicConfig(level=logging.DEBUG)
+logger = FleetmixLogger.get_logger(__name__)
 
 def save_optimization_results(
     execution_time: float,
@@ -82,7 +81,7 @@ def save_optimization_results(
             total_utilization = (sum(total_demand.values()) / config['Capacity']) * 100
         
         load_percentages.append(total_utilization)
-        logging.debug(f"Cluster {cluster['Cluster_ID']}: Load Percentage = {total_utilization}")
+        logger.debug(f"Cluster {cluster['Cluster_ID']}: Load Percentage = {total_utilization}")
     
     load_percentages = pd.Series(load_percentages)
     

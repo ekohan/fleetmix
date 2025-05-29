@@ -13,12 +13,26 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
 def convert_mcvrp_to_fsm(path: Union[str, Path]) -> tuple:
-    """
-    Convert a MCVRP .dat instance into FSM customer DataFrame and Parameters.
-    Args:
-        path: Path to the .dat MCVRP instance file.
-    Returns:
-        A tuple of (customers_df, parameters).
+    """Convert an MCVRP *.dat* file to Fleetmix inputs.
+
+    Parameters
+    ----------
+    path : str | Path
+        Location of the Henke et al. benchmark file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Customer demand table.
+    Parameters
+        Parameter set pre-filled with depot, capacity, and expected vehicles.
+
+    Raises
+    ------
+    FileNotFoundError
+        If *path* does not exist.
+    ValueError
+        If mandatory headers are missing.
     """
     # Parse the MCVRP instance
     instance = parse_mcvrp(path)

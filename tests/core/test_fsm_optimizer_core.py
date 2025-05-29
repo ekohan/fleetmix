@@ -46,19 +46,19 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Build base data and violate capacity so no config is feasible
     clusters_df.at[0, 'Total_Demand'] = {'Dry': 100, 'Chilled': 0, 'Frozen': 0}
-    # Capture warnings from model construction
-    caplog.set_level(logging.WARNING, logger='fleetmix.optimization.core')
+    # Capture warnings/debug from model construction for the specific logger
+    caplog.set_level(logging.DEBUG, logger='fleetmix.optimization.core')
     # Create model
     model, y_vars, x_vars, c_vk = optimization._create_model(clusters_df, config_df, params)
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
     assert any(v == 'NoVehicle' for v, k in x_vars.keys()), "Should inject NoVehicle for infeasible cluster"
-    # Check warning about unserviceable cluster
+    # Check warning about unserviceable cluster (now expecting DEBUG level)
     assert any(
         rec[0] == 'fleetmix.optimization.core' and 
-        rec[1] == logging.WARNING and
-        'serve' in rec[2].lower()
+        rec[1] == logging.DEBUG and  # Changed to DEBUG
+        'cannot be served by any vehicle' in rec[2].lower() # Made message check more specific
         for rec in caplog.record_tuples
-    ), "Expected warning about unserviceable cluster"
+    ), "Expected debug message about unserviceable cluster"
     
     # Check logs for specific messages
     

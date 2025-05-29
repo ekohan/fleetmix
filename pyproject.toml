@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fleetmix"
-version = "0.0.0"
+version = "0.1.0b1"
 description = "Fleet Size and Mix optimizer for heterogeneous fleets of multi-compartment vehicles"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,7 +30,12 @@ dependencies = [
     "pyvrp",
     "rich",
     "vrplib",
+    "typer[all]>=0.9.0",
+    "streamlit>=1.28.0",
 ]
+
+[project.scripts]
+fleetmix = "fleetmix.app:app"
 
 [project.optional-dependencies]
 test = [

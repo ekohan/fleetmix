@@ -73,11 +73,12 @@ def test_convert_to_fsm_mcvrp():
     assert hasattr(params, 'expected_vehicles')
 
 
-def test_run_optimization_prints_and_returns(capsys):
+def test_run_optimization_prints_and_returns(caplog):
     df = pd.DataFrame()
     params = DummyParams()
     sol, cfg = run_optimization(df, params, verbose=False)
-    out = capsys.readouterr().out
-    assert 'Optimization Results:' in out
+    
+    # Check that the logging message appears in the captured logs
+    assert any('Optimization Results:' in record.message for record in caplog.records)
     assert sol['total_cost'] == 0
     assert isinstance(cfg, pd.DataFrame) 

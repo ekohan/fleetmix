@@ -35,7 +35,8 @@ def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
     clusters_df, config_df, params = toy_fsm_edge_data
     # Make demand exceed capacity
     clusters_df.at[0, 'Total_Demand'] = {'Dry': 100, 'Chilled': 0, 'Frozen': 0}
-    caplog.set_level(logging.WARNING)
+    # Set caplog to capture DEBUG messages from the specific logger
+    caplog.set_level(logging.DEBUG, logger='fleetmix.optimization.core') 
     model, y_vars, x_vars, c_vk = _create_model(clusters_df, config_df, params)
     # 'NoVehicle' var should be present and y_1==0 forced
     assert any(v == 'NoVehicle' for (v, k) in x_vars)
@@ -43,11 +44,11 @@ def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
     assert f"Unserviceable_Cluster_1" in model.constraints
     # Use record_tuples for more robust log checking
     assert any(
-        (rec[0].startswith('fleetmix.fsm_optimizer') or rec[0].startswith('fleetmix.optimization.core')) and 
-        rec[1] == logging.WARNING and
-        'serve' in rec[2].lower()
+        rec[0] == 'fleetmix.optimization.core' and # Check specific logger name
+        rec[1] == logging.DEBUG and # Expect DEBUG level
+        'cannot be served by any vehicle' in rec[2].lower() # More specific message
         for rec in caplog.record_tuples
-    ), "Expected warning about unserviceable cluster"
+    ), "Expected debug message about unserviceable cluster"
 
 
 def test_extract_and_validate_solution(toy_fsm_edge_data):

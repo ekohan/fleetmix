@@ -4,11 +4,11 @@ common.py
 Common data structures used across the clustering process.
 """
 
-import logging
 from typing import Dict, List
 from dataclasses import dataclass, field
 
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 class Symbols:
     """Unicode symbols for logging."""

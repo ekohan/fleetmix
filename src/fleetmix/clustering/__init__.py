@@ -1,10 +1,7 @@
 """
-clustering module
-
-This module provides functions and classes for clustering customers in the fleet optimization process.
+Customer clustering for the cluster-first heuristic (§4.2).
 """
 
-# Re-export public functions and classes from generator, heuristics, and common modules
 from .common import (
     Cluster,
     ClusteringSettings,

@@ -1,7 +1,5 @@
 """
-optimization module
-
-This module provides functions for solving the Fleet Size-and-Mix optimization problem.
+MILP core for Fleet-Size-and-Mix optimisation (see §4.3 in the paper).
 """
 
 # Re-export public functions from core

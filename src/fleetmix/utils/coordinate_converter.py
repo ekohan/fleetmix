@@ -1,5 +1,5 @@
 """
-Utility for converting between CVRP Euclidean coordinates and geographic coordinates.
+Bidirectional projection between VRP Euclidean and lat/lon space.
 """
 
 from dataclasses import dataclass

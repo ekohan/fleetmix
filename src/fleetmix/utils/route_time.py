@@ -8,11 +8,10 @@ from pyvrp import (
     Model, Client, Depot, VehicleType, ProblemData,
     GeneticAlgorithmParams, PopulationParams, SolveParams
 )
-# Import stopping criteria from the correct submodule
 from pyvrp.stop import MaxIterations
-import logging # Added for logging
 
-logger = logging.getLogger(__name__) # Added logger
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 def calculate_total_service_time_hours(num_customers: int, service_time_per_customer_minutes: float) -> float:
     """

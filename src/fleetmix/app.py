@@ -334,28 +334,27 @@ def optimize(
             )
         
         # Display results summary (always shown unless quiet)
-        if not quiet:
-            table = Table(title="Optimization Results", show_header=True)
-            table.add_column("Metric", style="cyan")
-            table.add_column("Value", style="green")
-            
-            total_cost = (
-                solution['total_fixed_cost'] + 
-                solution['total_variable_cost'] + 
-                solution['total_penalties']
-            )
-            
-            table.add_row("Total Cost", f"${total_cost:,.2f}")
-            table.add_row("Fixed Cost", f"${solution['total_fixed_cost']:,.2f}")
-            table.add_row("Variable Cost", f"${solution['total_variable_cost']:,.2f}")
-            table.add_row("Penalties", f"${solution['total_penalties']:,.2f}")
-            table.add_row("Vehicles Used", str(solution['total_vehicles']))
-            table.add_row("Missing Customers", str(len(solution['missing_customers'])))
-            table.add_row("Solver Status", solution['solver_status'])
-            table.add_row("Solver Time", f"{solution['solver_runtime_sec']:.1f}s")
-            
-            console.print(table)
-            log_success(f"Results saved to {output}/")
+        table = Table(title="Optimization Results", show_header=True)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        
+        total_cost = (
+            solution['total_fixed_cost'] + 
+            solution['total_variable_cost'] + 
+            solution['total_penalties']
+        )
+        
+        table.add_row("Total Cost", f"${total_cost:,.2f}")
+        table.add_row("Fixed Cost", f"${solution['total_fixed_cost']:,.2f}")
+        table.add_row("Variable Cost", f"${solution['total_variable_cost']:,.2f}")
+        table.add_row("Penalties", f"${solution['total_penalties']:,.2f}")
+        table.add_row("Vehicles Used", str(solution['total_vehicles']))
+        table.add_row("Missing Customers", str(len(solution['missing_customers'])))
+        table.add_row("Solver Status", solution['solver_status'])
+        table.add_row("Solver Time", f"{solution['solver_runtime_sec']:.1f}s")
+        
+        console.print(table)
+        log_success(f"Results saved to {output}/")
         
     except FileNotFoundError as e:
         log_error(str(e))

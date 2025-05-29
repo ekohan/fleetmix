@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from sklearn.metrics import pairwise_distances
-from sklearn_extra.cluster import KMedoids
+from kmedoids import KMedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
@@ -42,7 +42,9 @@ def compute_cluster_metric_input(
         return compute_composite_distance(customers, settings.goods, settings.geo_weight, settings.demand_weight)
     else:
         logger.debug(f"Using feature-based input for method: {settings.method}")
-        return customers[['Latitude', 'Longitude']].values
+        # Ensure data is in the right format - contiguous float64 array
+        data = customers[['Latitude', 'Longitude']].values
+        return np.ascontiguousarray(data, dtype=np.float64)
 
 def compute_composite_distance(
     customers: pd.DataFrame,
@@ -89,7 +91,14 @@ def get_clustering_model(n_clusters: int, method: str):
     if method == 'minibatch_kmeans':
         return MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
     elif method == 'kmedoids':
-        return KMedoids(n_clusters=n_clusters, random_state=42)
+        return KMedoids(
+            n_clusters=n_clusters,
+            metric='euclidean',
+            method='fasterpam',
+            init='build',
+            max_iter=300,
+            random_state=42
+        )
     elif method.startswith('agglomerative'):
         return AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
     elif method == 'gaussian_mixture':
@@ -184,6 +193,7 @@ def create_small_dataset_clusters(customers_subset: pd.DataFrame) -> pd.DataFram
     """Create clusters for small datasets (≤2 customers)."""
     customers_copy = customers_subset.copy()
     data = customers_copy[['Latitude', 'Longitude']].values
+    data = np.ascontiguousarray(data, dtype=np.float64)
     model = MiniBatchKMeans(n_clusters=1, random_state=42)
     customers_copy['Cluster'] = model.fit_predict(data)
     return customers_copy

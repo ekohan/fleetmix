@@ -9,9 +9,9 @@ Fast, reproducible tooling for **multi‑compartment vehicle fleet design** in u
 ## Why fleetmix?
 
 * **Scales** — >1,000 customers solved in seconds via a *cluster‑first → MILP‑second* matheuristic.
-* **Extensible** — pluggable clustering engines, route‑time estimators, and solver back‑ends.
-* **Reproducible** — every experiment in the journal article reruns with one script.
-* **User-friendly** — Clean CLI interface and Python API for easy integration.
+* **Extensible** — pluggable clustering engines, route‑time estimators, solver back‑ends.
+* **Reproducible** — entire paper can be re-run with a single script.
+* **User-friendly** — clean CLI, idiomatic Python API, and a lightweight web GUI.
 
 ---
 
@@ -58,7 +58,7 @@ pip install -e .
 # Run optimization on customer demand data
 fleetmix optimize --demand customers.csv --config fleet.yaml
 
-# Run MCVRP benchmark suite
+# Run the full MCVRP benchmark suite
 fleetmix benchmark mcvrp
 
 # Convert VRP instance to FSM format
@@ -234,7 +234,7 @@ Located under `src/fleetmix/benchmarking/`
 * **Converters** – turn `.vrp` / `.dat` instances into Fleet‑Size‑and‑Mix demand tables.
 * **Parsers & Models** – light dataclasses for CVRP / MCVRP metadata.
 * **Solvers** – PyVRP wrapper providing single‑ and multi‑compartment baselines.
-* **Scripts** – batch runners producing JSON/XLSX artefacts in `results/`.
+* **Scripts** – batch runners producing JSON/XLSX artifacts in `results/`.
 
 Upper‑ and lower‑bound reference solutions are generated automatically for sanity checks.
 
@@ -271,7 +271,7 @@ See `docs/mapping.md` for a line‑by‑line crosswalk between paper sections an
 ## Contributing
 
 1. Fork → feature branch → PR against **main**.
-2. `pytest -q --cov=src` **must** stay green.
+2. All tests (`pytest -q --cov=src`) **must** stay green.
 3. Follow *PEP‑8*, add type hints, and keep public APIs doc‑commented.
 
 Bug reports and ideas via Issues are welcome.

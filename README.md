@@ -15,7 +15,7 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 <!-- GIF Demo -->
 
 <p align="center">
-  <img src="docs/images/fleetmix_demo.gif" alt="Fleetmix demo animation" width="80%"/>
+  <img src="docs/images/fleetmix_demo.png" alt="Fleetmix demo animation" width="80%"/>
   <br><em>(interactive demo – coming soon)</em>
 </p>
 

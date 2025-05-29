@@ -9,7 +9,7 @@ jupyter
 scikit-learn-extra
 pulp
 numba
-cython
+cython<3
 haversine
 joblib
 tqdm

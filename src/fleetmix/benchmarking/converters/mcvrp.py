@@ -12,13 +12,15 @@ from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
-def convert_mcvrp_to_fsm(path: Union[str, Path]) -> tuple:
+def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) -> tuple:
     """Convert an MCVRP *.dat* file to Fleetmix inputs.
 
     Parameters
     ----------
-    path : str | Path
-        Location of the Henke et al. benchmark file.
+    instance_name : str
+        Name of the MCVRP instance (e.g., 'pr01').
+    custom_instance_path : Path, optional
+        Full path to the instance .dat file if not in default dataset location.
 
     Returns
     -------
@@ -30,12 +32,20 @@ def convert_mcvrp_to_fsm(path: Union[str, Path]) -> tuple:
     Raises
     ------
     FileNotFoundError
-        If *path* does not exist.
+        If the instance file does not exist.
     ValueError
         If mandatory headers are missing.
     """
+    if custom_instance_path:
+        file_path = custom_instance_path
+    else:
+        file_path = Path(__file__).parent.parent / 'datasets' / 'mcvrp' / f'{instance_name}.dat'
+
+    if not file_path.exists():
+        raise FileNotFoundError(f"MCVRP instance file not found: {file_path} for instance '{instance_name}'. Provide custom_instance_path if using non-standard location.")
+
     # Parse the MCVRP instance
-    instance = parse_mcvrp(path)
+    instance = parse_mcvrp(file_path)
 
     # Convert coordinates to geospatial coordinates
     converter = CoordinateConverter(instance.coords)

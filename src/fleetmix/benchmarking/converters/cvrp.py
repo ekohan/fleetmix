@@ -28,7 +28,8 @@ def convert_cvrp_to_fsm(
     instance_names: Union[str, List[str]],
     benchmark_type: CVRPBenchmarkType,
     num_goods: int = 3,
-    split_ratios: Dict[str, float] = None
+    split_ratios: Dict[str, float] = None,
+    custom_instance_paths: Dict[str, Path] = None
 ) -> tuple:
     """
     Convert CVRP instance(s) to FSM format based on benchmark type.
@@ -46,10 +47,17 @@ def convert_cvrp_to_fsm(
         else:
             split_ratios = {'dry': 0.5, 'chilled': 0.3, 'frozen': 0.2}
             
-    # Parse instances (import parser locally to allow test stubbing and avoid circular import)
+    # Parse instances
     instances = []
     for name in instance_names:
-        instance_path = Path(__file__).parent.parent / 'datasets' / 'cvrp' / f'{name}.vrp'
+        if custom_instance_paths and name in custom_instance_paths:
+            instance_path = custom_instance_paths[name]
+        else:
+            instance_path = Path(__file__).parent.parent / 'datasets' / 'cvrp' / f'{name}.vrp'
+        
+        if not instance_path.exists():
+            raise FileNotFoundError(f"CVRP instance file not found: {instance_path} for instance '{name}'. Provide custom_instance_paths if using non-standard location.")
+            
         parser = cvrp_parser.CVRPParser(str(instance_path))
         instances.append(parser.parse())
         
@@ -145,7 +153,9 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
     )
     
     params = _create_base_params(instance)
-    params.expected_vehicles = instance.num_vehicles * num_goods
+    # Handle cases where instance.num_vehicles might be None
+    base_num_vehicles = instance.num_vehicles if instance.num_vehicles is not None else 1
+    params.expected_vehicles = base_num_vehicles * num_goods
     
     # Override vehicles with scaled CVRP vehicle
     params.vehicles = {

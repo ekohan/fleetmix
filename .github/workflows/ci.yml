@@ -14,7 +14,7 @@ jobs:
         python-version: ['3.12', '3.13']
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -39,10 +39,15 @@ jobs:
         env:
           FSM_SOLVER: cbc
         run: |
-          pytest --maxfail=1 --disable-warnings -q --cov=src --cov-report=xml
+          pytest --maxfail=1 --disable-warnings -q --cov=src --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         if: success()
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
-          files: coverage.xml 
+          files: coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+          name: codecov-umbrella
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }} 

@@ -13,8 +13,8 @@ def test_total_demand_preserved_and_expected_vehicles():
     dat_path = Path(__file__).parent.parent.parent / 'src' / 'fleetmix' / 'benchmarking' / 'datasets' / 'mcvrp' / '10_3_3_3_(01).dat'
     # Parse original instance
     instance = parse_mcvrp(dat_path)
-    # Convert to FSM format
-    df, params = convert_mcvrp_to_fsm(dat_path)
+    # Convert to FSM format - pass instance name and custom path separately
+    df, params = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
 
     # Sum demands for customers only
     total_orig = sum(sum(demand) for node, demand in instance.demands.items() if node != instance.depot_id)
@@ -30,8 +30,8 @@ def test_dataframe_schema_and_vehicle_config():
     dat_path = Path(__file__).parent.parent.parent / 'src' / 'fleetmix' / 'benchmarking' / 'datasets' / 'mcvrp' / '10_3_3_3_(01).dat'
     # Parse original instance
     instance = parse_mcvrp(dat_path)
-    # Convert to FSM format
-    df, params = convert_mcvrp_to_fsm(dat_path)
+    # Convert to FSM format - pass instance name and custom path separately
+    df, params = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
 
     # DataFrame should have exactly these columns in order
     expected_cols = ['Customer_ID', 'Latitude', 'Longitude', 'Dry_Demand', 'Chilled_Demand', 'Frozen_Demand']

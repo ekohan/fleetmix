@@ -9,29 +9,31 @@ description = "Fleet Size and Mix optimizer for heterogeneous fleets of multi-co
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "numpy<2",
+    "numpy",
     "pandas",
+    "scipy",
     "matplotlib",
+    "seaborn",
+    "streamlit",
+    "plotly",
     "scikit-learn",
+    "kmedoids",
+    "folium",
+    "streamlit-folium",
+    "haversine",
     "gurobipy",
     "geopy",
-    "scipy",
     "jupyter",
-    "scikit-learn-extra",
     "pulp",
     "numba",
     "cython",
-    "haversine",
     "joblib",
     "tqdm",
     "openpyxl",
-    "seaborn",
-    "folium",
     "pyvrp",
     "rich",
     "vrplib",
     "typer[all]>=0.9.0",
-    "streamlit>=1.28.0",
 ]
 
 [project.scripts]

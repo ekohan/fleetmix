@@ -20,8 +20,7 @@ def convert_vrp_to_fsm(
     split_ratios: Dict[str, float] = None
 ) -> tuple[pd.DataFrame, Parameters]:
     """
-    Unified converter that dispatches to the pipeline's converter functions,
-    allowing tests to stub pipeline.convert_cvrp_to_fsm/convert_mcvrp_to_fsm.
+    Dispatch CVRP/MCVRP conversion to the appropriate converter.
     """
     # avoid circular import at module load
     from fleetmix.pipeline.vrp_interface import VRPType

@@ -13,15 +13,18 @@ from pyvrp import (
 from pyvrp.stop import MaxIterations
 from haversine import haversine
 from joblib import Parallel, delayed
-import logging
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.utils.logging import Colors, Symbols
+from fleetmix.utils.logging import (
+    FleetmixLogger,
+    log_progress, log_detail, log_debug,
+    log_error, Colors, Symbols
+)
 from fleetmix.utils.route_time import estimate_route_time
 from fleetmix.core_types import BenchmarkType, VRPSolution
-
-# Add logging to track utilization
-logging.basicConfig(level=logging.WARNING)
+logger = FleetmixLogger.get_logger(__name__)
 
 class VRPSolver:
     """Single-compartment VRP solver implementation."""
@@ -247,7 +250,7 @@ class VRPSolver:
             ])
             
             # Calculate route time
-            route_time = estimate_route_time(
+            route_time, _ = estimate_route_time(
                 cluster_customers=route_customers,
                 depot=self.params.depot,
                 service_time=self.params.service_time,
@@ -263,11 +266,11 @@ class VRPSolver:
             # Log route status
             if not is_feasible:
                 if utilization > 100:
-                    logging.warning(f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}")
+                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}")
                 if route_time > self.params.max_route_time:
-                    logging.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {self.params.max_route_time}){Colors.RESET}")
+                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {self.params.max_route_time}){Colors.RESET}")
             elif verbose:
-                logging.info(f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}")
+                logger.info(f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}")
             
             feasible_routes.append([route[i] for i in range(len(route))])
             route_times.append(route_time)
@@ -317,7 +320,7 @@ class VRPSolver:
                 
                 # Ensure load does not exceed capacity
                 if load > vehicle_capacity:
-                    logging.warning(f"Route {route_idx} exceeds vehicle capacity: {load}/{vehicle_capacity}")
+                    logger.warning(f"Route {route_idx} exceeds vehicle capacity: {load}/{vehicle_capacity}")
                     load = vehicle_capacity
 
                 vehicle_loads.append(load)
@@ -358,24 +361,24 @@ class VRPSolver:
         compartment_configs: Optional[List[Dict[str, float]]] = None
     ) -> None:
         """Print solution details."""
-        print(f"\n🚚 VRP Solution Summary:")
+        log_progress("🚚 VRP Solution Summary:")
         
         # Handle infeasible solutions
         if total_cost == float('inf') or not routes:
-            print(f"{Colors.RED}→ Status: INFEASIBLE{Colors.RESET}")
-            print(f"{Colors.RED}→ No feasible solution found{Colors.RESET}")
-            print(f"{Colors.BLUE}→ Execution Time: {Colors.BOLD}{execution_time:.1f}s{Colors.RESET}")
+            log_error("Status: INFEASIBLE")
+            log_error("No feasible solution found")
+            log_detail(f"Execution Time: {execution_time:.1f}s")
             return
 
         # Print solution details for feasible solutions
-        print(f"{Colors.BLUE}→ Total Cost: ${Colors.BOLD}{total_cost:,.2f}{Colors.RESET}")
-        print(f"{Colors.BLUE}→ Total Distance: {Colors.BOLD}{total_distance:.1f} km{Colors.RESET}")
-        print(f"{Colors.BLUE}→ Total Vehicles Used: {Colors.BOLD}{num_vehicles}{Colors.RESET}")
+        log_detail(f"Total Cost: ${total_cost:,.2f}")
+        log_detail(f"Total Distance: {total_distance:.1f} km")
+        log_detail(f"Total Vehicles Used: {num_vehicles}")
         
         # Only calculate utilization if we have valid routes
         if utilization:
-            print(f"{Colors.BLUE}→ Avg Vehicle Utilization: {Colors.BOLD}{np.mean(utilization)*100:.1f}%{Colors.RESET}")
-        print(f"{Colors.BLUE}→ Execution Time: {Colors.BOLD}{execution_time:.1f}s{Colors.RESET}")
+            log_detail(f"Avg Vehicle Utilization: {np.mean(utilization)*100:.1f}%")
+        log_detail(f"Execution Time: {execution_time:.1f}s")
 
         if benchmark_type == BenchmarkType.SINGLE_COMPARTMENT:
             # Count vehicles by product type
@@ -387,26 +390,26 @@ class VRPSolver:
                     vehicles_by_product[product] += 1
             
             # Print vehicle breakdown
-            print(f"\nVehicles by Product Type:")
+            log_detail("Vehicles by Product Type:")
             for product, count in vehicles_by_product.items():
-                print(f"{Colors.BLUE}→ {product}: {Colors.BOLD}{count}{Colors.RESET}")
+                log_detail(f"→ {product}: {count}")
 
         # Print compartment configurations if available
         if compartment_configs:
-            print(f"\nCompartment Configurations:")
+            log_detail("Compartment Configurations:")
             for i, config in enumerate(compartment_configs, 1):
                 # Calculate total used capacity
                 total_used_capacity = sum(config.values())
                 # Calculate empty capacity
                 empty_capacity = 1.0 - total_used_capacity
                 
-                print(f"\n{Colors.BLUE}Route {i}:{Colors.RESET}")
+                log_detail(f"Route {i}:")
                 for product, percentage in config.items():
                     if percentage >= 0.01:  # Only show if >= 1%
-                        print(f"{Colors.BLUE}{product}: {Colors.BOLD}{percentage*100:.1f}%{Colors.RESET}")
+                        log_detail(f"  {product}: {percentage*100:.1f}%")
                 
                 # Always print empty capacity
-                print(f"{Colors.BLUE}Empty: {Colors.BOLD}{empty_capacity*100:.1f}%{Colors.RESET}")
+                log_detail(f"  Empty: {empty_capacity*100:.1f}%")
     
     def _prepare_multi_compartment_data(self) -> pd.DataFrame:
         """
@@ -531,7 +534,7 @@ class VRPSolver:
     
     def _print_diagnostic_information(self, customers: pd.DataFrame) -> None:
         """Print diagnostic information about the input data."""
-        print(f"\n{Symbols.INFO} VRP Solver Diagnostic Information:")
+        log_debug(f"{Symbols.INFO} VRP Solver Diagnostic Information:")
         
         # Count customers by product type
         customers_by_product = {}
@@ -542,9 +545,9 @@ class VRPSolver:
                 customers_by_product[good] = count
         
         # Print customer counts
-        print(f"\nCustomers by Product Type:")
+        log_debug("Customers by Product Type:")
         for product, count in customers_by_product.items():
-            print(f"{Colors.BLUE}→ {product}: {Colors.BOLD}{count}{Colors.RESET}")
+            log_debug(f"→ {product}: {count}")
         
         # Calculate total demand by product type
         demand_by_product = {}
@@ -555,9 +558,9 @@ class VRPSolver:
                 demand_by_product[good] = total_demand
         
         # Print demand information
-        print(f"\nTotal Demand by Product Type:")
+        log_debug("Total Demand by Product Type:")
         for product, demand in demand_by_product.items():
-            print(f"{Colors.BLUE}→ {product}: {Colors.BOLD}{demand:.1f}{Colors.RESET}")
+            log_debug(f"→ {product}: {demand:.1f}")
         
         # Calculate minimum vehicles needed (assuming single compartment)
         min_vehicles_by_product = {}
@@ -578,17 +581,17 @@ class VRPSolver:
                 min_vehicles_by_product[good] = min_vehicles
         
         # Print minimum vehicles needed
-        print(f"\nMinimum Vehicles Needed (Single Compartment):")
+        log_debug("Minimum Vehicles Needed (Single Compartment):")
         for product, count in min_vehicles_by_product.items():
-            print(f"{Colors.BLUE}→ {product}: {Colors.BOLD}{count:.0f}{Colors.RESET}")
+            log_debug(f"→ {product}: {count:.0f}")
         
         # Print total for all products
         total_vehicles = sum(min_vehicles_by_product.values())
-        print(f"{Colors.BLUE}→ Total: {Colors.BOLD}{total_vehicles:.0f}{Colors.RESET}")
+        log_debug(f"→ Total: {total_vehicles:.0f}")
         
         # Print expected vehicle count
         if hasattr(self.params, 'expected_vehicles'):
-            print(f"\n{Colors.BLUE}Expected Vehicles: {Colors.BOLD}{self.params.expected_vehicles}{Colors.RESET}")
+            log_debug(f"Expected Vehicles: {self.params.expected_vehicles}")
         
     def solve(self, verbose: bool = False) -> Dict[str, VRPSolution]:
         """Solve VRP using appropriate strategy based on benchmark type."""
@@ -605,10 +608,10 @@ class VRPSolver:
             total_vehicles = sum(s.num_vehicles for s in result.values())
             
             if verbose:
-                print(f"\n{Symbols.SUCCESS} Combined Results:")
-                print(f"{Colors.BLUE}→ Total Cost: ${Colors.BOLD}{total_cost:,.2f}{Colors.RESET}")
-                print(f"{Colors.BLUE}→ Total Distance: {Colors.BOLD}{total_distance:.1f} km{Colors.RESET}")
-                print(f"{Colors.BLUE}→ Total Vehicles: {Colors.BOLD}{total_vehicles}{Colors.RESET}")
+                log_detail(f"{Symbols.SUCCESS} Combined Results:")
+                log_detail(f"→ Total Cost: ${total_cost:,.2f}")
+                log_detail(f"→ Total Distance: {total_distance:.1f} km")
+                log_detail(f"→ Total Vehicles: {total_vehicles}")
             
             return result
         else:

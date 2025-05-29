@@ -11,6 +11,7 @@ need to patch this module.
 """
 import pandas as pd
 from pathlib import Path
+from fleetmix.utils.logging import log_detail
 
 def data_dir():
     return Path(__file__).resolve().parents[3] / "data"
@@ -20,9 +21,22 @@ def get_demand_profiles_dir() -> Path:
     return data_dir() / 'demand_profiles'
 
 def load_customer_demand(demand_file: str):
-    """Load customer demand from CSV file in demand_profiles directory."""
-    csv_file_path = get_demand_profiles_dir() / demand_file
-    print(f"Loading customer demand from {csv_file_path}")
+    """Load customer demand from CSV file. 
+    
+    Args:
+        demand_file: Either a filename relative to demand_profiles directory,
+                    or an absolute/relative path to a CSV file.
+    """
+    demand_path = Path(demand_file)
+    
+    if demand_path.is_absolute() or demand_path.exists():
+        # It's an absolute path or relative path that exists from current directory
+        csv_file_path = demand_path
+    else:
+        # Treat as filename relative to demand_profiles directory
+        csv_file_path = get_demand_profiles_dir() / demand_file
+    
+    log_detail(f"Loading customer demand from {csv_file_path}")
     
     # Read CSV with existing headers
     df = pd.read_csv(

@@ -1,15 +1,12 @@
 """
 Benchmark runner script for single-compartment VRP solutions.
 """
-import os
-import sys
 from pathlib import Path
-import time
 import argparse
-import numpy as np
+from warnings import warn
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.utils.logging import setup_logging, ProgressTracker, Colors, Symbols
+from fleetmix.utils.logging import setup_logging, ProgressTracker, Colors
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 from fleetmix.core_types import BenchmarkType, VRPSolution
@@ -65,6 +62,9 @@ def print_solution_details(solution: VRPSolution) -> None:
 
 def main():
     """Run VRP benchmarking."""
+    # Add deprecation warning
+    warn("Direct script execution is deprecated. Use 'fleetmix benchmark' instead", FutureWarning)
+    
     args = parse_benchmark_args()
     
     if args.info:

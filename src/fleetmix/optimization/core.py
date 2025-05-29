@@ -41,7 +41,6 @@ Typical usage
 >>> print(solution['total_cost'])
 """
 
-import logging
 import time
 from typing import Dict, Tuple, Set, Any
 import pandas as pd
@@ -53,7 +52,8 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 def solve_fsm_problem(
     clusters_df: pd.DataFrame,
@@ -118,9 +118,50 @@ def solve_fsm_problem(
     
     # Check solution status
     if model.status != pulp.LpStatusOptimal:
-        print(f"Optimization status: {pulp.LpStatus[model.status]}")
-        print("The model is infeasible. Please check for customers not included in any cluster or other constraint issues.")
-        sys.exit(1)
+        status_name = pulp.LpStatus[model.status]
+        
+        # Enhanced error message for infeasible problems
+        if status_name == "Infeasible":
+            # Check if any clusters have no feasible vehicles
+            clusters_without_vehicles = []
+            for _, cluster in clusters_df.iterrows():
+                cluster_id = cluster['Cluster_ID']
+                has_feasible_vehicle = False
+                
+                for _, config in configurations_df.iterrows():
+                    # Check if vehicle can serve cluster
+                    total_demand = sum(cluster['Total_Demand'].values())
+                    goods_required = set(g for g in parameters.goods if cluster['Total_Demand'][g] > 0)
+                    
+                    if total_demand <= config['Capacity']:
+                        # Check goods compatibility
+                        if all(config[g] == 1 for g in goods_required):
+                            has_feasible_vehicle = True
+                            break
+                
+                if not has_feasible_vehicle:
+                    clusters_without_vehicles.append(cluster_id)
+            
+            error_msg = "Optimization problem is infeasible!\n"
+            
+            if clusters_without_vehicles:
+                error_msg += f"\nClusters without feasible vehicles: {clusters_without_vehicles}\n"
+                error_msg += "Possible causes:\n"
+                error_msg += "- Vehicle capacities are too small for cluster demands\n"
+                error_msg += "- No vehicles have the right compartment mix\n"
+                error_msg += "- Consider adding larger vehicles or more compartment configurations\n"
+            else:
+                error_msg += "\nAll clusters have feasible vehicles, but constraints conflict.\n"
+                error_msg += "Possible causes:\n" 
+                error_msg += "- Not enough vehicles (check max_vehicles parameter)\n"
+                error_msg += "- Customer coverage constraints cannot be satisfied\n"
+                error_msg += "- Try relaxing penalties or adding more vehicle types\n"
+            
+            raise ValueError(error_msg)
+        else:
+            print(f"Optimization status: {status_name}")
+            print("The model is infeasible. Please check for customers not included in any cluster or other constraint issues.")
+            sys.exit(1)
 
     # Extract and validate solution
     selected_clusters = _extract_solution(clusters_df, y_vars, x_vars)
@@ -225,7 +266,7 @@ def _create_model(
 
         # If V_k[k] is empty, handle accordingly
         if not V_k[k]:
-            logger.warning(f"Cluster {k} cannot be served by any vehicle configuration.")
+            logger.debug(f"Cluster {k} cannot be served by any vehicle configuration.")
             # Force y_k to 0 (cluster cannot be selected)
             V_k[k].add('NoVehicle')  # Placeholder
             x_vars['NoVehicle', k] = pulp.LpVariable(f"x_NoVehicle_{k}", cat='Binary')
@@ -331,7 +372,6 @@ def _validate_solution(
     """
     Validate that all customers are served in the solution.
     """
-    logger = logging.getLogger(__name__)
 
     all_customers_set = set(customers_df['Customer_ID'])
     served_customers = set()

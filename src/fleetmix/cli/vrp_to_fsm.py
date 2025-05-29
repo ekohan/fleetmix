@@ -3,15 +3,16 @@ Unified CLI tool for converting CVRP or MCVRP instances to FSM and optimizing.
 """
 from __future__ import annotations
 import argparse
-import logging
-import sys
 import time
 from pathlib import Path
+from warnings import warn
 
-from fleetmix.utils.logging import setup_logging
+from fleetmix.utils.logging import FleetmixLogger, setup_logging
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.utils.save_results import save_optimization_results
+
+logger = FleetmixLogger.get_logger(__name__)
 
 DEFAULT_MCVRP_INSTANCE = "10_3_3_3_(01)"
 DEFAULT_CVRP_INSTANCE = "X-n106-k14"
@@ -86,8 +87,10 @@ def _print_info() -> None:
 
 
 def main() -> None:
+    # Add deprecation warning
+    warn("Direct script execution is deprecated. Use 'fleetmix convert' instead", FutureWarning)
+    
     setup_logging()
-    logger = logging.getLogger(__name__)
     parser = _build_parser()
     args = parser.parse_args()
 

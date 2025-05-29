@@ -6,7 +6,6 @@ It contains the lower-level implementation details of the clustering algorithms,
 and recursive splitting logic.
 """
 
-import logging
 from typing import Dict, List, Tuple
 import pandas as pd
 import numpy as np
@@ -17,10 +16,9 @@ from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
 
-# Import from common
 from .common import Cluster, ClusteringSettings
-
-logger = logging.getLogger(__name__)
+from fleetmix.utils.logging import FleetmixLogger
+logger = FleetmixLogger.get_logger(__name__)
 
 # Product weights for demand profile calculations - equal weighting for all product types
 PRODUCT_WEIGHTS = {
@@ -281,7 +279,7 @@ def should_split_cluster(
     
     # Log warning for single-customer constraints
     if (capacity_violated or time_violated) and is_singleton_cluster:
-        logger.warning(f"⚠️ Can't split further (singleton cluster) but constraints still violated: "
+        logger.debug(f"⚠️ Can't split further (singleton cluster) but constraints still violated: "
                      f"capacity={capacity_violated}, time={time_violated}")
     
     # Return True if we need to split (constraints violated and we can split)
@@ -397,7 +395,7 @@ def process_clusters_recursively(
             )
             
             if capacity_violated or time_violated:
-                logger.warning(f"⚠️ Max depth {settings.max_depth} reached but constraints still violated: "
+                logger.debug(f"⚠️ Max depth {settings.max_depth} reached but constraints still violated: "
                               f"capacity={capacity_violated}, time={time_violated}, "
                               f"method={settings.method}, config_id={config['Config_ID']}")
                 skipped_count += 1
@@ -425,7 +423,7 @@ def process_clusters_recursively(
             clusters.append(cluster)
     
     if skipped_count > 0:
-        logger.warning(f"⚠️ Skipped {skipped_count} clusters that exceeded capacity at max depth for config {config_id}.")
+        logger.debug(f"⚠️ Skipped {skipped_count} clusters that exceeded capacity at max depth for config {config_id}.")
     
     logger.info(f"Completed recursive processing for config {config_id}: {len(clusters)} final clusters, "
                f"{split_count} splits performed")

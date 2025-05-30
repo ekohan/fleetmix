@@ -31,10 +31,12 @@ def _get_available_instances(suite: str) -> list[str]:
     
     if suite == "mcvrp":
         mcvrp_dir = datasets_dir / "mcvrp"
-        instances = [f.stem for f in sorted(mcvrp_dir.glob("*.dat"))]
+        instances = [str(f.stem) for f in mcvrp_dir.glob("*.dat")]
+        instances.sort()
     elif suite == "cvrp":
         cvrp_dir = datasets_dir / "cvrp"
-        instances = [f.stem for f in sorted(cvrp_dir.glob("X-n*.vrp"))]
+        instances = [str(f.stem) for f in cvrp_dir.glob("X-n*.vrp")]
+        instances.sort()
     else:
         instances = []
     

@@ -1,8 +1,10 @@
 import pytest
 import yaml
 from argparse import Namespace
+from io import StringIO
+from unittest.mock import patch
 
-from fleetmix.utils.cli import parse_args, get_parameter_overrides, load_parameters
+from fleetmix.utils.cli import parse_args, get_parameter_overrides, load_parameters, print_parameter_help
 from fleetmix.config.parameters import Parameters
 
 
@@ -98,4 +100,40 @@ def test_load_parameters_with_clustering_overrides(tmp_path):
     assert c['distance'] == 'composite'
     assert c['geo_weight'] == 0.8
     assert c['demand_weight'] == 0.2
-    assert c['route_time_estimation'] == 'TSP' 
+    assert c['route_time_estimation'] == 'TSP'
+
+
+class TestCliUtils:
+    """Test CLI utility functions"""
+    
+    def test_print_parameter_help(self, capsys):
+        """Test print_parameter_help displays help and exits"""
+        with pytest.raises(SystemExit) as exc_info:
+            print_parameter_help()
+        
+        # Check it exits with code 0
+        assert exc_info.value.code == 0
+        
+        # Check help text was printed
+        captured = capsys.readouterr()
+        assert "Fleet Size and Mix Optimization Parameters" in captured.out
+        assert "Core Parameters:" in captured.out
+        assert "--avg-speed" in captured.out
+        assert "--max-route-time" in captured.out
+        assert "--service-time" in captured.out
+        assert "--route-time-estimation" in captured.out
+        assert "--light-load-penalty" in captured.out
+        assert "--light-load-threshold" in captured.out
+        assert "--compartment-setup-cost" in captured.out
+        assert "Clustering Options:" in captured.out
+        assert "--clustering-method" in captured.out
+        assert "--clustering-distance" in captured.out
+        assert "--geo-weight" in captured.out
+        assert "--demand-weight" in captured.out
+        assert "Input/Output:" in captured.out
+        assert "--demand-file" in captured.out
+        assert "--config" in captured.out
+        assert "--format" in captured.out
+        assert "Other Options:" in captured.out
+        assert "--verbose" in captured.out
+        assert "Examples:" in captured.out 

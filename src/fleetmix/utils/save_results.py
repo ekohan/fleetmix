@@ -337,7 +337,12 @@ def visualize_clusters(
             total_demand = sum(ast.literal_eval(cluster['Total_Demand']).values())
         
         # Get number of customers
-        num_customers = len(ast.literal_eval(cluster['Customers']) if isinstance(cluster['Customers'], str) else cluster['Customers'])
+        if 'Customers' in cluster:
+            num_customers = len(ast.literal_eval(cluster['Customers']) if isinstance(cluster['Customers'], str) else cluster['Customers'])
+        elif 'Num_Customers' in cluster:
+            num_customers = cluster['Num_Customers']
+        else:
+            num_customers = 0
         
         # Prepare popup content with Method field
         popup_content = f"""

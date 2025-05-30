@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from unittest.mock import patch
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 
 class DummyParams:
@@ -73,12 +74,19 @@ def test_convert_to_fsm_mcvrp():
     assert hasattr(params, 'expected_vehicles')
 
 
-def test_run_optimization_prints_and_returns(caplog):
+def test_run_optimization_prints_and_returns():
     df = pd.DataFrame()
     params = DummyParams()
-    sol, cfg = run_optimization(df, params, verbose=False)
     
-    # Check that the logging message appears in the captured logs
-    assert any('Optimization Results:' in record.message for record in caplog.records)
+    # Mock the logging functions to verify they're called
+    with patch('fleetmix.pipeline.vrp_interface.log_progress') as mock_progress:
+        with patch('fleetmix.pipeline.vrp_interface.log_detail') as mock_detail:
+            sol, cfg = run_optimization(df, params, verbose=False)
+    
+    # Check that the logging functions were called with expected messages
+    mock_progress.assert_called_once_with("Optimization Results:")
+    assert mock_detail.call_count == 3  # Called 3 times for total cost, vehicles used, and expected vehicles
+    
+    # Check return values
     assert sol['total_cost'] == 0
     assert isinstance(cfg, pd.DataFrame) 

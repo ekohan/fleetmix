@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
-
-from fleetmix.utils.data_processing import load_customer_demand
+from pathlib import Path
+from fleetmix.utils.data_processing import data_dir, get_demand_profiles_dir, load_customer_demand
 
 
 def test_load_customer_demand(tmp_path, monkeypatch):
@@ -39,4 +39,25 @@ def test_load_customer_demand(tmp_path, monkeypatch):
     row2 = result[result['Customer_ID']=='C2'].iloc[0]
     assert row2['Dry_Demand'] == 1
     assert row2['Chilled_Demand'] == 0
-    assert row2['Frozen_Demand'] == 0 
+    assert row2['Frozen_Demand'] == 0
+
+
+class TestDataProcessing:
+    """Test data processing utility functions"""
+    
+    def test_data_dir(self):
+        """Test data_dir returns correct path"""
+        result = data_dir()
+        assert isinstance(result, Path)
+        assert result.name == "data"
+        # Check it's 3 levels up from utils module
+        assert result.parent.name == "fleetmix"
+        
+    def test_get_demand_profiles_dir(self):
+        """Test get_demand_profiles_dir returns correct path"""
+        result = get_demand_profiles_dir()
+        assert isinstance(result, Path)
+        assert result.name == "demand_profiles"
+        assert result.parent.name == "data"
+        # Ensure it uses data_dir internally
+        assert result == data_dir() / "demand_profiles" 

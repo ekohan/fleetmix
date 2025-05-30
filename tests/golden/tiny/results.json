@@ -1,0 +1,288 @@
+{
+  "Solution Summary": {
+    "Total Cost ($)": "126.23",
+    "Fixed Cost ($)": "100.00",
+    "Variable Cost ($)": "26.23",
+    "Total Penalties ($)": "0.00",
+    "  Light Load Penalties ($)": "0.00",
+    "  Compartment Setup Penalties ($)": "0.00",
+    "Total Vehicles": 1,
+    "Vehicles Type A": 1,
+    "Customers per Cluster (Min)": "5",
+    "Customers per Cluster (Max)": "5",
+    "Customers per Cluster (Avg)": "5.0",
+    "Customers per Cluster (Median)": "5.0",
+    "Truck Load % (Min)": "9.3",
+    "Truck Load % (Max)": "9.3",
+    "Truck Load % (Avg)": "9.3",
+    "Truck Load % (Median)": "9.3",
+    "---Parameters---": "",
+    "Demand File": "sales_2024_avg_day_demand.csv",
+    "Variable Cost per Hour": 10.0,
+    "Average Speed": 30,
+    "Max Route Time": 10,
+    "Service Time per Customer": 25,
+    "Max Split Depth": 20,
+    "Clustering Method": "combine",
+    "Clustering Distance": "euclidean",
+    "Geography Weight": 0.7,
+    "Demand Weight": 0.3,
+    "Route Time Estimation Method": "BHH",
+    "Light Load Penalty": 0,
+    "Light Load Threshold": 0,
+    "Compartment Setup Cost": 0,
+    "Vehicle A capacity": 2700,
+    "Vehicle A fixed_cost": 100,
+    "Vehicle B capacity": 3300,
+    "Vehicle B fixed_cost": 175,
+    "Vehicle C capacity": 4500,
+    "Vehicle C fixed_cost": 225
+  },
+  "Configurations": [
+    {
+      "Dry": 0,
+      "Chilled": 0,
+      "Frozen": 1,
+      "Vehicle_Type": "A",
+      "Config_ID": 1,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 0,
+      "Vehicle_Type": "A",
+      "Config_ID": 2,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Vehicle_Type": "A",
+      "Config_ID": 3,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 0,
+      "Vehicle_Type": "A",
+      "Config_ID": 4,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 1,
+      "Vehicle_Type": "A",
+      "Config_ID": 5,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 0,
+      "Vehicle_Type": "A",
+      "Config_ID": 6,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Vehicle_Type": "A",
+      "Config_ID": 7,
+      "Capacity": 2700,
+      "Fixed_Cost": 100
+    },
+    {
+      "Dry": 0,
+      "Chilled": 0,
+      "Frozen": 1,
+      "Vehicle_Type": "B",
+      "Config_ID": 8,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 0,
+      "Vehicle_Type": "B",
+      "Config_ID": 9,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Vehicle_Type": "B",
+      "Config_ID": 10,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 0,
+      "Vehicle_Type": "B",
+      "Config_ID": 11,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 1,
+      "Vehicle_Type": "B",
+      "Config_ID": 12,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 0,
+      "Vehicle_Type": "B",
+      "Config_ID": 13,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Vehicle_Type": "B",
+      "Config_ID": 14,
+      "Capacity": 3300,
+      "Fixed_Cost": 175
+    },
+    {
+      "Dry": 0,
+      "Chilled": 0,
+      "Frozen": 1,
+      "Vehicle_Type": "C",
+      "Config_ID": 15,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    },
+    {
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 0,
+      "Vehicle_Type": "C",
+      "Config_ID": 16,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    },
+    {
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Vehicle_Type": "C",
+      "Config_ID": 17,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    },
+    {
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 0,
+      "Vehicle_Type": "C",
+      "Config_ID": 18,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    },
+    {
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 1,
+      "Vehicle_Type": "C",
+      "Config_ID": 19,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    },
+    {
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 0,
+      "Vehicle_Type": "C",
+      "Config_ID": 20,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    },
+    {
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Vehicle_Type": "C",
+      "Config_ID": 21,
+      "Capacity": 4500,
+      "Fixed_Cost": 225
+    }
+  ],
+  "Selected Clusters": [
+    {
+      "Cluster_ID": 4,
+      "Config_ID": 7,
+      "Customers": "['C001', 'C002', 'C003', 'C004', 'C005']",
+      "Total_Demand": "{'Dry': 155.0, 'Chilled': 70.0, 'Frozen': 25.0}",
+      "Centroid_Latitude": 4.67,
+      "Centroid_Longitude": -74.1,
+      "Goods_In_Config": [
+        "Dry",
+        "Chilled",
+        "Frozen"
+      ],
+      "Route_Time": 2.623054765328441,
+      "Method": "minibatch_kmeans",
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 1,
+      "Num_Customers": 5,
+      "Demand_Dry_pct": 0.62,
+      "Demand_Chilled_pct": 0.28,
+      "Demand_Frozen_pct": 0.1,
+      "Load_Dry_pct": 0.05740740740740741,
+      "Load_Chilled_pct": 0.025925925925925925,
+      "Load_Frozen_pct": 0.009259259259259259,
+      "Load_total_pct": 0.09259259259259259,
+      "Load_empty_pct": 0.9074074074074074
+    }
+  ],
+  "Vehicle Usage": [
+    {
+      "vehicle_type": "A",
+      "count": 1
+    }
+  ],
+  "Other Considerations": {
+    "Total Vehicles Used": 1,
+    "Number of Unserved Customers": 0,
+    "Unserved Customers": "None",
+    "Average Customers per Cluster": 5.0,
+    "Average Distance per Cluster": "N/A"
+  },
+  "Execution Details": {
+    "Execution Time (s)": 0,
+    "Solver": "GUROBI_CMD",
+    "Solver Status": "Optimal",
+    "Solver Runtime (s)": 0.03446507453918457,
+    "Post-Optimization Runtime (s)": 0.2438807487487793,
+    "Total Fixed Cost": 100,
+    "Total Variable Cost": 26.230547653284408,
+    "Total Penalties": 0.0,
+    "Light Load Penalties": 0.0,
+    "Compartment Setup Penalties": 0,
+    "Total Cost": 126.2305476532844,
+    "Demand File": "sales_2024_avg_day_demand.csv"
+  }
+}

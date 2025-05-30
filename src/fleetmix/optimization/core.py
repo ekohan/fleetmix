@@ -61,7 +61,8 @@ def solve_fsm_problem(
     customers_df: pd.DataFrame,
     parameters: Parameters,
     solver=None,
-    verbose: bool = False
+    verbose: bool = False,
+    time_recorder=None
 ) -> Dict:
     """Solve the Fleet Size-and-Mix MILP.
 
@@ -85,6 +86,7 @@ def solve_fsm_problem(
             :func:`fleetmix.utils.solver.pick_solver` chooses CBC/Gurobi/CPLEX based
             on environment variables.
         verbose: If *True* prints solver progress to stdout.
+        time_recorder: Optional TimeRecorder instance to measure post-optimization time.
 
     Returns:
         Dict: A dictionary with keys
@@ -200,15 +202,27 @@ def solve_fsm_problem(
     # Improvement phase
     post_optimization_time = None
     if parameters.post_optimization:
-        post_start = time.time()
-        solution = improve_solution(
-            solution,
-            configurations_df,
-            customers_df,
-            parameters
-        )
-        post_end = time.time()
-        post_optimization_time = post_end - post_start
+        if time_recorder:
+            with time_recorder.measure("fsm_post_optimization"):
+                post_start = time.time()
+                solution = improve_solution(
+                    solution,
+                    configurations_df,
+                    customers_df,
+                    parameters
+                )
+                post_end = time.time()
+                post_optimization_time = post_end - post_start
+        else:
+            post_start = time.time()
+            solution = improve_solution(
+                solution,
+                configurations_df,
+                customers_df,
+                parameters
+            )
+            post_end = time.time()
+            post_optimization_time = post_end - post_start
 
     # Record post-optimization runtime
     solution['post_optimization_runtime_sec'] = post_optimization_time

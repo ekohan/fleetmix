@@ -48,7 +48,8 @@ def save_optimization_results(
     is_benchmark: bool = False,
     expected_vehicles: int | None = None,
     solver_runtime_sec: float = None,
-    post_optimization_runtime_sec: float = None
+    post_optimization_runtime_sec: float = None,
+    time_measurements: list = None
 ) -> None:
     """Save optimization results to a file (Excel or JSON) and create visualization"""
     
@@ -205,6 +206,22 @@ def save_optimization_results(
         ]
     }
 
+    # Process time measurements if provided
+    if time_measurements:
+        time_measurements_data = []
+        for measurement in time_measurements:
+            time_measurements_data.extend([
+                (f'{measurement.span_name}_wall_time', measurement.wall_time),
+                (f'{measurement.span_name}_process_user_time', measurement.process_user_time),
+                (f'{measurement.span_name}_process_system_time', measurement.process_system_time),
+                (f'{measurement.span_name}_children_user_time', measurement.children_user_time),
+                (f'{measurement.span_name}_children_system_time', measurement.children_system_time),
+                (f'{measurement.span_name}_total_cpu_time', 
+                 measurement.process_user_time + measurement.process_system_time + 
+                 measurement.children_user_time + measurement.children_system_time)
+            ])
+        data['time_measurements'] = time_measurements_data
+
     try:
         if format == 'json':
             _write_to_json(output_filename, data)
@@ -257,6 +274,12 @@ def _write_to_excel(filename: str, data: dict) -> None:
         pd.DataFrame(data['execution_details'], columns=['Metric', 'Value']).to_excel(
             writer, sheet_name='Execution Details', index=False
         )
+        
+        # Sheet 7: Time Measurements (if available)
+        if 'time_measurements' in data:
+            pd.DataFrame(data['time_measurements'], columns=['Metric', 'Value']).to_excel(
+                writer, sheet_name='Time Measurements', index=False
+            )
 
 def _write_to_json(filename: str, data: dict) -> None:
     """Write optimization results to JSON file."""
@@ -290,6 +313,10 @@ def _write_to_json(filename: str, data: dict) -> None:
         'Other Considerations': dict(data['other_considerations']),
         'Execution Details': dict(data['execution_details'])
     }
+    
+    # Add time measurements if available
+    if 'time_measurements' in data:
+        json_data['Time Measurements'] = dict(data['time_measurements'])
 
     with open(filename, 'w') as f:
         json.dump(json_data, f, cls=NumpyEncoder, indent=2)

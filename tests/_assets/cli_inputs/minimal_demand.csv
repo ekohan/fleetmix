@@ -1,0 +1,4 @@
+ClientID,Lat,Lon,ProductType,Kg
+C1,10.0,10.0,Dry,5
+C1,10.0,10.0,Chilled,0
+C1,10.0,10.0,Frozen,0

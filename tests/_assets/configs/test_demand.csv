@@ -1,0 +1,6 @@
+Customer_ID,Customer_Name,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand
+C001,Test Customer 1,0.05,0.05,5,0,0
+C002,Test Customer 2,0.10,0.10,10,5,0
+C003,Test Customer 3,0.15,0.15,0,10,5
+C004,Test Customer 4,0.20,0.20,15,0,0
+C005,Test Customer 5,0.25,0.25,20,5,5 

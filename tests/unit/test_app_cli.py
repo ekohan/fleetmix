@@ -66,7 +66,6 @@ def setup_cli_assets(tmp_path_factory):
             if not is_tmp_subdir:
                  shutil.rmtree(dir_to_remove, ignore_errors=True)
 
-@pytest.mark.skip(reason="Skipping, check")
 def test_optimize_command_success(tmp_path):
     """Test 'fleetmix optimize' with minimal valid inputs.
     Temporarily simplified to only check exit code due to file system inconsistencies.
@@ -115,7 +114,6 @@ def test_benchmark_list_cvrp():
     assert "Available" in result.stdout and "CVRP" in result.stdout and "Instances" in result.stdout
     assert CVRP_INSTANCE in result.stdout
 
-# @pytest.mark.skip(reason="Skipping due to known issue where benchmark runs lead to AttributeError: 'dict' object has no attribute 'empty' in app.py result processing.")
 def test_benchmark_run_mcvrp_instance(tmp_path):
     """Test running a single MCVRP benchmark instance."""
     output_dir = tmp_path / "benchmark_mcvrp_cli"
@@ -128,7 +126,6 @@ def test_benchmark_run_mcvrp_instance(tmp_path):
     assert output_dir.exists()
     assert (output_dir / f"mcvrp_{MCVRP_INSTANCE}.json").exists()
 
-# @pytest.mark.skip(reason="Skipping due to known issue where benchmark runs lead to AttributeError: 'dict' object has no attribute 'empty' in app.py result processing.")
 def test_benchmark_run_cvrp_instance(tmp_path):
     """Test running a single CVRP benchmark instance."""
     output_dir = tmp_path / "benchmark_cvrp_cli"

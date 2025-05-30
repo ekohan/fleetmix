@@ -32,11 +32,11 @@ goods:
 # Clustering Parameters
 clustering:
   max_depth: 20
-  method: combine  # Options: minibatch_kmeans, kmedoids, agglomerative, combine
+  method: kmedoids  # Options: minibatch_kmeans, kmedoids, agglomerative, combine
   distance: euclidean  # Options: euclidean, composite (only for agglomerative)
   geo_weight: 0.7    # Weight for geographical distance (composite-only)
   demand_weight: 0.3  # Weight for demand distance (composite-only)
-  route_time_estimation: 'BHH'  # Options: TSP, BHH, Legacy
+  route_time_estimation: 'TSP'  # Options: TSP, BHH, Legacy
 
 prune_tsp: false  # Skip TSP based on BHH estimate
 
@@ -62,4 +62,4 @@ nearest_merge_candidates: 100    # max neighbour clusters to probe
 max_improvement_iterations: 10   # max iterations for iterative post-optimization
 
 # Output format
-format: 'excel'  # Output format (excel or json)
+format: 'json'  # Output format (excel or json)

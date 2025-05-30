@@ -17,6 +17,7 @@ from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.logging import LogLevel, setup_logging, log_progress, log_success, log_error
+from fleetmix.core_types import FleetmixSolution
 
 app = typer.Typer(
     help="Fleetmix: Fleet Size and Mix optimizer for heterogeneous fleets",
@@ -97,20 +98,8 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         # Save results as JSON for later batch analysis
         output_path = params.results_dir / f"mcvrp_{instance}.json"
         save_optimization_results(
-            execution_time=time.time() - start_time,
-            solver_name=solution["solver_name"],
-            solver_status=solution["solver_status"],
-            solver_runtime_sec=solution["solver_runtime_sec"],
-            post_optimization_runtime_sec=solution["post_optimization_runtime_sec"],
+            solution=solution,
             configurations_df=configs_df,
-            selected_clusters=solution["selected_clusters"],
-            total_fixed_cost=solution["total_fixed_cost"],
-            total_variable_cost=solution["total_variable_cost"],
-            total_light_load_penalties=solution["total_light_load_penalties"],
-            total_compartment_penalties=solution["total_compartment_penalties"],
-            total_penalties=solution["total_penalties"],
-            vehicles_used=solution["vehicles_used"],
-            missing_customers=solution["missing_customers"],
             parameters=params,
             filename=str(output_path),
             format="json",
@@ -123,25 +112,19 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
         
-        total_cost = (
-            solution['total_fixed_cost'] + 
-            solution['total_variable_cost'] + 
-            solution['total_penalties']
-        )
-        
-        table.add_row("Total Cost", f"${total_cost:,.2f}")
-        table.add_row("Fixed Cost", f"${solution['total_fixed_cost']:,.2f}")
-        table.add_row("Variable Cost", f"${solution['total_variable_cost']:,.2f}")
-        table.add_row("Penalties", f"${solution['total_penalties']:,.2f}")
-        table.add_row("Vehicles Used", str(solution['vehicles_used']))
+        table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
+        table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
+        table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
+        table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
+        table.add_row("Vehicles Used", str(solution.vehicles_used))
         table.add_row("Expected Vehicles", str(params.expected_vehicles))
-        table.add_row("Missing Customers", str(len(solution['missing_customers'])))
-        table.add_row("Solver Status", solution['solver_status'])
-        table.add_row("Solver Time", f"{solution['solver_runtime_sec']:.1f}s")
+        table.add_row("Missing Customers", str(len(solution.missing_customers)))
+        table.add_row("Solver Status", solution.solver_status)
+        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
         
         # Add cluster load percentages if available
-        if 'selected_clusters' in solution and not solution['selected_clusters'].empty:
-            for i, (_, cluster) in enumerate(solution['selected_clusters'].iterrows()):
+        if not solution.selected_clusters.empty:
+            for i, (_, cluster) in enumerate(solution.selected_clusters.iterrows()):
                 # Try to get load percentage from different possible columns
                 load_pct = None
                 if 'Load_total_pct' in cluster:
@@ -200,20 +183,8 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         # Save results as JSON for later batch analysis
         output_path = params.results_dir / f"cvrp_{instance}_normal.json"
         save_optimization_results(
-            execution_time=time.time() - start_time,
-            solver_name=solution["solver_name"],
-            solver_status=solution["solver_status"],
-            solver_runtime_sec=solution["solver_runtime_sec"],
-            post_optimization_runtime_sec=solution["post_optimization_runtime_sec"],
+            solution=solution,
             configurations_df=configs_df,
-            selected_clusters=solution["selected_clusters"],
-            total_fixed_cost=solution["total_fixed_cost"],
-            total_variable_cost=solution["total_variable_cost"],
-            total_light_load_penalties=solution["total_light_load_penalties"],
-            total_compartment_penalties=solution["total_compartment_penalties"],
-            total_penalties=solution["total_penalties"],
-            vehicles_used=solution["vehicles_used"],
-            missing_customers=solution["missing_customers"],
             parameters=params,
             filename=str(output_path),
             format="json",
@@ -226,25 +197,19 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
         
-        total_cost = (
-            solution['total_fixed_cost'] + 
-            solution['total_variable_cost'] + 
-            solution['total_penalties']
-        )
-        
-        table.add_row("Total Cost", f"${total_cost:,.2f}")
-        table.add_row("Fixed Cost", f"${solution['total_fixed_cost']:,.2f}")
-        table.add_row("Variable Cost", f"${solution['total_variable_cost']:,.2f}")
-        table.add_row("Penalties", f"${solution['total_penalties']:,.2f}")
-        table.add_row("Vehicles Used", str(solution['vehicles_used']))
+        table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
+        table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
+        table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
+        table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
+        table.add_row("Vehicles Used", str(solution.vehicles_used))
         table.add_row("Expected Vehicles", str(params.expected_vehicles))
-        table.add_row("Missing Customers", str(len(solution['missing_customers'])))
-        table.add_row("Solver Status", solution['solver_status'])
-        table.add_row("Solver Time", f"{solution['solver_runtime_sec']:.1f}s")
+        table.add_row("Missing Customers", str(len(solution.missing_customers)))
+        table.add_row("Solver Status", solution.solver_status)
+        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
         
         # Add cluster load percentages if available
-        if 'selected_clusters' in solution and not solution['selected_clusters'].empty:
-            for i, (_, cluster) in enumerate(solution['selected_clusters'].iterrows()):
+        if not solution.selected_clusters.empty:
+            for i, (_, cluster) in enumerate(solution.selected_clusters.iterrows()):
                 # Try to get load percentage from different possible columns
                 load_pct = None
                 if 'Load_total_pct' in cluster:
@@ -338,20 +303,14 @@ def optimize(
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
         
-        total_cost = (
-            solution['total_fixed_cost'] + 
-            solution['total_variable_cost'] + 
-            solution['total_penalties']
-        )
-        
-        table.add_row("Total Cost", f"${total_cost:,.2f}")
-        table.add_row("Fixed Cost", f"${solution['total_fixed_cost']:,.2f}")
-        table.add_row("Variable Cost", f"${solution['total_variable_cost']:,.2f}")
-        table.add_row("Penalties", f"${solution['total_penalties']:,.2f}")
-        table.add_row("Vehicles Used", str(solution['total_vehicles']))
-        table.add_row("Missing Customers", str(len(solution['missing_customers'])))
-        table.add_row("Solver Status", solution['solver_status'])
-        table.add_row("Solver Time", f"{solution['solver_runtime_sec']:.1f}s")
+        table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
+        table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
+        table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
+        table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
+        table.add_row("Vehicles Used", str(solution.total_vehicles))
+        table.add_row("Missing Customers", str(len(solution.missing_customers)))
+        table.add_row("Solver Status", solution.solver_status)
+        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
         
         console.print(table)
         log_success(f"Results saved to {output}/")
@@ -519,20 +478,8 @@ def convert(
         results_path = params.results_dir / f"{filename_stub}.{ext}"
         
         save_optimization_results(
-            execution_time=time.time() - start_time,
-            solver_name=solution["solver_name"],
-            solver_status=solution["solver_status"],
-            solver_runtime_sec=solution["solver_runtime_sec"],
-            post_optimization_runtime_sec=solution["post_optimization_runtime_sec"],
+            solution=solution,
             configurations_df=configs_df,
-            selected_clusters=solution["selected_clusters"],
-            total_fixed_cost=solution["total_fixed_cost"],
-            total_variable_cost=solution["total_variable_cost"],
-            total_light_load_penalties=solution["total_light_load_penalties"],
-            total_compartment_penalties=solution["total_compartment_penalties"],
-            total_penalties=solution["total_penalties"],
-            vehicles_used=solution["vehicles_used"],
-            missing_customers=solution["missing_customers"],
             parameters=params,
             filename=results_path,
             format=format,

@@ -80,19 +80,19 @@ EOF"""
         
         # Verify we got a solution
         assert solution is not None
-        assert 'solver_status' in solution
-        assert 'vehicles_used' in solution
+        assert solution.solver_status is not None
+        assert solution.vehicles_used is not None
         
         # Check basic solution properties
-        assert solution['solver_status'] in ['Optimal', 'Feasible', 'TimeLimit']
+        assert solution.solver_status in ['Optimal', 'Feasible', 'TimeLimit']
         
         # Verify cost components exist
-        assert 'total_fixed_cost' in solution
-        assert 'total_variable_cost' in solution
+        assert solution.total_fixed_cost is not None
+        assert solution.total_variable_cost is not None
         
         # For simple instances, should use at least one vehicle
-        if isinstance(solution['vehicles_used'], dict):
-            total_vehicles = sum(solution['vehicles_used'].values())
+        if isinstance(solution.vehicles_used, dict):
+            total_vehicles = sum(solution.vehicles_used.values())
             assert total_vehicles > 0
 
     def test_mcvrp_simple_instance(self, tmp_path):
@@ -164,18 +164,18 @@ EOF"""
         
         # Verify solution
         assert solution is not None
-        assert 'solver_status' in solution
+        assert solution.solver_status is not None
         
         # Check basic solution properties
-        assert solution['solver_status'] in ['Optimal', 'Feasible', 'TimeLimit']
+        assert solution.solver_status in ['Optimal', 'Feasible', 'TimeLimit']
         
         # Verify cost components exist
-        assert 'total_fixed_cost' in solution
-        assert 'total_variable_cost' in solution
+        assert solution.total_fixed_cost is not None
+        assert solution.total_variable_cost is not None
         
         # For MCVRP, should use vehicles
-        if isinstance(solution['vehicles_used'], dict):
-            total_vehicles = sum(solution['vehicles_used'].values())
+        if isinstance(solution.vehicles_used, dict):
+            total_vehicles = sum(solution.vehicles_used.values())
             assert total_vehicles > 0
 
     def test_cvrp_vrp_mode(self, tmp_path):
@@ -232,21 +232,7 @@ EOF"""
         # Verify VRP-specific output
         assert solution is not None
         
-        # In VRP mode, should have route sequences
-        if 'route_sequences' in solution:
-            sequences = solution['route_sequences']
-            assert isinstance(sequences, list)
-            
-            # Each sequence should be a list of customer visits
-            for seq in sequences:
-                assert isinstance(seq, list)
-                assert len(seq) >= 3  # Depot -> Customer -> Depot minimum
-                
-        # Check route information if available
-        if 'route_details' in solution:
-            for route in solution['route_details']:
-                assert 'distance' in route or 'time' in route
-                assert 'load' in route or 'demand' in route
+        assert not solution.selected_clusters.empty
 
     def test_benchmark_type_split(self, tmp_path):
         """Test CVRP with SPLIT benchmark type."""
@@ -305,7 +291,7 @@ EOF"""
         )
         
         assert solution is not None
-        assert solution['solver_status'] in ['Optimal', 'Feasible', 'TimeLimit']
+        assert solution.solver_status in ['Optimal', 'Feasible', 'TimeLimit']
 
     def test_small_real_dataset(self):
         """Test with real small dataset if available."""

@@ -14,6 +14,7 @@ from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.time_measurement import TimeRecorder
+from fleetmix.core_types import FleetmixSolution
 
 logger = FleetmixLogger.get_logger('fleetmix.api')
 
@@ -24,7 +25,7 @@ def optimize(
     output_dir: str = "results",
     format: str = "excel",
     verbose: bool = False
-) -> Dict[str, Any]:
+) -> FleetmixSolution:
     """
     Run the Fleetmix optimization pipeline.
     
@@ -179,11 +180,14 @@ def optimize(
                         time_recorder=time_recorder
                     )
                 
+                # Add time measurements to the solution object itself
+                solution.time_measurements = time_recorder.measurements
+
                 # Check if optimization was successful
-                if solution['solver_status'] != 'Optimal':
-                    if 'infeasible' in solution['solver_status'].lower():
+                if solution.solver_status != 'Optimal':
+                    if 'infeasible' in solution.solver_status.lower():
                         # Analyze why it's infeasible
-                        missing_count = len(solution.get('missing_customers', []))
+                        missing_count = len(solution.missing_customers)
                         total_customers = len(customers)
                         
                         error_msg = (
@@ -209,7 +213,7 @@ def optimize(
                             
                         raise ValueError(error_msg)
                     else:
-                        log_warning(f"Solver returned non-optimal status: {solution['solver_status']}")
+                        log_warning(f"Solver returned non-optimal status: {solution.solver_status}")
                     
             except ValueError:
                 raise
@@ -223,23 +227,10 @@ def optimize(
             if output_dir:
                 try:
                     save_optimization_results(
-                        execution_time=solution.get('total_runtime_sec', time.time() - start_time),
-                        solver_name=solution['solver_name'],
-                        solver_status=solution['solver_status'],
-                        solver_runtime_sec=solution['solver_runtime_sec'],
-                        post_optimization_runtime_sec=solution['post_optimization_runtime_sec'],
+                        solution=solution, # Pass the whole solution object
                         configurations_df=configs_df,
-                        selected_clusters=solution['selected_clusters'],
-                        total_fixed_cost=solution['total_fixed_cost'],
-                        total_variable_cost=solution['total_variable_cost'],
-                        total_light_load_penalties=solution['total_light_load_penalties'],
-                        total_compartment_penalties=solution['total_compartment_penalties'],
-                        total_penalties=solution['total_penalties'],
-                        vehicles_used=solution['vehicles_used'],
-                        missing_customers=solution['missing_customers'],
                         parameters=params,
-                        format=format,
-                        time_measurements=time_recorder.measurements
+                        format=format
                     )
                 except Exception as e:
                     log_warning(f"Failed to save results: {str(e)}")

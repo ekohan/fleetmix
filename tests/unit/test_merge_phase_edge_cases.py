@@ -13,6 +13,7 @@ from fleetmix.post_optimization.merge_phase import (
     _get_merged_route_time
 )
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import FleetmixSolution
 
 
 @pytest.fixture
@@ -32,18 +33,19 @@ def params_with_post_opt():
 def test_improve_solution_no_clusters(simple_params):
     """Test improve_solution when solution has no clusters."""
     # Solution without clusters key
-    initial_solution = {
-        'total_cost': 100,
-        'total_fixed_cost': 50,
-        'total_variable_cost': 50
-    }
+    initial_solution_obj = FleetmixSolution(
+        total_cost=100,
+        total_fixed_cost=50,
+        total_variable_cost=50,
+    )
     
     configs_df = pd.DataFrame()
     customers_df = pd.DataFrame()
     
     # Should return the initial solution unchanged
-    result = improve_solution(initial_solution, configs_df, customers_df, simple_params)
-    assert result == initial_solution
+    result = improve_solution(initial_solution_obj, configs_df, customers_df, simple_params)
+    assert result.total_cost == initial_solution_obj.total_cost
+    assert result.selected_clusters.empty
 
 
 def test_improve_solution_missing_goods_columns(params_with_post_opt):
@@ -60,10 +62,10 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
         'Method': ['test']
     })
     
-    initial_solution = {
-        'total_cost': 100,
-        'selected_clusters': selected_clusters
-    }
+    initial_solution_obj = FleetmixSolution(
+        total_cost=100,
+        selected_clusters=selected_clusters
+    )
     
     configs_df = pd.DataFrame({
         'Config_ID': ['Small'],
@@ -82,8 +84,8 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
     })
     
     # This should handle missing goods columns
-    result = improve_solution(initial_solution, configs_df, customers_df, params_with_post_opt)
-    assert 'selected_clusters' in result
+    result = improve_solution(initial_solution_obj, configs_df, customers_df, params_with_post_opt)
+    assert not result.selected_clusters.empty
 
 
 def test_generate_merge_phase_clusters_with_small_clusters(simple_params):

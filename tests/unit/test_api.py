@@ -46,21 +46,21 @@ def test_optimize_with_dataframe(simple_demand_df, base_config_path):
         verbose=False
     )
     
-    # Check result structure
-    assert 'total_fixed_cost' in result
-    assert 'total_variable_cost' in result
-    assert 'total_penalties' in result
-    assert 'vehicles_used' in result
-    assert 'selected_clusters' in result
-    assert 'missing_customers' in result
-    assert 'solver_status' in result
-    assert 'solver_runtime_sec' in result
+    # Check result structure using attribute access
+    assert result.total_fixed_cost is not None
+    assert result.total_variable_cost is not None
+    assert result.total_penalties is not None
+    assert result.vehicles_used is not None
+    assert result.selected_clusters is not None
+    assert result.missing_customers is not None
+    assert result.solver_status is not None
+    assert result.solver_runtime_sec is not None
     
     # Check that solution is optimal
-    assert result['solver_status'] == 'Optimal'
+    assert result.solver_status == 'Optimal'
     
     # Check that all customers are served
-    assert len(result['missing_customers']) == 0
+    assert len(result.missing_customers) == 0
 
 
 def test_optimize_with_csv_file(simple_demand_df, base_config_path, tmp_path):
@@ -78,8 +78,8 @@ def test_optimize_with_csv_file(simple_demand_df, base_config_path, tmp_path):
     )
     
     # Check result
-    assert result['solver_status'] == 'Optimal'
-    assert len(result['missing_customers']) == 0
+    assert result.solver_status == 'Optimal'
+    assert len(result.missing_customers) == 0
 
 
 def test_optimize_with_parameters_object(simple_demand_df):
@@ -97,7 +97,7 @@ def test_optimize_with_parameters_object(simple_demand_df):
     )
     
     # Check result
-    assert result['solver_status'] == 'Optimal'
+    assert result.solver_status == 'Optimal'
 
 
 def test_optimize_with_missing_columns():
@@ -139,7 +139,7 @@ def test_optimize_with_default_config(simple_demand_df):
     )
     
     # Check result
-    assert 'solver_status' in result
+    assert result.solver_status is not None
 
 
 def test_optimize_saves_results(simple_demand_df, base_config_path, tmp_path):

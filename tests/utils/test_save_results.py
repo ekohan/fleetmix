@@ -17,7 +17,7 @@ from fleetmix.utils.save_results import (
     _write_to_json
 )
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import BenchmarkType, VRPSolution
+from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution
 
 
 class TestSaveOptimizationResults(unittest.TestCase):
@@ -25,9 +25,34 @@ class TestSaveOptimizationResults(unittest.TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.execution_time = 10.5
-        self.solver_name = "TestSolver"
-        self.solver_status = "Optimal"
+        # Create a FleetmixSolution instance for testing
+        self.solution = FleetmixSolution(
+            selected_clusters=pd.DataFrame({
+                'Cluster_ID': ['CL1', 'CL2'],
+                'Config_ID': ['C1', 'C2'],
+                'Method': ['kmeans', 'hierarchical'],
+                'Customers': [['A', 'B'], ['C', 'D']],
+                'Total_Demand': [{'Dry': 100, 'Chilled': 50, 'Frozen': 0}, 
+                               {'Dry': 200, 'Chilled': 0, 'Frozen': 100}],
+                'Route_Time': [3.5, 4.2],
+                'Centroid_Latitude': [4.5, 4.6],
+                'Centroid_Longitude': [-74.0, -74.1]
+            }),
+            total_fixed_cost=300.0,
+            total_variable_cost=150.0,
+            total_light_load_penalties=20.0,
+            total_compartment_penalties=10.0,
+            total_penalties=30.0,
+            total_cost=480.0,
+            vehicles_used=pd.Series({'Type1': 1, 'Type2': 1}).to_dict(),
+            total_vehicles=2,
+            missing_customers=set(),
+            solver_name="TestSolver",
+            solver_status="Optimal",
+            solver_runtime_sec=10.5,
+            post_optimization_runtime_sec=None,
+            time_measurements=None
+        )
         
         self.configurations_df = pd.DataFrame({
             'Config_ID': ['C1', 'C2'],
@@ -36,29 +61,6 @@ class TestSaveOptimizationResults(unittest.TestCase):
             'Fixed_Cost': [100, 200]
         })
         
-        self.selected_clusters = pd.DataFrame({
-            'Cluster_ID': ['CL1', 'CL2'],
-            'Config_ID': ['C1', 'C2'],
-            'Method': ['kmeans', 'hierarchical'],
-            'Customers': [['A', 'B'], ['C', 'D']],
-            'Total_Demand': [{'Dry': 100, 'Chilled': 50, 'Frozen': 0}, 
-                           {'Dry': 200, 'Chilled': 0, 'Frozen': 100}],
-            'Route_Time': [3.5, 4.2],
-            'Estimated_Distance': [50.0, 75.0],
-            'TSP_Sequence': [['Depot', 'A', 'B', 'Depot'], ['Depot', 'C', 'D', 'Depot']],
-            'Centroid_Latitude': [4.5, 4.6],
-            'Centroid_Longitude': [-74.0, -74.1]
-        })
-        
-        self.total_fixed_cost = 300.0
-        self.total_variable_cost = 150.0
-        self.total_light_load_penalties = 20.0
-        self.total_compartment_penalties = 10.0
-        self.total_penalties = 30.0
-        self.vehicles_used = pd.Series({'Type1': 1, 'Type2': 1})
-        self.missing_customers = set()
-        
-        # Create mock parameters
         self.parameters = MagicMock(spec=Parameters)
         self.parameters.results_dir = Path(tempfile.gettempdir())
         self.parameters.demand_file = "test_demand.csv"
@@ -93,19 +95,9 @@ class TestSaveOptimizationResults(unittest.TestCase):
         
         try:
             save_optimization_results(
-                self.execution_time,
-                self.solver_name,
-                self.solver_status,
-                self.configurations_df,
-                self.selected_clusters,
-                self.total_fixed_cost,
-                self.total_variable_cost,
-                self.total_light_load_penalties,
-                self.total_compartment_penalties,
-                self.total_penalties,
-                self.vehicles_used,
-                self.missing_customers,
-                self.parameters,
+                solution=self.solution,
+                configurations_df=self.configurations_df,
+                parameters=self.parameters,
                 filename=temp_file,
                 format='excel'
             )
@@ -129,19 +121,9 @@ class TestSaveOptimizationResults(unittest.TestCase):
         
         try:
             save_optimization_results(
-                self.execution_time,
-                self.solver_name,
-                self.solver_status,
-                self.configurations_df,
-                self.selected_clusters,
-                self.total_fixed_cost,
-                self.total_variable_cost,
-                self.total_light_load_penalties,
-                self.total_compartment_penalties,
-                self.total_penalties,
-                self.vehicles_used,
-                self.missing_customers,
-                self.parameters,
+                solution=self.solution,
+                configurations_df=self.configurations_df,
+                parameters=self.parameters,
                 filename=temp_file,
                 format='json'
             )
@@ -161,19 +143,9 @@ class TestSaveOptimizationResults(unittest.TestCase):
         mock_datetime.now.return_value.strftime.return_value = "20240101_120000"
         
         save_optimization_results(
-            self.execution_time,
-            self.solver_name,
-            self.solver_status,
-            self.configurations_df,
-            self.selected_clusters,
-            self.total_fixed_cost,
-            self.total_variable_cost,
-            self.total_light_load_penalties,
-            self.total_compartment_penalties,
-            self.total_penalties,
-            self.vehicles_used,
-            self.missing_customers,
-            self.parameters
+            solution=self.solution,
+            configurations_df=self.configurations_df,
+            parameters=self.parameters
         )
         
         # Check that filename was generated with timestamp
@@ -187,26 +159,31 @@ class TestSaveOptimizationResults(unittest.TestCase):
         """Test saving with time measurements."""
         from fleetmix.utils.time_measurement import TimeMeasurement
         
-        time_measurements = [
+        time_measurements_list = [
             TimeMeasurement("step1", 1.0, 0.5, 0.1, 0.2, 0.1),
             TimeMeasurement("step2", 2.0, 1.0, 0.2, 0.3, 0.2)
         ]
         
+        # Create a solution object that includes these time_measurements
+        solution_with_times = FleetmixSolution(
+            selected_clusters=self.solution.selected_clusters,
+            total_fixed_cost=self.solution.total_fixed_cost,
+            total_variable_cost=self.solution.total_variable_cost,
+            total_penalties=self.solution.total_penalties,
+            total_cost=self.solution.total_cost,
+            vehicles_used=self.solution.vehicles_used,
+            total_vehicles=self.solution.total_vehicles,
+            missing_customers=self.solution.missing_customers,
+            solver_name=self.solution.solver_name,
+            solver_status=self.solution.solver_status,
+            solver_runtime_sec=self.solution.solver_runtime_sec,
+            time_measurements=time_measurements_list
+        )
+
         save_optimization_results(
-            self.execution_time,
-            self.solver_name,
-            self.solver_status,
-            self.configurations_df,
-            self.selected_clusters,
-            self.total_fixed_cost,
-            self.total_variable_cost,
-            self.total_light_load_penalties,
-            self.total_compartment_penalties,
-            self.total_penalties,
-            self.vehicles_used,
-            self.missing_customers,
-            self.parameters,
-            time_measurements=time_measurements
+            solution=solution_with_times,
+            configurations_df=self.configurations_df,
+            parameters=self.parameters
         )
         
         # Check that time measurements were included

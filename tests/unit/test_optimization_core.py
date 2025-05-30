@@ -85,18 +85,18 @@ def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_c
     )
     
     # Check result structure
-    assert 'total_cost' in result
-    assert 'total_fixed_cost' in result
-    assert 'total_variable_cost' in result
-    assert 'total_penalties' in result
-    assert 'selected_clusters' in result
-    assert 'vehicles_used' in result
-    assert 'missing_customers' in result
-    assert 'solver_status' in result
-    assert 'solver_runtime_sec' in result
+    assert result.total_cost is not None
+    assert result.total_fixed_cost is not None
+    assert result.total_variable_cost is not None
+    assert result.total_penalties is not None
+    assert result.selected_clusters is not None
+    assert result.vehicles_used is not None
+    assert result.missing_customers is not None
+    assert result.solver_status is not None
+    assert result.solver_runtime_sec is not None
     
     # Check that solution is optimal
-    assert result['solver_status'] == 'Optimal'
+    assert result.solver_status == 'Optimal'
 
 
 def test_solve_fsm_problem_with_post_optimization(simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt):
@@ -110,8 +110,7 @@ def test_solve_fsm_problem_with_post_optimization(simple_clusters_df, simple_con
     )
     
     # Check that post-optimization runtime is recorded
-    assert 'post_optimization_runtime_sec' in result
-    assert result['post_optimization_runtime_sec'] is not None
+    assert result.post_optimization_runtime_sec is not None
 
 
 def test_create_model(simple_clusters_df, simple_configs_df, simple_params):
@@ -270,9 +269,8 @@ def test_calculate_solution_statistics(simple_clusters_df, simple_configs_df, si
         c_vk
     )
     
-    # Check statistics structure
-    assert 'total_fixed_cost' in stats
-    assert 'total_variable_cost' in stats
-    assert 'total_penalties' in stats
-    assert 'vehicles_used' in stats
-    assert 'total_vehicles' in stats 
+    assert stats.total_fixed_cost is not None
+    assert stats.total_variable_cost is not None
+    assert stats.total_penalties is not None
+    assert stats.vehicles_used is not None
+    assert stats.total_vehicles is not None 

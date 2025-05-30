@@ -88,28 +88,17 @@ def main():
                 verbose=args.verbose,
                 time_recorder=time_recorder
             )
-        total_cost = solution['total_fixed_cost'] + solution['total_variable_cost'] + solution['total_penalties']
+        total_cost = solution.total_fixed_cost + solution.total_variable_cost + solution.total_penalties
         progress.advance(f"Optimized fleet: ${total_cost:,.2f} total cost")
+
+        solution.time_measurements = time_recorder.measurements
 
         # Step 5: Save results
         save_optimization_results(
-            execution_time=time.time() - start_time,
-            solver_name=solution['solver_name'],
-            solver_status=solution['solver_status'],
-            solver_runtime_sec=solution['solver_runtime_sec'],
-            post_optimization_runtime_sec=solution['post_optimization_runtime_sec'],
+            solution=solution,
             configurations_df=configs_df,
-            selected_clusters=solution['selected_clusters'],
-            total_fixed_cost=solution['total_fixed_cost'],
-            total_variable_cost=solution['total_variable_cost'],
-            total_light_load_penalties=solution['total_light_load_penalties'],
-            total_compartment_penalties=solution['total_compartment_penalties'],
-            total_penalties=solution['total_penalties'],
-            vehicles_used=solution['vehicles_used'],
-            missing_customers=solution['missing_customers'],
             parameters=params,
-            format=args.format,
-            time_measurements=time_recorder.measurements
+            format=args.format
         )
         progress.advance(f"Results saved (execution time: {time.time() - start_time:.1f}s)")
     

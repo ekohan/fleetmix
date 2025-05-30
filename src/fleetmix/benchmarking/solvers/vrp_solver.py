@@ -159,7 +159,7 @@ class VRPSolver:
                 product_instances.append((good, product_customers))
         
         # Solve in parallel using existing solve method
-        solutions = Parallel(n_jobs=-1)(
+        solutions = Parallel(n_jobs=-1, backend='loky')(
             delayed(self._solve_single_product)(customers, verbose)
             for _, customers in product_instances
         )

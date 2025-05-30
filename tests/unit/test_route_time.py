@@ -1,8 +1,9 @@
 import pytest
 import pandas as pd
 import numpy as np
+from unittest.mock import patch, MagicMock
 
-from fleetmix.utils.route_time import _legacy_estimation, _bhh_estimation
+from fleetmix.utils.route_time import _legacy_estimation, _bhh_estimation, estimate_route_time
 
 
 def test_legacy_estimation_zero_customers():
@@ -35,4 +36,45 @@ def test_bhh_estimation_two_customers():
     # Here radius=~111 km cancels with avg_speed=111, so expected = 0.765 * sqrt(2) * sqrt(pi)
     expected = 0.765 * np.sqrt(2) * np.sqrt(np.pi)
     # Looser tolerance (0.3%) for numeric approximations
-    assert est == pytest.approx(expected, rel=3e-3) 
+    assert est == pytest.approx(expected, rel=3e-3)
+
+
+class TestRouteTime:
+    """Test route time estimation functions"""
+    
+    def test_tsp_prune_warning(self):
+        """Test TSP pruning logs warning when BHH estimate exceeds max route time"""
+        # Create sample customer data
+        cluster_customers = pd.DataFrame({
+            'Customer_ID': ['C1', 'C2', 'C3'],
+            'Latitude': [4.5, 4.6, 4.7],
+            'Longitude': [-74.0, -74.1, -74.2]
+        })
+        
+        depot = {'latitude': 4.65, 'longitude': -74.15}
+        
+        # Mock the BHH estimation to return a value that exceeds max_route_time
+        with patch('fleetmix.utils.route_time._bhh_estimation') as mock_bhh:
+            mock_bhh.return_value = 15.0  # BHH returns 15 hours
+            
+            with patch('fleetmix.utils.route_time.logger') as mock_logger:
+                # Call with prune_tsp=True and max_route_time=10
+                time, sequence = estimate_route_time(
+                    cluster_customers,
+                    depot,
+                    service_time=15,
+                    avg_speed=30,
+                    method='TSP',
+                    max_route_time=10,
+                    prune_tsp=True
+                )
+                
+                # Check that warning was logged
+                mock_logger.warning.assert_any_call("Prune TSP: True, Max Route Time: 10")
+                # Check that the skipped message was logged
+                assert any("Cluster skipped TSP computation" in str(call) 
+                          for call in mock_logger.warning.call_args_list)
+                
+                # Check return values when pruned
+                assert time > 10  # Should return slightly over max_route_time
+                assert sequence == []  # Empty sequence when pruned 

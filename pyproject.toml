@@ -45,6 +45,7 @@ test = [
     "pytest-cov",
     "hypothesis",
     "pytest-xdist",
+    "requests",
 ]
 
 [tool.setuptools.package-dir]

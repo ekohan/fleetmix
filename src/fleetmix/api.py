@@ -54,12 +54,9 @@ def optimize(
         Exception: For unexpected errors with original details
     """
     try:
-        # Initialize TimeRecorder
+
         time_recorder = TimeRecorder()
-        
-        # Start global time measurement
         with time_recorder.measure("global"):
-            start_time = time.time()
             
             # Step 1: Load customer demand
             if isinstance(demand, pd.DataFrame):
@@ -180,7 +177,6 @@ def optimize(
                         time_recorder=time_recorder
                     )
                 
-                # Add time measurements to the solution object itself
                 solution.time_measurements = time_recorder.measurements
 
                 # Check if optimization was successful
@@ -239,7 +235,6 @@ def optimize(
             return solution
         
     except (FileNotFoundError, ValueError):
-        # Re-raise our custom errors as-is
         raise
     except Exception as e:
         # Wrap unexpected errors with context

@@ -310,14 +310,14 @@ class TestCoreAlgorithms:
         )
         
         # Verify solution structure
-        assert 'solver_status' in solution
-        assert 'total_fixed_cost' in solution
-        assert 'total_variable_cost' in solution
-        assert 'vehicles_used' in solution
+        assert solution.solver_status is not None
+        assert solution.total_fixed_cost is not None
+        assert solution.total_variable_cost is not None
+        assert solution.vehicles_used is not None
         
         # Costs should be non-negative
-        assert solution['total_fixed_cost'] >= 0
-        assert solution['total_variable_cost'] >= 0
+        assert solution.total_fixed_cost >= 0
+        assert solution.total_variable_cost >= 0
 
     def test_post_optimization_merge_phase(self, realistic_customers, realistic_config, temp_results_dir):
         """Test post-optimization merge phase algorithm."""
@@ -346,12 +346,12 @@ class TestCoreAlgorithms:
             verbose=False
         )
         
-        if solution['solver_status'] == 'Infeasible':
+        if solution.solver_status == 'Infeasible':
             pytest.skip("Base solution infeasible, cannot test merge phase")
         
         # Test merge phase if enabled and we have a solution
         if (realistic_config.post_optimization and 
-            not solution.get('selected_clusters', pd.DataFrame()).empty):
+            not solution.selected_clusters.empty):
             
             try:
                 improved_solution = improve_solution(
@@ -362,16 +362,16 @@ class TestCoreAlgorithms:
                 )
                 
                 # Merge phase should return a solution structure
-                assert 'total_fixed_cost' in improved_solution
-                assert 'total_variable_cost' in improved_solution
+                assert improved_solution.total_fixed_cost is not None
+                assert improved_solution.total_variable_cost is not None
                 
                 # Total cost should be <= original (merge phase should not worsen)
-                original_cost = (solution['total_fixed_cost'] + 
-                               solution['total_variable_cost'] + 
-                               solution['total_penalties'])
-                improved_cost = (improved_solution['total_fixed_cost'] + 
-                               improved_solution['total_variable_cost'] + 
-                               improved_solution['total_penalties'])
+                original_cost = (solution.total_fixed_cost + 
+                               solution.total_variable_cost + 
+                               solution.total_penalties)
+                improved_cost = (improved_solution.total_fixed_cost + 
+                               improved_solution.total_variable_cost + 
+                               improved_solution.total_penalties)
                 
                 # Allow for small numerical differences
                 assert improved_cost <= original_cost + 1e-6

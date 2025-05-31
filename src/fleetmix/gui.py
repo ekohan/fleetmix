@@ -15,6 +15,7 @@ from datetime import datetime, date
 import traceback
 from typing import Dict, Any, Optional, Tuple
 import numpy as np
+from dataclasses import is_dataclass, asdict
 
 import fleetmix.api as api
 from fleetmix.config.parameters import Parameters
@@ -112,6 +113,8 @@ def convert_numpy_types(obj):
         return obj.isoformat()
     elif isinstance(obj, Path):
         return str(obj)
+    elif is_dataclass(obj):
+        return convert_numpy_types(asdict(obj))
     return obj
 
 

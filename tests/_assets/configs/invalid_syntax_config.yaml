@@ -1,0 +1,3 @@
+valid_top_key:
+  badly_indented_list_item
+- item2 # This should cause a parsing error 

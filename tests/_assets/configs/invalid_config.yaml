@@ -1,0 +1,5 @@
+this_is_not_valid_yaml: @!#% 
+
+vehicles:
+  Tiny:
+    capacity: 10 # Bad indentation 

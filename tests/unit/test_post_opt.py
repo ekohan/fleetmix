@@ -5,6 +5,7 @@ import sys
 import fleetmix.post_optimization.merge_phase as merge_phase
 import fleetmix.optimization
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import FleetmixSolution
 
 # Helper to create a minimal clusters DataFrame with goods columns
 def make_cluster_df(cluster_id):
@@ -49,7 +50,7 @@ def test_no_merges(monkeypatch):
 
     def fake_solve(combined, configurations_df, customers_df, params, solver=None, verbose=False):
         calls['solve'] += 1
-        return {'selected_clusters': make_cluster_df('m'), 'total_cost': 50}
+        return FleetmixSolution(selected_clusters=make_cluster_df('m'), total_cost=50)
 
     # Patch the imported function directly 
     import fleetmix.post_optimization.merge_phase
@@ -62,11 +63,12 @@ def test_no_merges(monkeypatch):
     
     try:
         initial_clusters = make_cluster_df('c')
-        initial_solution = {'selected_clusters': initial_clusters, 'total_cost': 100}
+        initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
 
         result = merge_phase.improve_solution(initial_solution, make_config_df(), pd.DataFrame(), params)
-        assert result is initial_solution
+        assert result.total_cost == initial_solution.total_cost
+        assert result.selected_clusters.equals(initial_solution.selected_clusters)
         assert calls['gen'] == 1
         assert calls['solve'] == 0
     finally:
@@ -87,7 +89,7 @@ def test_single_merge_then_no_more(monkeypatch):
 
     def fake_solve(combined, configurations_df, customers_df, params, solver=None, verbose=False):
         calls['solve'] += 1
-        return {'selected_clusters': make_cluster_df('m1'), 'total_cost': 90}
+        return FleetmixSolution(selected_clusters=make_cluster_df('m1'), total_cost=90)
 
     # Patch the imported function directly 
     import fleetmix.post_optimization.merge_phase
@@ -100,11 +102,11 @@ def test_single_merge_then_no_more(monkeypatch):
     
     try:
         initial_clusters = make_cluster_df('c1')
-        initial_solution = {'selected_clusters': initial_clusters, 'total_cost': 100}
+        initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
 
         result = merge_phase.improve_solution(initial_solution, make_config_df(), pd.DataFrame(), params)
-        assert result['total_cost'] == 90
+        assert result.total_cost == 90
         assert calls['gen'] == 2
         assert calls['solve'] == 1
     finally:
@@ -127,7 +129,7 @@ def test_iteration_cap(monkeypatch):
         # decreasing cost each call
         cost = 100 - calls['solve']
         # ensure selected_clusters changes
-        return {'selected_clusters': make_cluster_df(f'g{calls["solve"]}'), 'total_cost': cost}
+        return FleetmixSolution(selected_clusters=make_cluster_df(f'g{calls["solve"]}'), total_cost=cost)
 
     # Patch the imported function directly 
     import fleetmix.post_optimization.merge_phase
@@ -140,13 +142,13 @@ def test_iteration_cap(monkeypatch):
     
     try:
         initial_clusters = make_cluster_df('c0')
-        initial_solution = {'selected_clusters': initial_clusters, 'total_cost': 100}
+        initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
         params.max_improvement_iterations = 3
 
         result = merge_phase.improve_solution(initial_solution, make_config_df(), pd.DataFrame(), params)
         assert calls['solve'] == 3
-        assert result['total_cost'] == 100 - 3
+        assert result.total_cost == 100 - 3
     finally:
         # Restore the original functions to avoid affecting other tests
         fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters = original_gen

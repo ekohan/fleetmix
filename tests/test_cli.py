@@ -10,6 +10,7 @@ import pandas as pd
 
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
+from fleetmix.core_types import FleetmixSolution
 
 
 def test_cli_version():
@@ -147,11 +148,10 @@ def test_api_optimize():
         format="json"
     )
     
-    # Check solution structure
-    assert isinstance(solution, dict)
-    assert 'total_cost' in solution
-    assert 'total_fixed_cost' in solution
-    assert 'total_variable_cost' in solution
-    assert 'vehicles_used' in solution
-    assert 'missing_customers' in solution
-    assert 'solver_status' in solution 
+    assert isinstance(solution, FleetmixSolution)
+    assert solution.total_cost is not None
+    assert solution.total_fixed_cost is not None
+    assert solution.total_variable_cost is not None
+    assert solution.vehicles_used is not None
+    assert solution.missing_customers is not None
+    assert solution.solver_status is not None 

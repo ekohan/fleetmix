@@ -42,6 +42,7 @@ import numpy as np
 from haversine import haversine_vector, Unit
 from dataclasses import replace
 
+from fleetmix.core_types import FleetmixSolution
 from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
 from fleetmix.config.parameters import Parameters
 
@@ -77,11 +78,11 @@ def _get_merged_route_time(
     return time, sequence
 
 def improve_solution(
-    initial_solution: Dict,
+    initial_solution: FleetmixSolution,
     configurations_df: pd.DataFrame,
     customers_df: pd.DataFrame,
     params: Parameters
-) -> Dict:
+) -> FleetmixSolution:
     """Iteratively merge small clusters to lower total cost.
 
     Implements the *improvement phase* described in Section 4.4.  Starting from
@@ -110,16 +111,16 @@ def improve_solution(
     """
     from fleetmix.optimization import solve_fsm_problem
 
-    best = initial_solution
-    best_cost = best.get('total_cost', float('inf'))
+    best_solution = initial_solution
+    best_cost = best_solution.total_cost if best_solution.total_cost is not None else float('inf')
     reason = ''
     # Iterate with explicit counter to correctly log attempts
     for iters in range(1, params.max_improvement_iterations + 1):
         logger.debug(f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.max_improvement_iterations}")
-        selected_clusters = best.get('selected_clusters', best.get('clusters'))
-        if selected_clusters is None:
-            logger.error("Cannot find clusters in solution.")
-            reason = "no clusters"
+        selected_clusters = best_solution.selected_clusters
+        if selected_clusters.empty:
+            logger.info("Initial solution has no selected clusters. Skipping merge phase.")
+            reason = "initial solution empty"
             break
 
         # Ensure goods columns exist
@@ -143,19 +144,19 @@ def improve_solution(
         combined_clusters = pd.concat([selected_clusters, merged_clusters], ignore_index=True)
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
-        trial = solve_fsm_problem(
+        trial_solution = solve_fsm_problem(
             combined_clusters,
             configurations_df,
             customers_df,
             internal_params
         )
-        trial_cost = trial.get('total_cost', float('inf'))
+        trial_cost = trial_solution.total_cost if trial_solution.total_cost is not None else float('inf')
         cost_better = trial_cost < best_cost - 1e-6
 
         same_choice = False
-        if 'selected_clusters' in trial and 'selected_clusters' in best:
-            trial_ids = set(trial['selected_clusters']['Cluster_ID'])
-            best_ids  = set(best['selected_clusters']['Cluster_ID'])
+        if not trial_solution.selected_clusters.empty and not best_solution.selected_clusters.empty:
+            trial_ids = set(trial_solution.selected_clusters['Cluster_ID'])
+            best_ids  = set(best_solution.selected_clusters['Cluster_ID'])
             same_choice = (trial_ids == best_ids)
 
         logger.debug(f"→ Trial cost={trial_cost:.2f}, best cost={best_cost:.2f}, Δ={(trial_cost-best_cost):.2f}")
@@ -167,7 +168,7 @@ def improve_solution(
             break
 
         # Accept improvement and continue
-        best = trial
+        best_solution = trial_solution
         best_cost = trial_cost
     else:
         # Loop completed without breaks
@@ -175,7 +176,7 @@ def improve_solution(
         iters = params.max_improvement_iterations
 
     logger.debug(f"Merge phase finished after {iters} iteration(s): {reason}")
-    return best
+    return best_solution
 
 def generate_merge_phase_clusters(
     selected_clusters: pd.DataFrame,

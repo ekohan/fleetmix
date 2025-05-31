@@ -53,6 +53,7 @@ from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
+from fleetmix.core_types import FleetmixSolution
 logger = FleetmixLogger.get_logger(__name__)
 
 def solve_fsm_problem(
@@ -61,8 +62,9 @@ def solve_fsm_problem(
     customers_df: pd.DataFrame,
     parameters: Parameters,
     solver=None,
-    verbose: bool = False
-) -> Dict:
+    verbose: bool = False,
+    time_recorder=None
+) -> FleetmixSolution:
     """Solve the Fleet Size-and-Mix MILP.
 
     This is the tactical optimisation layer described in Section 4.3 of the
@@ -85,6 +87,7 @@ def solve_fsm_problem(
             :func:`fleetmix.utils.solver.pick_solver` chooses CBC/Gurobi/CPLEX based
             on environment variables.
         verbose: If *True* prints solver progress to stdout.
+        time_recorder: Optional TimeRecorder instance to measure post-optimization time.
 
     Returns:
         Dict: A dictionary with keys
@@ -188,30 +191,39 @@ def solve_fsm_problem(
         c_vk
     )
     
-    # Add additional solution data
-    solution.update({
-        'selected_clusters': selected_clusters,
-        'missing_customers': missing_customers,
-        'solver_name': model.solver.name,
-        'solver_status': pulp.LpStatus[model.status],
-        'solver_runtime_sec': solver_time
-    })
+    # Add additional solution data by setting attributes directly
+    solution.missing_customers = missing_customers
+    solution.solver_name = model.solver.name
+    solution.solver_status = pulp.LpStatus[model.status]
+    solution.solver_runtime_sec = solver_time
     
     # Improvement phase
     post_optimization_time = None
     if parameters.post_optimization:
-        post_start = time.time()
-        solution = improve_solution(
-            solution,
-            configurations_df,
-            customers_df,
-            parameters
-        )
-        post_end = time.time()
-        post_optimization_time = post_end - post_start
+        if time_recorder:
+            with time_recorder.measure("fsm_post_optimization"):
+                post_start = time.time()
+                solution = improve_solution(
+                    solution,
+                    configurations_df,
+                    customers_df,
+                    parameters
+                )
+                post_end = time.time()
+                post_optimization_time = post_end - post_start
+        else:
+            post_start = time.time()
+            solution = improve_solution(
+                solution,
+                configurations_df,
+                customers_df,
+                parameters
+            )
+            post_end = time.time()
+            post_optimization_time = post_end - post_start
 
     # Record post-optimization runtime
-    solution['post_optimization_runtime_sec'] = post_optimization_time
+    solution.post_optimization_runtime_sec = post_optimization_time
 
     return solution
 
@@ -409,7 +421,7 @@ def _calculate_solution_statistics(
     model: pulp.LpProblem,
     x_vars: Dict,
     c_vk: Dict
-) -> Dict:
+) -> FleetmixSolution:
     """Calculate solution statistics using the optimization results."""
     
     # Get selected assignments and their actual costs from the optimization
@@ -431,8 +443,20 @@ def _calculate_solution_statistics(
     )
     
     # Get vehicle statistics and fixed costs
+    # Drop potentially clashing columns from selected_clusters before merging
+    # to ensure columns from configurations_df are used without suffixes.
+    potential_clash_cols = ['Fixed_Cost', 'Vehicle_Type', 'Capacity']
+    cols_to_drop_from_selected = [col for col in potential_clash_cols if col in selected_clusters.columns]
+    if cols_to_drop_from_selected:
+        selected_clusters = selected_clusters.drop(columns=cols_to_drop_from_selected)
+
+    # Select only necessary columns from configurations_df to avoid merge conflicts with goods columns
+    # already present in selected_clusters (this part is already good)
+    cols_to_merge_from_config = ['Config_ID', 'Fixed_Cost', 'Vehicle_Type', 'Capacity'] 
+    config_subset_for_merge = configurations_df[cols_to_merge_from_config]
+
     selected_clusters = selected_clusters.merge(
-        configurations_df, 
+        config_subset_for_merge, 
         on="Config_ID",
         how='left'
     )
@@ -455,16 +479,17 @@ def _calculate_solution_statistics(
     # Total penalties
     total_penalties = total_light_load_penalties + total_compartment_penalties
     
-    return {
-        'total_fixed_cost': total_fixed_cost,
-        'total_variable_cost': total_variable_cost,
-        'total_light_load_penalties': total_light_load_penalties,
-        'total_compartment_penalties': total_compartment_penalties,
-        'total_penalties': total_penalties,
-        'total_cost': total_cost,
-        'vehicles_used': selected_clusters['Vehicle_Type'].value_counts().sort_index().to_dict(),
-        'total_vehicles': len(selected_clusters)
-    }
+    return FleetmixSolution(
+        selected_clusters=selected_clusters,
+        total_fixed_cost=total_fixed_cost,
+        total_variable_cost=total_variable_cost,
+        total_light_load_penalties=total_light_load_penalties,
+        total_compartment_penalties=total_compartment_penalties,
+        total_penalties=total_penalties,
+        total_cost=total_cost,
+        vehicles_used=selected_clusters['Vehicle_Type'].value_counts().sort_index().to_dict(),
+        total_vehicles=len(selected_clusters)
+    )
 
 def _calculate_cluster_cost(
     cluster: pd.Series,

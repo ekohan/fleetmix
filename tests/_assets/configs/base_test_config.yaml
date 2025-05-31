@@ -1,0 +1,53 @@
+# Base test configuration for unit tests
+vehicles:
+  Small:
+    capacity: 50
+    fixed_cost: 100
+  Large:
+    capacity: 100
+    fixed_cost: 150
+
+# Cost Parameters
+variable_cost_per_hour: 20.0
+
+# Time Parameters
+avg_speed: 30  # km/h
+max_route_time: 8  # hours
+service_time: 10  # minutes per customer
+
+# Location
+depot:
+  latitude: 0.0
+  longitude: 0.0
+
+# Product Types
+goods:
+  - Dry
+  - Chilled
+  - Frozen
+
+# Clustering Parameters
+clustering:
+  max_depth: 2
+  method: minibatch_kmeans
+  distance: euclidean
+  geo_weight: 0.7
+  demand_weight: 0.3
+  route_time_estimation: Legacy
+
+# Data Files
+demand_file: tests/_assets/configs/test_demand.csv
+
+# Math model Parameters
+light_load_penalty: 10
+light_load_threshold: 0.7
+compartment_setup_cost: 5
+
+# Post-optimization
+post_optimization: false
+small_cluster_size: 3
+nearest_merge_candidates: 5
+max_improvement_iterations: 2
+
+# Output format
+format: excel 

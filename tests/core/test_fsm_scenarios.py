@@ -444,10 +444,10 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
             clusters_df, config_df, customers_df, params, verbose=False
         )
         # Compare expected
-        assert result["missing_customers"] == exp["missing_customers"]
-        assert result["vehicles_used"]       == exp["vehicles_used"]
-        assert result["total_fixed_cost"]    == exp["total_fixed_cost"]
-        assert pytest.approx(result["total_variable_cost"]) == exp["total_variable_cost"]
-        assert result["total_light_load_penalties"]  == exp["total_light_load_penalties"]
-        assert result["total_compartment_penalties"] == exp["total_compartment_penalties"]
-        assert result["total_cost"]          == exp["total_cost"]
+        assert result.missing_customers == exp["missing_customers"]
+        assert result.vehicles_used       == exp["vehicles_used"]
+        assert result.total_fixed_cost    == exp["total_fixed_cost"]
+        assert pytest.approx(result.total_variable_cost) == exp["total_variable_cost"]
+        assert result.total_light_load_penalties  == exp["total_light_load_penalties"]
+        assert result.total_compartment_penalties == exp["total_compartment_penalties"]
+        assert result.total_cost          == exp["total_cost"]

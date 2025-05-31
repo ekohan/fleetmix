@@ -13,6 +13,7 @@ from fleetmix.utils.vehicle_configurations import generate_vehicle_configuration
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
+from fleetmix.utils.time_measurement import TimeRecorder
 
 def main():
     """Run the FSM optimization pipeline."""
@@ -41,6 +42,9 @@ def main():
         
     params = load_parameters(args)
     
+    # Initialize TimeRecorder
+    time_recorder = TimeRecorder()
+    
     # Define optimization steps
     steps = [
         'Load Data',
@@ -51,55 +55,53 @@ def main():
     ]
     
     progress = ProgressTracker(steps)
-    start_time = time.time()
+    
+    # Start global time measurement
+    with time_recorder.measure("global"):
+        start_time = time.time()
 
-    # Step 1: Load customer data
-    customers = load_customer_demand(params.demand_file)
-    progress.advance(f"Loaded {len(customers)} customers")
+        # Step 1: Load customer data
+        customers = load_customer_demand(params.demand_file)
+        progress.advance(f"Loaded {len(customers)} customers")
 
-    # Step 2: Generate vehicle configurations
-    configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
-    progress.advance(f"Generated {len(configs_df)} vehicle configurations")
+        # Step 2: Generate vehicle configurations
+        with time_recorder.measure("vehicle_configuration"):
+            configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
+        progress.advance(f"Generated {len(configs_df)} vehicle configurations")
 
-    # Step 3: Generate clusters
-    clusters_df = generate_clusters_for_configurations(
-        customers=customers,
-        configurations_df=configs_df,
-        params=params
-    )
-    progress.advance(f"Created {len(clusters_df)} clusters")
+        # Step 3: Generate clusters
+        with time_recorder.measure("clustering"):
+            clusters_df = generate_clusters_for_configurations(
+                customers=customers,
+                configurations_df=configs_df,
+                params=params
+            )
+        progress.advance(f"Created {len(clusters_df)} clusters")
 
-    # Step 4: Solve optimization problem
-    solution = solve_fsm_problem(
-        clusters_df=clusters_df,
-        configurations_df=configs_df,
-        customers_df=customers,
-        parameters=params,
-        verbose=args.verbose
-    )
-    total_cost = solution['total_fixed_cost'] + solution['total_variable_cost'] + solution['total_penalties']
-    progress.advance(f"Optimized fleet: ${total_cost:,.2f} total cost")
+        # Step 4: Solve optimization problem
+        with time_recorder.measure("fsm_initial"):
+            solution = solve_fsm_problem(
+                clusters_df=clusters_df,
+                configurations_df=configs_df,
+                customers_df=customers,
+                parameters=params,
+                verbose=args.verbose,
+                time_recorder=time_recorder
+            )
+        total_cost = solution.total_fixed_cost + solution.total_variable_cost + solution.total_penalties
+        progress.advance(f"Optimized fleet: ${total_cost:,.2f} total cost")
 
-    # Step 5: Save results
-    save_optimization_results(
-        execution_time=time.time() - start_time,
-        solver_name=solution['solver_name'],
-        solver_status=solution['solver_status'],
-        solver_runtime_sec=solution['solver_runtime_sec'],
-        post_optimization_runtime_sec=solution['post_optimization_runtime_sec'],
-        configurations_df=configs_df,
-        selected_clusters=solution['selected_clusters'],
-        total_fixed_cost=solution['total_fixed_cost'],
-        total_variable_cost=solution['total_variable_cost'],
-        total_light_load_penalties=solution['total_light_load_penalties'],
-        total_compartment_penalties=solution['total_compartment_penalties'],
-        total_penalties=solution['total_penalties'],
-        vehicles_used=solution['vehicles_used'],
-        missing_customers=solution['missing_customers'],
-        parameters=params,
-        format=args.format
-    )
-    progress.advance(f"Results saved (execution time: {time.time() - start_time:.1f}s)")
+        solution.time_measurements = time_recorder.measurements
+
+        # Step 5: Save results
+        save_optimization_results(
+            solution=solution,
+            configurations_df=configs_df,
+            parameters=params,
+            format=args.format
+        )
+        progress.advance(f"Results saved (execution time: {time.time() - start_time:.1f}s)")
+    
     progress.close()
 
 if __name__ == "__main__":

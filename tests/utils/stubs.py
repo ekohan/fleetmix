@@ -23,6 +23,7 @@ from pathlib import Path
 import pandas as pd
 import fleetmix.clustering as clustering_module
 import fleetmix.optimization as optimization_module
+from fleetmix.core_types import FleetmixSolution
 
 @contextlib.contextmanager
 def stub_data_processing(monkeypatch):
@@ -64,22 +65,30 @@ def stub_clustering(monkeypatch):
 @contextlib.contextmanager
 def stub_solver(monkeypatch):
     """Stub FSM solver to return empty but valid solution."""
+    def mock_solve_fsm_problem(*args, **kwargs):
+        # Return a FleetmixSolution instance
+        return FleetmixSolution(
+            total_cost=0,
+            selected_clusters=pd.DataFrame(),
+            missing_customers=set(),
+            vehicles_used={},
+            total_fixed_cost=0,
+            total_variable_cost=0,
+            total_light_load_penalties=0,
+            total_compartment_penalties=0,
+            total_penalties=0,
+            solver_name="stub",
+            solver_status="Optimal",
+            total_vehicles=0, # Ensure all fields have a default
+            solver_runtime_sec=0.0,
+            post_optimization_runtime_sec=None,
+            time_measurements=None
+        )
+
     monkeypatch.setattr(
         optimization_module,
         "solve_fsm_problem",
-        lambda *args, **kwargs: {
-            "total_cost": 0,
-            "selected_clusters": pd.DataFrame(),
-            "missing_customers": set(),
-            "vehicles_used": {},
-            "total_fixed_cost": 0,
-            "total_variable_cost": 0,
-            "total_light_load_penalties": 0,
-            "total_compartment_penalties": 0,
-            "total_penalties": 0,
-            "solver_name": "stub",
-            "solver_status": "Optimal"
-        }
+        mock_solve_fsm_problem
     )
     yield
 

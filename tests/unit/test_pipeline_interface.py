@@ -1,28 +1,13 @@
 import pandas as pd
 import pytest
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
+from fleetmix.core_types import FleetmixSolution
 
 class DummyParams:
     def __init__(self):
         self.vehicles = {}
         self.goods = {}
         self.expected_vehicles = 3
-
-class DummySolution(dict):
-    def __init__(self):
-        super().__init__({
-            'total_cost': 0,
-            'vehicles_used': {},
-            'selected_clusters': pd.DataFrame(),
-            'missing_customers': set(),
-            'total_fixed_cost': 0,
-            'total_variable_cost': 0,
-            'total_light_load_penalties': 0,
-            'total_compartment_penalties': 0,
-            'total_penalties': 0,
-            'solver_name': 'stub',
-            'solver_status': 'Optimal'
-        })
 
 @pytest.fixture(autouse=True)
 def stub_everything(monkeypatch):
@@ -47,7 +32,23 @@ def stub_everything(monkeypatch):
     # Stub solver in pipeline
     monkeypatch.setattr(
         'fleetmix.pipeline.vrp_interface.solve_fsm_problem',
-        lambda *args, **kw: DummySolution()
+        lambda *args, **kw: FleetmixSolution(
+            total_cost=0,
+            vehicles_used={},
+            selected_clusters=pd.DataFrame(),
+            missing_customers=set(),
+            total_fixed_cost=0,
+            total_variable_cost=0,
+            total_light_load_penalties=0,
+            total_compartment_penalties=0,
+            total_penalties=0,
+            solver_name='stub',
+            solver_status='Optimal',
+            total_vehicles=0,
+            solver_runtime_sec=0.0,
+            post_optimization_runtime_sec=None,
+            time_measurements=None
+        )
     )
     yield
 
@@ -80,5 +81,5 @@ def test_run_optimization_prints_and_returns(caplog):
     
     # Check that the logging message appears in the captured logs
     assert any('Optimization Results:' in record.message for record in caplog.records)
-    assert sol['total_cost'] == 0
+    assert sol.total_cost == 0
     assert isinstance(cfg, pd.DataFrame) 

@@ -24,31 +24,19 @@ import seaborn as sns
 import ast
 import folium
 from typing import Dict
-from fleetmix.core_types import BenchmarkType, VRPSolution
+from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution
 from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
 
 def save_optimization_results(
-    execution_time: float,
-    solver_name: str,
-    solver_status: str,
+    solution: FleetmixSolution,
     configurations_df: pd.DataFrame,
-    selected_clusters: pd.DataFrame,
-    total_fixed_cost: float,
-    total_variable_cost: float,
-    total_light_load_penalties: float,
-    total_compartment_penalties: float,
-    total_penalties: float,
-    vehicles_used: pd.Series,
-    missing_customers: set,
     parameters: Parameters,
     filename: str = None,
     format: str = 'excel',
     is_benchmark: bool = False,
     expected_vehicles: int | None = None,
-    solver_runtime_sec: float = None,
-    post_optimization_runtime_sec: float = None
 ) -> None:
     """Save optimization results to a file (Excel or JSON) and create visualization"""
     
@@ -64,15 +52,15 @@ def save_optimization_results(
     output_filename.parent.mkdir(parents=True, exist_ok=True)
 
     # Calculate metrics and prepare data
-    if 'Customers' in selected_clusters.columns:
-        customers_per_cluster = selected_clusters['Customers'].apply(len)
+    if 'Customers' in solution.selected_clusters.columns:
+        customers_per_cluster = solution.selected_clusters['Customers'].apply(len)
     else:
         # For benchmark results, use Num_Customers column
-        customers_per_cluster = selected_clusters['Num_Customers']
+        customers_per_cluster = solution.selected_clusters['Num_Customers']
     
     # Calculate load percentages
     load_percentages = []
-    for _, cluster in selected_clusters.iterrows():
+    for _, cluster in solution.selected_clusters.iterrows():
         if 'Vehicle_Utilization' in cluster:
             total_utilization = cluster['Vehicle_Utilization']
         else:
@@ -86,20 +74,20 @@ def save_optimization_results(
     load_percentages = pd.Series(load_percentages)
     
     summary_metrics = [
-        ('Total Cost ($)', f"{total_fixed_cost + total_variable_cost + total_penalties:,.2f}"),
-        ('Fixed Cost ($)', f"{total_fixed_cost:,.2f}"),
-        ('Variable Cost ($)', f"{total_variable_cost:,.2f}"),
-        ('Total Penalties ($)', f"{total_penalties:,.2f}"),
-        ('  Light Load Penalties ($)', f"{total_light_load_penalties:,.2f}"),
-        ('  Compartment Setup Penalties ($)', f"{total_compartment_penalties:,.2f}"),
-        ('Total Vehicles', len(selected_clusters)),
+        ('Total Cost ($)', f"{solution.total_cost:,.2f}"),
+        ('Fixed Cost ($)', f"{solution.total_fixed_cost:,.2f}"),
+        ('Variable Cost ($)', f"{solution.total_variable_cost:,.2f}"),
+        ('Total Penalties ($)', f"{solution.total_penalties:,.2f}"),
+        ('  Light Load Penalties ($)', f"{solution.total_light_load_penalties:,.2f}"),
+        ('  Compartment Setup Penalties ($)', f"{solution.total_compartment_penalties:,.2f}"),
+        ('Total Vehicles', solution.total_vehicles),
     ]
     
     if expected_vehicles is not None:
         summary_metrics.append(('Expected Vehicles', expected_vehicles))
     
-    for vehicle_type in sorted(vehicles_used.keys()):
-        vehicle_count = vehicles_used[vehicle_type]
+    for vehicle_type in sorted(solution.vehicles_used.keys()):
+        vehicle_count = solution.vehicles_used[vehicle_type]
         summary_metrics.append(
             (f'Vehicles Type {vehicle_type}', vehicle_count)
         )
@@ -137,7 +125,7 @@ def save_optimization_results(
             summary_metrics.append((metric_name, value))
 
     # Prepare cluster details
-    cluster_details = selected_clusters.copy()
+    cluster_details = solution.selected_clusters.copy()
     if 'Customers' in cluster_details.columns:
         cluster_details['Num_Customers'] = cluster_details['Customers'].apply(len)
         cluster_details['Customers'] = cluster_details['Customers'].apply(str)
@@ -181,29 +169,49 @@ def save_optimization_results(
         'summary_metrics': summary_metrics,
         'configurations_df': configurations_df,
         'cluster_details': cluster_details,
-        'vehicles_used': vehicles_used,
+        'vehicles_used': solution.vehicles_used,
         'other_considerations': [
-            ('Total Vehicles Used', len(selected_clusters)),
-            ('Number of Unserved Customers', len(missing_customers)),
-            ('Unserved Customers', str(list(missing_customers)) if missing_customers else "None"),
-            ('Average Customers per Cluster', cluster_details['Num_Customers'].mean() if 'Num_Customers' in cluster_details.columns else 'N/A'),
-            ('Average Distance per Cluster', cluster_details['Estimated_Distance'].mean() if 'Estimated_Distance' in cluster_details.columns else 'N/A')
+            ('Total Vehicles Used', solution.total_vehicles),
+            ('Number of Unserved Customers', len(solution.missing_customers)),
+            ('Unserved Customers', str(list(solution.missing_customers)) if solution.missing_customers else "None"),
+            ('Average Customers per Cluster', cluster_details['Num_Customers'].mean() if 'Num_Customers' in cluster_details.columns and not cluster_details.empty else 'N/A'),
+            ('Average Distance per Cluster', cluster_details['Estimated_Distance'].mean() if 'Estimated_Distance' in cluster_details.columns and not cluster_details.empty else 'N/A')
         ],
         'execution_details': [
-            ('Execution Time (s)', execution_time),
-            ('Solver', solver_name),
-            ('Solver Status', solver_status),
-            ('Solver Runtime (s)', solver_runtime_sec),
-            ('Post-Optimization Runtime (s)', post_optimization_runtime_sec),
-            ('Total Fixed Cost', total_fixed_cost),
-            ('Total Variable Cost', total_variable_cost),
-            ('Total Penalties', total_penalties),
-            ('Light Load Penalties', total_light_load_penalties),
-            ('Compartment Setup Penalties', total_compartment_penalties),
-            ('Total Cost', total_fixed_cost + total_variable_cost + total_penalties),
+            ('Execution Time (s)', 
+             next((tm.wall_time for tm in solution.time_measurements if tm.span_name == 'global'), 'N/A') 
+             if solution.time_measurements else 'N/A'),
+            ('Solver', solution.solver_name),
+            ('Solver Status', solution.solver_status),
+            ('Solver Runtime (s)', solution.solver_runtime_sec),
+            ('Post-Optimization Runtime (s)', solution.post_optimization_runtime_sec),
+            ('Total Fixed Cost', solution.total_fixed_cost),
+            ('Total Variable Cost', solution.total_variable_cost),
+            ('Total Penalties', solution.total_penalties),
+            ('Light Load Penalties', solution.total_light_load_penalties),
+            ('Compartment Setup Penalties', solution.total_compartment_penalties),
+            ('Total Cost', solution.total_cost),
             ('Demand File', parameters.demand_file)
         ]
     }
+
+    # Process time measurements if provided
+    if solution.time_measurements:
+        time_measurements_data = []
+        for measurement in solution.time_measurements:
+            time_measurements_data.extend([
+                (f'{measurement.span_name}_wall_time', measurement.wall_time),
+                (f'{measurement.span_name}_process_user_time', measurement.process_user_time),
+                (f'{measurement.span_name}_process_system_time', measurement.process_system_time),
+                (f'{measurement.span_name}_children_user_time', measurement.children_user_time),
+                (f'{measurement.span_name}_children_system_time', measurement.children_system_time),
+                (f'{measurement.span_name}_total_cpu_time', 
+                 measurement.process_user_time + measurement.process_system_time + 
+                 measurement.children_user_time + measurement.children_system_time)
+            ])
+
+        if time_measurements_data:
+            data['time_measurements'] = time_measurements_data
 
     try:
         if format == 'json':
@@ -214,7 +222,7 @@ def save_optimization_results(
         # Only create visualization for optimization results
         if not is_benchmark:
             depot_coords = (parameters.depot['latitude'], parameters.depot['longitude'])
-            visualize_clusters(selected_clusters, depot_coords, str(output_filename))
+            visualize_clusters(solution.selected_clusters, depot_coords, str(output_filename))
             
     except Exception as e:
         print(f"Error saving results to {output_filename}: {str(e)}")
@@ -257,6 +265,12 @@ def _write_to_excel(filename: str, data: dict) -> None:
         pd.DataFrame(data['execution_details'], columns=['Metric', 'Value']).to_excel(
             writer, sheet_name='Execution Details', index=False
         )
+        
+        # Sheet 7: Time Measurements (if available)
+        if 'time_measurements' in data:
+            pd.DataFrame(data['time_measurements'], columns=['Metric', 'Value']).to_excel(
+                writer, sheet_name='Time Measurements', index=False
+            )
 
 def _write_to_json(filename: str, data: dict) -> None:
     """Write optimization results to JSON file."""
@@ -290,6 +304,10 @@ def _write_to_json(filename: str, data: dict) -> None:
         'Other Considerations': dict(data['other_considerations']),
         'Execution Details': dict(data['execution_details'])
     }
+    
+    # Add time measurements if available
+    if 'time_measurements' in data:
+        json_data['Time Measurements'] = dict(data['time_measurements'])
 
     with open(filename, 'w') as f:
         json.dump(json_data, f, cls=NumpyEncoder, indent=2)
@@ -464,27 +482,35 @@ def save_benchmark_results(
     cluster_details = pd.DataFrame(cluster_details)
     
     # Count vehicles used by type
-    vehicles_used = pd.Series({
+    vehicles_used_series = pd.Series({
         vt_name: sum(1 for sol in solutions.values() 
                     for vt_idx in sol.vehicle_types 
                     if list(parameters.vehicles.keys())[vt_idx] == vt_name)
         for vt_name in parameters.vehicles.keys()
     })
     
-    # Call existing save function with data from solutions
-    save_optimization_results(
-        execution_time=execution_time,
-        solver_name='PyVRP',
-        solver_status='Optimal',
-        configurations_df=configurations_df,
-        selected_clusters=cluster_details,
+    # Create a FleetmixSolution object for benchmark to pass to the main save function
+    # This is a bit of a workaround, ideally, save_benchmark_results would construct its own dict/excel directly
+    # or be more tightly integrated if it must use the same saving logic.
+    benchmark_solution_obj = FleetmixSolution(
+        selected_clusters=cluster_details, # This is a DataFrame of routes, not true clusters
         total_fixed_cost=sum(sol.fixed_cost for sol in solutions.values()),
         total_variable_cost=sum(sol.variable_cost for sol in solutions.values()),
+        total_penalties=0,
         total_light_load_penalties=0,
         total_compartment_penalties=0,
-        total_penalties=0,
-        vehicles_used=vehicles_used,
-        missing_customers=set(),
+        total_cost=total_cost,
+        vehicles_used=vehicles_used_series.to_dict(), # Convert Series to Dict
+        total_vehicles=len(cluster_details), # Number of routes
+        solver_name='PyVRP',
+        solver_status='Optimal',
+        solver_runtime_sec=execution_time, # Approximation, PyVRP doesn't split this out easily
+        # time_measurements might be relevant if PyVRP provided them
+    )
+
+    save_optimization_results(
+        solution=benchmark_solution_obj,
+        configurations_df=configurations_df,
         parameters=parameters,
         filename=filename,
         format=format,

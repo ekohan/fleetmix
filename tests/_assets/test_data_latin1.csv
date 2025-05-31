@@ -1,0 +1,4 @@
+ClientID,Lat,Lon,Kg,ProductType
+Coffee001,10.5,20.5,100,Dry
+Coffee001,10.5,20.5,0,Chilled
+Coffee001,10.5,20.5,0,Frozen

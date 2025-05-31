@@ -25,6 +25,7 @@ except ImportError:
 
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
+from fleetmix.core_types import FleetmixSolution
 
 
 class TestBenchmarkingWorkflows:
@@ -218,8 +219,8 @@ EOF
                 verbose=True
             )
             
-            # Verify solution structure
-            assert 'solver_status' in solution
+            # Verify solution structure - solution is FleetmixSolution
+            assert solution.solver_status is not None # Attribute access
             assert isinstance(configs_df, pd.DataFrame)
             
         except Exception as e:
@@ -248,8 +249,8 @@ EOF
                 verbose=True
             )
             
-            # Verify solution structure
-            assert 'solver_status' in solution
+            # Verify solution structure - solution is FleetmixSolution
+            assert solution.solver_status is not None # Attribute access
             assert isinstance(configs_df, pd.DataFrame)
             
         except Exception as e:
@@ -273,8 +274,10 @@ EOF
             
             # If solver succeeds, verify solution structure
             if solution is not None:
-                assert 'cost' in solution or 'total_cost' in solution
-                assert 'routes' in solution
+                # Assuming 'solution' from solve_cvrp_instance is a dict-like or object
+                # This part is for the VRP_SOLVER_AVAILABLE block, may not be FleetmixSolution
+                assert hasattr(solution, 'cost') or hasattr(solution, 'total_cost')
+                assert hasattr(solution, 'routes')
                 
         except Exception as e:
             # Solver might fail for small instances or other reasons
@@ -282,41 +285,43 @@ EOF
 
     def test_save_benchmark_results(self, temp_results_dir):
         """Test benchmark result saving functionality."""
-        # Create mock solution data
-        mock_solution = {
-            'solver_name': 'test_solver',
-            'solver_status': 'Optimal',
-            'solver_runtime_sec': 10.5,
-            'post_optimization_runtime_sec': 2.3,
-            'total_fixed_cost': 500.0,
-            'total_variable_cost': 200.0,
-            'total_light_load_penalties': 10.0,
-            'total_compartment_penalties': 5.0,
-            'total_penalties': 15.0,
-            'vehicles_used': {'Small Van': 2, 'Large Truck': 1},
-            'missing_customers': []
-        }
+        # Create mock solution data for FleetmixSolution
+        mock_fleetmix_solution = FleetmixSolution(
+            selected_clusters=pd.DataFrame({
+                'Cluster_ID': [1, 2, 3],
+                'Config_ID': [1, 1, 2],
+                'Customers': [[1, 2], [3], [4, 5]],
+                'Total_Demand': [
+                    {'Dry': 100, 'Chilled': 50, 'Frozen': 0}, 
+                    {'Dry': 80, 'Chilled': 0, 'Frozen': 0},
+                    {'Dry': 0, 'Chilled': 70, 'Frozen': 30}
+                ],
+                'Route_Time': [1.5, 0.8, 2.1],
+                'Centroid_Latitude': [40.0, 40.1, 40.2],
+                'Centroid_Longitude': [-73.0, -73.1, -73.2],
+                'Method': ['test', 'test', 'test']
+            }),
+            solver_name='test_solver',
+            solver_status='Optimal',
+            solver_runtime_sec=10.5,
+            post_optimization_runtime_sec=2.3,
+            total_fixed_cost=500.0,
+            total_variable_cost=200.0,
+            total_light_load_penalties=10.0,
+            total_compartment_penalties=5.0,
+            total_penalties=15.0,
+            total_cost=715.0, # 500 + 200 + 15
+            vehicles_used={'Small Van': 2, 'Large Truck': 1},
+            total_vehicles=3,
+            missing_customers=set() 
+            # time_measurements can be added if needed for a specific test scenario
+        )
         
         mock_configs_df = pd.DataFrame({
             'Config_ID': [1, 2],
             'Vehicle_Name': ['Small Van', 'Large Truck'],
             'Fixed_Cost': [100, 200],
             'Capacity': [400, 800]
-        })
-        
-        mock_clusters_df = pd.DataFrame({
-            'Cluster_ID': [1, 2, 3],
-            'Config_ID': [1, 1, 2],
-            'Customers': [[1, 2], [3], [4, 5]],
-            'Total_Demand': [
-                {'Dry': 100, 'Chilled': 50, 'Frozen': 0}, 
-                {'Dry': 80, 'Chilled': 0, 'Frozen': 0},
-                {'Dry': 0, 'Chilled': 70, 'Frozen': 30}
-            ],
-            'Route_Time': [1.5, 0.8, 2.1],
-            'Centroid_Latitude': [40.0, 40.1, 40.2],
-            'Centroid_Longitude': [-73.0, -73.1, -73.2],
-            'Method': ['test', 'test', 'test']
         })
         
         # Create mock parameters
@@ -358,20 +363,8 @@ EOF
         # Test saving as JSON
         output_path = temp_results_dir / "test_benchmark.json"
         save_optimization_results(
-            execution_time=15.8,
-            solver_name=mock_solution['solver_name'],
-            solver_status=mock_solution['solver_status'],
-            solver_runtime_sec=mock_solution['solver_runtime_sec'],
-            post_optimization_runtime_sec=mock_solution['post_optimization_runtime_sec'],
+            solution=mock_fleetmix_solution,
             configurations_df=mock_configs_df,
-            selected_clusters=mock_clusters_df,
-            total_fixed_cost=mock_solution['total_fixed_cost'],
-            total_variable_cost=mock_solution['total_variable_cost'],
-            total_light_load_penalties=mock_solution['total_light_load_penalties'],
-            total_compartment_penalties=mock_solution['total_compartment_penalties'],
-            total_penalties=mock_solution['total_penalties'],
-            vehicles_used=mock_solution['vehicles_used'],
-            missing_customers=mock_solution['missing_customers'],
             parameters=mock_params,
             filename=str(output_path),
             format="json",
@@ -510,8 +503,8 @@ EOF
             assert optimization_time < 120  # Should optimize quickly for small instance
             
             # Verify solution contains timing info
-            assert 'solver_runtime_sec' in solution
-            assert solution['solver_runtime_sec'] >= 0
+            assert solution.solver_runtime_sec is not None # Attribute access
+            assert solution.solver_runtime_sec >= 0 # Attribute access
             
         except Exception as e:
             pytest.skip(f"Performance metrics test failed: {str(e)}") 

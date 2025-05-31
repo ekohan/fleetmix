@@ -1,12 +1,14 @@
 import itertools
 import pandas as pd
+from typing import List, Dict, Any
+from fleetmix.core_types import VehicleSpec
 
-def generate_vehicle_configurations(vehicle_types, goods):
+def generate_vehicle_configurations(vehicle_types: Dict[str, VehicleSpec], goods: List[str]) -> pd.DataFrame:
     """
     Enumerate every feasible vehicle–compartment combination (paper §4.4).
     """
     compartment_options = list(itertools.product([0, 1], repeat=len(goods)))
-    compartment_configs = []
+    compartment_configs: List[Dict[str, Any]] = []
     config_id = 1
     
     for vt_name, vt_info in vehicle_types.items():
@@ -17,8 +19,8 @@ def generate_vehicle_configurations(vehicle_types, goods):
             compartment = dict(zip(goods, option))
             compartment['Vehicle_Type'] = vt_name
             compartment['Config_ID'] = config_id
-            compartment['Capacity'] = vt_info['capacity']
-            compartment['Fixed_Cost'] = vt_info['fixed_cost']
+            compartment['Capacity'] = vt_info.capacity 
+            compartment['Fixed_Cost'] = vt_info.fixed_cost
             compartment_configs.append(compartment)
             config_id += 1
 

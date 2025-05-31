@@ -17,7 +17,7 @@ from fleetmix.utils.save_results import (
     _write_to_json
 )
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution
+from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution, VehicleSpec, DepotLocation
 
 
 class TestSaveOptimizationResults(unittest.TestCase):
@@ -50,7 +50,6 @@ class TestSaveOptimizationResults(unittest.TestCase):
             solver_name="TestSolver",
             solver_status="Optimal",
             solver_runtime_sec=10.5,
-            post_optimization_runtime_sec=None,
             time_measurements=None
         )
         
@@ -80,11 +79,11 @@ class TestSaveOptimizationResults(unittest.TestCase):
         self.parameters.light_load_threshold = 0.5
         self.parameters.compartment_setup_cost = 5
         self.parameters.vehicles = {
-            'Type1': {'capacity': 1000, 'fixed_cost': 100},
-            'Type2': {'capacity': 2000, 'fixed_cost': 200}
+            'Type1': VehicleSpec(capacity=1000, fixed_cost=100, compartments={'Dry':True, 'Chilled':True, 'Frozen':False}, extra={}),
+            'Type2': VehicleSpec(capacity=2000, fixed_cost=200, compartments={'Dry':True, 'Frozen':True, 'Chilled':False}, extra={})
         }
         self.parameters.goods = ['Dry', 'Chilled', 'Frozen']
-        self.parameters.depot = {'latitude': 4.5, 'longitude': -74.0}
+        self.parameters.depot = DepotLocation(latitude=4.5, longitude=-74.0)
     
     @patch('fleetmix.utils.save_results._write_to_excel')
     @patch('fleetmix.utils.save_results.visualize_clusters')
@@ -188,8 +187,8 @@ class TestSaveOptimizationResults(unittest.TestCase):
         
         # Check that time measurements were included
         data = mock_write.call_args[0][1]
-        self.assertIn('time_measurements', data)
-        self.assertEqual(len(data['time_measurements']), 12)  # 6 metrics per measurement
+        self.assertIn('time_measurements_excel', data)
+        self.assertEqual(len(data['time_measurements_excel']), 12)  # 6 metrics per measurement * 2 measurements
 
 
 class TestWriteToExcel(unittest.TestCase):
@@ -391,8 +390,8 @@ class TestSaveBenchmarkResults(unittest.TestCase):
         self.parameters = MagicMock(spec=Parameters)
         self.parameters.results_dir = Path(tempfile.gettempdir())
         self.parameters.vehicles = {
-            'Type1': {'capacity': 1000, 'fixed_cost': 100},
-            'Type2': {'capacity': 2000, 'fixed_cost': 200}
+            'Type1': VehicleSpec(capacity=1000, fixed_cost=100, compartments={'Dry':True}, extra={}),
+            'Type2': VehicleSpec(capacity=2000, fixed_cost=200, compartments={'Chilled':True}, extra={})
         }
         self.parameters.goods = ['Dry', 'Chilled', 'Frozen']
     

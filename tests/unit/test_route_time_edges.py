@@ -1,47 +1,52 @@
+"""Edge cases for route time estimation."""
 import pandas as pd
-import pytest
-from fleetmix.utils.route_time import _legacy_estimation, _bhh_estimation, estimate_route_time
+from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
 
 
-def test_legacy_estimation_edge_cases():
-    # Zero customers yields 1 hour
-    assert _legacy_estimation(0, service_time=30) == pytest.approx(1.0)
-    # Two customers at 30 min each: 1 + 2*0.5 = 2 hours
-    assert _legacy_estimation(2, service_time=30) == pytest.approx(2.0)
+def test_estimate_route_time_empty_dataframe():
+    """Test with empty customer dataframe."""
+    df = pd.DataFrame(columns=['Customer_ID', 'Latitude', 'Longitude'])
+    depot = {'latitude': 0, 'longitude': 0}
+    
+    # Legacy method with empty customers
+    time, seq = estimate_route_time(df, depot, 30, 60, method='Legacy')
+    assert time == 1.0  # Just the constant 1 hour
+    assert seq == []
+    
+    # BHH method with empty customers  
+    time, seq = estimate_route_time(df, depot, 30, 60, method='BHH')
+    assert time == 0.0  # No customers, no time
+    assert seq == []
 
 
-def test_bhh_estimation_bounds():
-    # Build a small cluster of 3 points
+def test_estimate_route_time_single_customer():
+    """Test with single customer."""
     df = pd.DataFrame({
-        'Latitude': [0.0, 0.0, 1.0],
-        'Longitude': [0.0, 1.0, 0.0]
+        'Customer_ID': ['C1'],
+        'Latitude': [0.1],
+        'Longitude': [0.1]
     })
-    service_time = 30
-    avg_speed = 60
-    max_route_time = 10
-    # Compute BHH and legacy
-    t_bhh = _bhh_estimation(df, {'latitude':0,'longitude':0}, service_time, avg_speed)
-    t_legacy = _legacy_estimation(len(df), service_time)
-    # BHH >= legacy
-    assert t_bhh >= t_legacy
-    # BHH not ridiculously large: bounded by legacy + 2*max_route_time
-    assert t_bhh <= t_legacy + 2*max_route_time
+    depot = {'latitude': 0, 'longitude': 0}
+    
+    # Legacy method
+    time, seq = estimate_route_time(df, depot, 30, 60, method='Legacy')
+    assert time == 1.5  # 1 hour + 30 min service
+    assert seq == []
+    
+    # BHH method
+    time, seq = estimate_route_time(df, depot, 30, 60, method='BHH')
+    assert time == 0.5  # Just service time for single customer
+    assert seq == []
 
-@pytest.mark.parametrize("method", ["Legacy", "BHH"])
-def test_estimate_route_time_dispatch(method):
-    # Single customer cluster
-    df = pd.DataFrame({'Latitude': [0.0], 'Longitude': [0.0]})
-    t, seq = estimate_route_time(
-        df, 
-        {'latitude':0,'longitude':0}, 
-        service_time=15, 
-        avg_speed=30, 
-        method=method,
-        prune_tsp=False
-    )
-    assert isinstance(t, float)
-    assert isinstance(seq, list)
-    # Legacy should return empty sequence
-    if method == 'Legacy':
-        assert seq == []
-    # BHH returns empty too for singleton 
+
+def test_negative_service_time():
+    """Test that negative service time is handled correctly."""
+    # Should be handled by calculate_total_service_time_hours
+    result = calculate_total_service_time_hours(5, -30)
+    assert result == 0.0  # Negative service time returns 0
+
+
+def test_negative_customers():
+    """Test that negative number of customers is handled correctly."""
+    result = calculate_total_service_time_hours(-5, 30)
+    assert result == 0.0  # Negative customers returns 0 

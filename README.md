@@ -33,28 +33,29 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 ## 🗺️ Table of Contents
 
 1. [Installation](#installation)
-2. [Quick Start](#quick-start)
-3. [Architecture Overview](#architecture-overview)
-4. [Command‑Line Usage](#command-line-usage)
-5. [Python API](#python-api)
-6. [Benchmarking Suite](#benchmarking-suite)
-7. [Repository Layout](#repository-layout)
-8. [Paper ↔ Code Map](#paper-↔-code-map)
-9. [Contributing](#contributing)
-10. [Citation](#citation)
-11. [License](#license)
+2. [Quick Start](#quick-start)
+3. [Architecture Overview](#architecture-overview)
+4. [Command‑Line Usage](#command-line-usage)
+5. [Python API](#python-api)
+6. [Composability & Extensibility](#composability--extensibility)
+7. [Benchmarking Suite](#benchmarking-suite)
+8. [Repository Layout](#repository-layout)
+9. [Paper ↔ Code Map](#paper-↔-code-map)
+10. [Contributing](#contributing)
+11. [Citation](#citation)
+12. [License](#license)
 
 ---
 
 ## ⚙️ Installation
 
-### From PyPI *(coming soon)*
+### From PyPI *(coming soon)*
 
 ```bash
 pip install fleetmix
 ```
 
-### From Source *(development)*
+### From Source *(development)*
 
 ```bash
 # Clone and set up environment
@@ -67,7 +68,7 @@ pip install -e .
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start
 
 ### Command‑Line Interface
 
@@ -85,7 +86,7 @@ fleetmix convert --type cvrp --instance X-n101-k25 --benchmark-type split
 fleetmix version
 ```
 
-### Python API
+### Python API
 
 ```python
 import fleetmix
@@ -99,7 +100,7 @@ print(f"Total cost: ${solution['total_cost']:,.2f}")
 print(f"Vehicles used: {len(solution['vehicles_used'])}")
 ```
 
-### Web Interface
+### Web Interface
 
 ```bash
 # Launch web interface
@@ -169,7 +170,7 @@ fleetmix convert --type mcvrp --instance 10_3_3_3_\(01\)
 
 ---
 
-## 🐍 Python API
+## 🐍 Python API
 
 ```python
 import fleetmix as fm
@@ -179,6 +180,41 @@ solution = fm.optimize(demand=customers_df, config="config.yaml")
 ```
 
 Retrieve metrics via `solution[...]` keys (see docstring for full schema).
+
+---
+
+## 🧩 Composability & Extensibility
+
+FleetMix uses a **Protocol-based plugin architecture** that makes it easy to add custom implementations for core components.
+
+### Adding a Custom Clustering Algorithm
+
+```python
+from fleetmix.registry import register_clusterer
+from fleetmix.interfaces import Clusterer
+import pandas as pd
+from typing import List
+
+@register_clusterer("my_custom_clustering")
+class MyCustomClusterer:
+    """Custom clustering implementation."""
+    
+    def fit(self, customers: pd.DataFrame, *, settings, n_clusters: int) -> List[int]:
+        """Implement your clustering logic here."""
+        # Your custom clustering algorithm
+        # Must return a list of cluster labels (integers)
+        labels = your_clustering_logic(customers, n_clusters)
+        return labels
+
+# Now use it in your config.yaml:
+# clustering:
+#   method: my_custom_clustering
+```
+
+The plugin system supports:
+- **Clustering algorithms**: K-means, K-medoids, Agglomerative, Gaussian Mixture, or your own
+- **Route time estimators**: Legacy, BHH, TSP-based, or custom (e.g., with traffic data)
+- **Solvers**: Gurobi, CBC, or any PuLP-compatible solver
 
 ---
 
@@ -212,7 +248,7 @@ docs/                   # code↔paper map • design notes
 
 ---
 
-## 📝 Paper ↔ Code Map
+## 📝 Paper ↔ Code Map
 
 See `docs/mapping.md` for a line‑by‑line crosswalk between paper sections and implementation.
 

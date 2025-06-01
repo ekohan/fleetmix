@@ -46,7 +46,6 @@ def stub_everything(monkeypatch):
             solver_status='Optimal',
             total_vehicles=0,
             solver_runtime_sec=0.0,
-            post_optimization_runtime_sec=None,
             time_measurements=None
         )
     )

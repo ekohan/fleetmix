@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 import yaml
 
 from fleetmix.utils import PROJECT_ROOT
 from fleetmix.utils.logging import FleetmixLogger
+from fleetmix.core_types import VehicleSpec, DepotLocation
+
 logger = FleetmixLogger.get_logger(__name__)
 
 @dataclass
 class Parameters:
     """Configuration parameters for the optimization"""
-    vehicles: Dict
+    vehicles: Dict[str, VehicleSpec]
     variable_cost_per_hour: float
     avg_speed: float
     max_route_time: float
     service_time: float
-    depot: Dict
+    depot: DepotLocation
     goods: List[str]
     clustering: Dict
     demand_file: str
@@ -71,10 +73,31 @@ class Parameters:
         except Exception as e:
             raise ValueError(f"Error reading config file {resolved_config_path}: {str(e)}")
         
+        raw_vehicles_data = data.pop("vehicles")
+        parsed_vehicles = {}
+        for v_name, v_details in raw_vehicles_data.items():
+            spec_kwargs = {
+                'capacity': v_details.pop('capacity'),
+                'fixed_cost': v_details.pop('fixed_cost')
+            }
+            # Handle compartments: should be Dict[str, bool]
+            # If compartments is defined in YAML, use it directly. Otherwise, VehicleSpec defaults to empty dict.
+            if 'compartments' in v_details:
+                spec_kwargs['compartments'] = v_details.pop('compartments') 
+            # Else, VehicleSpec will use its default_factory for compartments
+            
+            # Remaining items go into extra
+            spec_kwargs['extra'] = v_details 
+            parsed_vehicles[v_name] = VehicleSpec(**spec_kwargs)
+        
+        vehicles = parsed_vehicles
+
+        raw_depot = data.pop("depot")
+        depot = DepotLocation(**raw_depot)
+
         data['config_file_path'] = resolved_config_path
 
-        # Check for required fields
-        required_fields = ['vehicles', 'goods', 'depot', 'demand_file', 'clustering']
+        required_fields = ['goods', 'demand_file', 'clustering']
         missing_fields = [field for field in required_fields if field not in data]
         
         if missing_fields:
@@ -85,9 +108,8 @@ class Parameters:
             )
 
         try:
-            instance =  cls(**data)
+            instance =  cls(vehicles=vehicles, depot=depot, **data)
         except TypeError as e:
-            # Parse the error to extract the specific field
             error_str = str(e)
             if "missing" in error_str:
                 raise ValueError(
@@ -145,10 +167,16 @@ class Parameters:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
-        data_to_save = {f.name: getattr(self, f.name) for f in fields(self) if f.name != 'config_file_path'}
+        data_to_save = asdict(self)
+        del data_to_save['config_file_path']
+
         for key, value in data_to_save.items():
             if isinstance(value, Path):
                 data_to_save[key] = str(value)
-                
+            elif isinstance(value, DepotLocation):
+                data_to_save[key] = value.to_dict()
+            elif isinstance(value, dict) and all(isinstance(v, VehicleSpec) for v in value.values()):
+                data_to_save[key] = {k: v.to_dict() for k, v in value.items()}
+
         with open(output_path, 'w') as f:
             yaml.dump(data_to_save, f, sort_keys=False) 

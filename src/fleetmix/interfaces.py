@@ -1,0 +1,48 @@
+"""Protocol definitions for pluggable components in FleetMix."""
+from typing import Protocol, List, Dict, Tuple, Any
+import pandas as pd
+import pulp
+
+
+class Clusterer(Protocol):
+    """Protocol for clustering algorithms.
+    
+    Implementation note: fit() returns cluster labels (List[int]) to maintain 
+    compatibility with sklearn-style fit_predict() pattern used throughout the codebase.
+    """
+    def fit(self, customers: pd.DataFrame, *, settings: 'ClusteringSettings', n_clusters: int) -> List[int]:
+        """Cluster customers into n_clusters groups. Returns cluster labels."""
+        ...
+
+
+class RouteTimeEstimator(Protocol):
+    """Protocol for route time estimation algorithms."""
+    def estimate_route_time(
+        self,
+        cluster_customers: pd.DataFrame,
+        depot: Dict[str, float],
+        service_time: float,
+        avg_speed: float,
+        max_route_time: float,
+        prune_tsp: bool,
+    ) -> Tuple[float, List[str]]:
+        """Returns (route_time_hours, sequence)"""
+        ...
+
+
+class SolverAdapter(Protocol):
+    """Thin wrapper around PuLP solvers to provide a consistent interface."""
+    
+    def get_pulp_solver(self, verbose: bool = False) -> pulp.LpSolver:
+        """Return the underlying PuLP solver instance configured and ready to use."""
+        ...
+    
+    @property
+    def name(self) -> str:
+        """Solver name for logging."""
+        ...
+    
+    @property
+    def available(self) -> bool:
+        """Check if this solver is available in the environment."""
+        ... 

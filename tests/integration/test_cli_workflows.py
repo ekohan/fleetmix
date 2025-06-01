@@ -57,40 +57,36 @@ goods: ["Dry", "Chilled", "Frozen"]
 vehicles:
   Test Van:
     fixed_cost: 100
-    variable_cost_per_km: 0.5 # This will be used to calculate variable_cost_per_hour with avg_speed
     capacity: 500
     compartments:
-      - temperature_min: -25
-        temperature_max: 25
-        capacity: 500
+      Dry: True
+      Chilled: True
+      Frozen: True
+    extra:
+      variable_cost_per_km: 0.5
 
 # Root level parameters
-variable_cost_per_hour: 20.0 # Example: 0.5 cost/km * 40 km/hr avg_speed
+variable_cost_per_hour: 20.0
 avg_speed: 40.0 # km/hr
 max_route_time: 8.0 # hours
 service_time: 10.0 # minutes, moved from clustering
 
 clustering:
-  max_clusters_per_vehicle: 50
-  time_limit_minutes: 30
-  # service_time_minutes: 10 # Moved to root as service_time
   route_time_estimation: 'Legacy'
   method: 'minibatch_kmeans'
   max_depth: 5
   geo_weight: 0.7
   demand_weight: 0.3
+  distance: 'euclidean'
 
-# These were previously under 'optimization'
-# solver: "cbc" # REMOVED
-# time_limit_minutes: 1 # REMOVED - For the optimization solver
 light_load_penalty: 5.0
 light_load_threshold: 0.5
 compartment_setup_cost: 100.0
+prune_tsp: False
 
-# Output format, will be overridden by CLI --format if provided
 format: "json"
 
-post_optimization: false # Corresponds to post_optimization: { enabled: false }
+post_optimization: false
 """
         config_path = temp_results_dir / "cli_test_config.yaml"
         config_path.write_text(config_content)

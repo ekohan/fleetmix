@@ -1,12 +1,12 @@
 coverage:
   precision: 2
   round: down
-  range: "50...100"
+  range: "60...80"
   
   status:
     project:
       default:
-        target: 50%
+        target: 60%
         threshold: 1%
         if_no_uploads: error
         if_not_found: success

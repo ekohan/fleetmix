@@ -250,9 +250,15 @@ def _get_clustering_settings_list(params: Parameters) -> List[ClusteringSettings
 
     if base_settings.method == 'combine':
         logger.info("🔄 Generating settings variations for 'combine' method")
-        # 1. Base methods (kmeans, kmedoids, gmm) - Assume primarily geographical (Geo=1, Dem=0)
-        base_method_names = ['minibatch_kmeans', 'kmedoids', 'gaussian_mixture']
-        for name in base_method_names:
+        
+        # Check if sub_methods are specified in the clustering params
+        sub_methods = params.clustering.get('combine_sub_methods', None)
+        if sub_methods is None:
+            # Use default sub_methods
+            sub_methods = ['minibatch_kmeans', 'kmedoids', 'gaussian_mixture']
+        
+        # 1. Base methods - Assume primarily geographical (Geo=1, Dem=0)
+        for name in sub_methods:
             settings_list.append(replace(
                 base_settings, # Start from base
                 method=name # Set correct method name

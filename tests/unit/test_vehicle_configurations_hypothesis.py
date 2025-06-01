@@ -2,10 +2,11 @@ import hypothesis.strategies as st
 from hypothesis import given, settings
 import pandas as pd
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
+from fleetmix.core_types import VehicleSpec
 
 @settings(max_examples=20)
 @given(
-    vehicle_types=st.dictionaries(
+    vehicle_types_raw=st.dictionaries(
         keys=st.text(min_size=1, max_size=3),
         values=st.fixed_dictionaries({
             'capacity': st.integers(min_value=1, max_value=100),
@@ -15,7 +16,14 @@ from fleetmix.utils.vehicle_configurations import generate_vehicle_configuration
     ),
     goods=st.lists(st.text(min_size=1, max_size=3), min_size=1, max_size=3, unique=True)
 )
-def test_generate_vehicle_configurations_hypothesis(vehicle_types, goods):
+def test_generate_vehicle_configurations_hypothesis(vehicle_types_raw, goods):
+    """Test vehicle configuration generation with varied inputs using Hypothesis."""
+    # Convert raw dicts to VehicleSpec objects
+    vehicle_types = { 
+        name: VehicleSpec(**specs) 
+        for name, specs in vehicle_types_raw.items()
+    }
+
     df = generate_vehicle_configurations(vehicle_types, goods)
     # Must be a DataFrame
     assert isinstance(df, pd.DataFrame)

@@ -12,6 +12,7 @@ import pandas as pd
 import numpy as np
 
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleSpec, DepotLocation
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 import fleetmix.benchmarking.parsers.cvrp as cvrp_parser
 from fleetmix.utils.logging import log_detail, log_debug, log_progress
@@ -95,11 +96,11 @@ def _convert_normal(instance) -> tuple:
     
     # Override the default vehicles with just our CVRP vehicle
     params.vehicles = {
-        'CVRP': {
-            'capacity': instance.capacity,
-            'fixed_cost': 1000,
-            'compartments': {'Dry': True, 'Chilled': False, 'Frozen': False}
-        }
+        'CVRP': VehicleSpec(
+            capacity=instance.capacity,
+            fixed_cost=1000,
+            compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+        )
     }
     
     log_detail(f"\nVehicle Configuration:")
@@ -131,11 +132,11 @@ def _convert_split(instance, split_ratios: Dict[str, float]) -> tuple:
     
     # Override vehicles with just the multi-compartment CVRP vehicle
     params.vehicles = {
-        'CVRP_Multi': {
-            'capacity': instance.capacity,
-            'fixed_cost': 1000,
-            'compartments': {good: True for good in split_ratios}
-        }
+        'CVRP_Multi': VehicleSpec(
+            capacity=instance.capacity,
+            fixed_cost=1000,
+            compartments={good: True for good in split_ratios}
+        )
     }
     
     return pd.DataFrame(customers_data), params
@@ -159,11 +160,11 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
     
     # Override vehicles with scaled CVRP vehicle
     params.vehicles = {
-        'CVRP_Scaled': {
-            'capacity': instance.capacity * num_goods,
-            'fixed_cost': 1000,
-            'compartments': {'Dry': True, 'Chilled': False, 'Frozen': False}
-        }
+        'CVRP_Scaled': VehicleSpec(
+            capacity=instance.capacity * num_goods,
+            fixed_cost=1000,
+            compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+        )
     }
     
     return pd.DataFrame(customers_data), params
@@ -186,16 +187,16 @@ def _convert_combined(instances: List) -> tuple:
         customers_data.extend(instance_data)
     
     params = _create_base_params(instances[0])  # Use first instance for depot
-    params.expected_vehicles = sum(inst.num_vehicles for inst in instances)
+    params.expected_vehicles = sum(inst.num_vehicles for inst in instances if inst.num_vehicles is not None)
     
     # Create a vehicle type for each instance with its specific capacity and good
     params.vehicles = {
-        f'CVRP_{idx+1}': {
-            'capacity': instance.capacity,
-            'fixed_cost': 1000,
-            'compartments': {g: (g == good) for g in goods}
-        }
-        for idx, (instance, good) in enumerate(zip(instances, goods))
+        f'CVRP_{idx+1}': VehicleSpec(
+            capacity=instance.capacity,
+            fixed_cost=1000,
+            compartments={g: (g == good_outer) for g in goods}
+        )
+        for idx, (instance, good_outer) in enumerate(zip(instances, goods))
     }
     
     return pd.DataFrame(customers_data), params
@@ -231,10 +232,10 @@ def _create_base_params(instance) -> Parameters:
     geo_coords = converter.convert_all_coordinates(instance.coordinates)
     depot_coords = geo_coords[instance.depot_id]
     
-    params.depot = {
-        'latitude': depot_coords[0],
-        'longitude': depot_coords[1]
-    }
+    params.depot = DepotLocation(
+        latitude=depot_coords[0],
+        longitude=depot_coords[1]
+    )
 
     params.max_route_time = float('inf')
     

@@ -304,7 +304,6 @@ EOF
             solver_name='test_solver',
             solver_status='Optimal',
             solver_runtime_sec=10.5,
-            post_optimization_runtime_sec=2.3,
             total_fixed_cost=500.0,
             total_variable_cost=200.0,
             total_light_load_penalties=10.0,
@@ -326,24 +325,27 @@ EOF
         
         # Create mock parameters
         from fleetmix.config.parameters import Parameters
-        mock_params = Parameters(
-            goods=['Dry'],
-            vehicles={ # Simplified: one vehicle type
+        from fleetmix.core_types import VehicleSpec, DepotLocation
+
+        # Create a temporary YAML for the mock_params to load from
+        mock_params_dict = {
+            'goods': ['Dry'],
+            'vehicles': { 
                 'Test Van': {
                     'fixed_cost': 100,
-                    'variable_cost_per_km': 0.5, 
                     'capacity': 400,
-                    'compartments': [{'temperature_min': 15, 'temperature_max': 25, 'capacity': 400}]
+                    'compartments': {'Dry': True, 'Chilled': False, 'Frozen': False},
+                    'extra': {
+                        'variable_cost_per_km': 0.5 
+                    }
                 }
             },
-            variable_cost_per_hour=20.0,
-            avg_speed=40.0,
-            max_route_time=8.0,
-            service_time=15.0,
-            depot={'latitude': 0.0, 'longitude': 0.0}, # Dummy depot
-            clustering={
-                'max_clusters_per_vehicle': 100,
-                'time_limit_minutes': 60,
+            'variable_cost_per_hour': 20.0,
+            'avg_speed': 40.0,
+            'max_route_time': 8.0,
+            'service_time': 15.0,
+            'depot': {'latitude': 0.0, 'longitude': 0.0},
+            'clustering': {
                 'route_time_estimation': 'Legacy',
                 'method': 'minibatch_kmeans',
                 'max_depth': 5,
@@ -351,13 +353,23 @@ EOF
                 'demand_weight': 0.3,
                 'distance': 'euclidean'
             },
-            demand_file='dummy_demand.csv',
-            light_load_penalty=10.0,
-            light_load_threshold=0.5,
-            compartment_setup_cost=100.0,
-            format='json',
-            post_optimization=False # Simplified for this test
-        )
+            'demand_file': 'dummy_demand.csv',
+            'light_load_penalty': 10.0,
+            'light_load_threshold': 0.5,
+            'compartment_setup_cost': 100.0,
+            'format': 'json',
+            'post_optimization': False,
+            'prune_tsp': False
+            # small_cluster_size, nearest_merge_candidates, max_improvement_iterations are also in Parameters
+            # but might use defaults if not specified here and in from_yaml
+        }
+        
+        import yaml
+        temp_yaml_path = temp_results_dir / "mock_params_for_benchmark_save.yaml"
+        with open(temp_yaml_path, 'w') as f:
+            yaml.dump(mock_params_dict, f)
+
+        mock_params = Parameters.from_yaml(temp_yaml_path)
         mock_params.results_dir = temp_results_dir
         
         # Test saving as JSON

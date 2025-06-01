@@ -8,6 +8,7 @@ import numpy as np
 from pathlib import Path
 import tempfile
 import shutil
+import yaml
 
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.clustering.heuristics import (
@@ -77,64 +78,81 @@ class TestCoreAlgorithms:
         return pd.DataFrame(customers_data)
     
     @pytest.fixture
-    def realistic_config(self):
+    def realistic_config(self, tmp_path):
         """Create realistic fleet configuration for testing."""
-        return Parameters(
-            goods=['Dry', 'Chilled', 'Frozen'],
-            vehicles={
+        # Define config as dict first
+        config_dict = {
+            'goods': ['Dry', 'Chilled', 'Frozen'],
+            'vehicles': {
                 'Small Van': {
                     'fixed_cost': 100,
-                    'variable_cost_per_km': 0.5,
+                    # 'variable_cost_per_km': 0.5, # Not a direct Parameters field, store in extra
                     'capacity': 400,
-                    'compartments': [
-                        {'temperature_min': -25, 'temperature_max': 25, 'capacity': 400}
-                    ]
+                    'extra': {
+                        'variable_cost_per_km': 0.5,
+                        'compartments': [
+                            {'temperature_min': -25, 'temperature_max': 25, 'capacity': 400}
+                        ]
+                    }
                 },
                 'Medium Truck': {
                     'fixed_cost': 150,
-                    'variable_cost_per_km': 0.7,
                     'capacity': 800,
-                    'compartments': [
-                        {'temperature_min': -25, 'temperature_max': -18, 'capacity': 200},
-                        {'temperature_min': 0, 'temperature_max': 5, 'capacity': 300},
-                        {'temperature_min': 15, 'temperature_max': 25, 'capacity': 300}
-                    ]
+                    'extra': {
+                        'variable_cost_per_km': 0.7,
+                        'compartments': [
+                            {'temperature_min': -25, 'temperature_max': -18, 'capacity': 200},
+                            {'temperature_min': 0, 'temperature_max': 5, 'capacity': 300},
+                            {'temperature_min': 15, 'temperature_max': 25, 'capacity': 300}
+                        ]
+                    }
                 },
                 'Large Truck': {
                     'fixed_cost': 200,
-                    'variable_cost_per_km': 0.9,
                     'capacity': 1200,
-                    'compartments': [
-                        {'temperature_min': -25, 'temperature_max': -18, 'capacity': 300},
-                        {'temperature_min': 0, 'temperature_max': 5, 'capacity': 450},
-                        {'temperature_min': 15, 'temperature_max': 25, 'capacity': 450}
-                    ]
+                    'extra': {
+                        'variable_cost_per_km': 0.9,
+                        'compartments': [
+                            {'temperature_min': -25, 'temperature_max': -18, 'capacity': 300},
+                            {'temperature_min': 0, 'temperature_max': 5, 'capacity': 450},
+                            {'temperature_min': 15, 'temperature_max': 25, 'capacity': 450}
+                        ]
+                    }
                 }
             },
-            variable_cost_per_hour=20.0,
-            avg_speed=40.0,
-            max_route_time=8.0,
-            service_time=15.0,
-            depot={'latitude': 40.7831, 'longitude': -73.9712},
-            clustering={
-                'max_clusters_per_vehicle': 100,
-                'time_limit_minutes': 60,
+            'variable_cost_per_hour': 20.0,
+            'avg_speed': 40.0,
+            'max_route_time': 8.0,
+            'service_time': 15.0,
+            'depot': {'latitude': 40.7831, 'longitude': -73.9712},
+            'clustering': {
+                # 'max_clusters_per_vehicle': 100, # Not a direct Parameters field
+                'time_limit_minutes': 60, # Not a direct Parameters field
                 'route_time_estimation': 'Legacy',
                 'method': 'minibatch_kmeans',
                 'max_depth': 5,
                 'geo_weight': 0.7,
                 'demand_weight': 0.3
             },
-            demand_file='test_demand.csv',
-            light_load_penalty=10.0,
-            light_load_threshold=0.5,
-            compartment_setup_cost=100.0,
-            format='json',
-            post_optimization=True,
-            small_cluster_size=3,
-            nearest_merge_candidates=10,
-            max_improvement_iterations=5
-        )
+            'demand_file': 'test_demand.csv',
+            'light_load_penalty': 10.0,
+            'light_load_threshold': 0.5,
+            'compartment_setup_cost': 100.0,
+            'format': 'json',
+            'post_optimization': True,
+            'small_cluster_size': 3,
+            'nearest_merge_candidates': 10,
+            'max_improvement_iterations': 5,
+            'prune_tsp': False
+        }
+
+        # Write this dict to a temporary YAML file
+        temp_yaml_path = tmp_path / "realistic_temp_config.yaml"
+        with open(temp_yaml_path, 'w') as f:
+            yaml.dump(config_dict, f)
+
+        # Load Parameters from this temporary YAML
+        return Parameters.from_yaml(temp_yaml_path)
 
     def test_vehicle_configuration_generation(self, realistic_config):
         """Test vehicle configuration generation with multiple vehicle types."""

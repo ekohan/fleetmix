@@ -1,8 +1,9 @@
 from enum import Enum
-from dataclasses import dataclass, field
-from typing import Dict, List, Set, Optional, Tuple
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Set, Optional, Tuple, Any
 
 import pandas as pd
+from fleetmix.utils.time_measurement import TimeMeasurement
 
 @dataclass
 class VRPSolution:
@@ -63,25 +64,60 @@ class FleetmixSolution:
     total_compartment_penalties: float = 0.0
     total_cost: float = 0.0
     vehicles_used: Dict[str, int] = field(default_factory=empty_dict_factory)
-    total_vehicles: int = 0 # Added field based on _calculate_solution_statistics
+    total_vehicles: int = 0
     missing_customers: Set[str] = field(default_factory=empty_set_factory)
     solver_status: str = "Unknown"
     solver_name: str = "Unknown"
     solver_runtime_sec: float = 0.0
-    post_optimization_runtime_sec: Optional[float] = None # Changed to Optional
-    time_measurements: Optional[Dict[str, float]] = None
+    time_measurements: Optional[List[TimeMeasurement]] = None
 
     def __post_init__(self):
         """
         Post-initialization to calculate derived fields or perform validation.
         For example, ensuring total_cost is consistent.
         """
-        # Ensuring total_cost is correctly calculated if its components are provided
-        # and total_cost itself isn't directly set to a different value.
-        # If total_cost is explicitly passed, this won't override it unless
-        # it's the default 0.0 and other costs are non-zero.
         if (self.total_fixed_cost != 0.0 or \
             self.total_variable_cost != 0.0 or \
             self.total_penalties != 0.0) and \
-           self.total_cost == 0.0: # only recalculate if total_cost appears to be default
-            self.total_cost = self.total_fixed_cost + self.total_variable_cost + self.total_penalties 
+           self.total_cost == 0.0:
+            self.total_cost = self.total_fixed_cost + self.total_variable_cost + self.total_penalties
+
+@dataclass
+class VehicleSpec:
+    capacity: int
+    fixed_cost: float
+    compartments: Dict[str, bool] = field(default_factory=dict)
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+    def __getitem__(self, item: str) -> Any:
+        if item == 'compartments':
+            return self.compartments
+        if hasattr(self, item):
+            return getattr(self, item)
+        if item in self.extra:
+            return self.extra[item]
+        raise KeyError(f"'{item}' not found in VehicleSpec or its extra fields")
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = {"capacity": self.capacity, "fixed_cost": self.fixed_cost, "compartments": self.compartments}
+        data.update(self.extra)
+        return data
+
+@dataclass
+class DepotLocation:
+    latitude: float
+    longitude: float
+
+    def __getitem__(self, key: str) -> float:
+        if key == 'latitude':
+            return self.latitude
+        elif key == 'longitude':
+            return self.longitude
+        else:
+            raise KeyError(f"Invalid key for DepotLocation: {key}")
+
+    def as_tuple(self) -> Tuple[float, float]:
+        return (self.latitude, self.longitude)
+
+    def to_dict(self) -> Dict[str, float]:
+        return asdict(self)

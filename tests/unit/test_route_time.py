@@ -1,38 +1,79 @@
-import pytest
+"""Unit tests for the route_time module."""
+
+import unittest
 import pandas as pd
-import numpy as np
-
-from fleetmix.utils.route_time import _legacy_estimation, _bhh_estimation
+from fleetmix.utils.route_time import calculate_total_service_time_hours, estimate_route_time
 
 
-def test_legacy_estimation_zero_customers():
-    assert _legacy_estimation(0, service_time=30) == pytest.approx(1.0)
+class TestRouteTime(unittest.TestCase):
+    """Test cases for route time estimation functions."""
+    
+    def test_calculate_total_service_time_hours(self):
+        """Test service time calculation."""
+        # Test normal case
+        result = calculate_total_service_time_hours(5, 10)  # 5 customers, 10 min each
+        self.assertEqual(result, 50/60)  # 50 minutes = 0.833... hours
+        
+        # Test zero customers
+        result = calculate_total_service_time_hours(0, 10)
+        self.assertEqual(result, 0.0)
+        
+        # Test zero service time
+        result = calculate_total_service_time_hours(5, 0)
+        self.assertEqual(result, 0.0)
+    
+    def test_legacy_estimation(self):
+        """Test legacy estimation method through estimate_route_time."""
+        # Create dummy customer data
+        customers_df = pd.DataFrame({
+            'Customer_ID': ['C1', 'C2'],
+            'Latitude': [0.1, 0.2],
+            'Longitude': [0.1, 0.2]
+        })
+        depot = {'latitude': 0.0, 'longitude': 0.0}
+        
+        # 2 customers, 30 min service time each
+        time, sequence = estimate_route_time(
+            customers_df, depot, 30, 30, method='Legacy'
+        )
+        
+        # Legacy: 1 hour travel + 1 hour service (2 * 30 min)
+        expected = 1 + (2 * 30 / 60)
+        self.assertEqual(time, expected)
+        self.assertEqual(sequence, [])
+    
+    def test_bhh_estimation(self):
+        """Test BHH estimation method through estimate_route_time."""
+        # Create dummy customer data
+        customers_df = pd.DataFrame({
+            'Customer_ID': ['C1', 'C2', 'C3'],
+            'Latitude': [0.1, 0.15, 0.2],
+            'Longitude': [0.1, 0.15, 0.2]
+        })
+        depot = {'latitude': 0.0, 'longitude': 0.0}
+        
+        time, sequence = estimate_route_time(
+            customers_df, depot, 10, 30, method='BHH'
+        )
+        
+        # BHH should return positive time
+        self.assertGreater(time, 0)
+        self.assertEqual(sequence, [])
+    
+    def test_invalid_method(self):
+        """Test with invalid estimation method."""
+        customers_df = pd.DataFrame({
+            'Customer_ID': ['C1'],
+            'Latitude': [0.1],
+            'Longitude': [0.1]
+        })
+        depot = {'latitude': 0.0, 'longitude': 0.0}
+        
+        with self.assertRaises(ValueError) as cm:
+            estimate_route_time(customers_df, depot, 10, 30, method='INVALID')
+        
+        self.assertIn("Unknown route time estimation method", str(cm.exception))
 
 
-def test_legacy_estimation_multiple_customers():
-    # For 2 customers and 30 minutes each: 1 + 2*(30/60) = 1 + 1 = 2 hours
-    assert _legacy_estimation(2, service_time=30) == pytest.approx(2.0)
-
-
-def make_customers_df(coords):
-    # coords: list of (lat, lon)
-    df = pd.DataFrame({'Latitude':[c[0] for c in coords], 'Longitude':[c[1] for c in coords]})
-    return df
-
-
-def test_bhh_estimation_single_customer():
-    # For single customer, should return service_time/60
-    df = make_customers_df([(0,0)])
-    est = _bhh_estimation(df, depot={'latitude':0, 'longitude':0}, service_time=30, avg_speed=60)
-    assert est == pytest.approx(0.5)
-
-
-def test_bhh_estimation_two_customers():
-    # Two customers at unit distance 1 degree (~111 km), speed=111 km/h => travel ~1h roundtrip + service
-    df = make_customers_df([(0,1),(0,-1)])
-    est = _bhh_estimation(df, depot={'latitude':0,'longitude':0}, service_time=0, avg_speed=111)
-    # Internally, BHH intra-cluster time = 0.765 * sqrt(n) * sqrt(pi * radius^2) / avg_speed
-    # Here radius=~111 km cancels with avg_speed=111, so expected = 0.765 * sqrt(2) * sqrt(pi)
-    expected = 0.765 * np.sqrt(2) * np.sqrt(np.pi)
-    # Looser tolerance (0.3%) for numeric approximations
-    assert est == pytest.approx(expected, rel=3e-3) 
+if __name__ == '__main__':
+    unittest.main() 

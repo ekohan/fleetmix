@@ -9,9 +9,6 @@ from fleetmix.utils.route_time import (
     calculate_total_service_time_hours,
     build_distance_duration_matrices,
     estimate_route_time,
-    _legacy_estimation,
-    _bhh_estimation,
-    _pyvrp_tsp_estimation,
     _matrix_cache
 )
 
@@ -175,15 +172,23 @@ def test_estimate_route_time_invalid_method():
         estimate_route_time(customers_df, depot, 10, 30, method='INVALID')
 
 
-def test_legacy_estimation():
-    """Test the legacy estimation function directly."""
+def test_legacy_estimation_through_public_api():
+    """Test the legacy estimation behavior through public API."""
     # 5 customers, 10 min service time each
-    time = _legacy_estimation(5, 10)
+    customers_df = pd.DataFrame({
+        'Customer_ID': [f'C{i}' for i in range(5)],
+        'Latitude': [0.1 * i for i in range(5)],
+        'Longitude': [0.1 * i for i in range(5)]
+    })
+    depot = {'latitude': 0.0, 'longitude': 0.0}
+    
+    time, sequence = estimate_route_time(customers_df, depot, 10, 30, method='Legacy')
     assert time == 1 + (5 * 10 / 60)  # 1 + 50/60 hours
+    assert sequence == []
 
 
-def test_bhh_estimation():
-    """Test the BHH estimation function directly."""
+def test_bhh_estimation_through_public_api():
+    """Test the BHH estimation behavior through public API."""
     customers_df = pd.DataFrame({
         'Customer_ID': ['C1', 'C2'],
         'Latitude': [0.1, 0.2],
@@ -194,7 +199,7 @@ def test_bhh_estimation():
     service_time = 10  # minutes
     avg_speed = 30  # km/h
     
-    time = _bhh_estimation(customers_df, depot, service_time, avg_speed)
+    time, sequence = estimate_route_time(customers_df, depot, service_time, avg_speed, method='BHH')
     
     # Should return positive time
     assert time > 0
@@ -202,18 +207,18 @@ def test_bhh_estimation():
     assert time >= (2 * 10 / 60)  # At least the service time
 
 
-def test_pyvrp_tsp_estimation_zero_customers():
+def test_tsp_estimation_zero_customers():
     """Test TSP estimation with zero customers."""
     customers_df = pd.DataFrame(columns=['Customer_ID', 'Latitude', 'Longitude'])
     depot = {'latitude': 0.0, 'longitude': 0.0}
     
-    time, sequence = _pyvrp_tsp_estimation(customers_df, depot, 10, 30)
+    time, sequence = estimate_route_time(customers_df, depot, 10, 30, method='TSP')
     
     assert time == 0.0
     assert sequence == []
 
 
-def test_pyvrp_tsp_estimation_single_customer():
+def test_tsp_estimation_single_customer():
     """Test TSP estimation with single customer."""
     customers_df = pd.DataFrame({
         'Customer_ID': ['C1'],
@@ -225,7 +230,7 @@ def test_pyvrp_tsp_estimation_single_customer():
     service_time = 10  # minutes
     avg_speed = 30  # km/h
     
-    time, sequence = _pyvrp_tsp_estimation(customers_df, depot, service_time, avg_speed)
+    time, sequence = estimate_route_time(customers_df, depot, service_time, avg_speed, method='TSP')
     
     # Should return travel time + service time
     assert time > 0
@@ -234,7 +239,7 @@ def test_pyvrp_tsp_estimation_single_customer():
 
 
 @patch('fleetmix.utils.route_time.Model')
-def test_pyvrp_tsp_estimation_infeasible(mock_model):
+def test_tsp_estimation_infeasible(mock_model):
     """Test TSP estimation when solution is infeasible."""
     # Mock PyVRP to return infeasible solution
     mock_result = MagicMock()
@@ -250,8 +255,8 @@ def test_pyvrp_tsp_estimation_infeasible(mock_model):
     depot = {'latitude': 0.0, 'longitude': 0.0}
     max_route_time = 8  # hours
     
-    time, sequence = _pyvrp_tsp_estimation(
-        customers_df, depot, 10, 30, max_route_time
+    time, sequence = estimate_route_time(
+        customers_df, depot, 10, 30, method='TSP', max_route_time=max_route_time
     )
     
     # Should return slightly over max_route_time

@@ -10,6 +10,7 @@ from typing import Union
 import pandas as pd
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleSpec, DepotLocation
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
 def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) -> tuple:
@@ -71,16 +72,16 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
     params = Parameters.from_yaml()
     # Set depot location
     depot_lat, depot_lon = geo_coords[instance.depot_id]
-    params.depot = {'latitude': depot_lat, 'longitude': depot_lon}
+    params.depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
     # No max route time by default
     params.max_route_time = float('inf')
     # Single multi-compartment vehicle
     params.vehicles = {
-        'MCVRP': {
-            'capacity': instance.capacity,
-            'fixed_cost': 1000,
-            'compartments': {'Dry': True, 'Chilled': True, 'Frozen': True}
-        }
+        'MCVRP': VehicleSpec(
+            capacity=instance.capacity,
+            fixed_cost=1000,
+            compartments={'Dry': True, 'Chilled': True, 'Frozen': True}
+        )
     }
     # Expected vehicles from instance
     params.expected_vehicles = instance.vehicles

@@ -15,6 +15,7 @@ from kmedoids import KMedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
+from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY
 
 from .common import Cluster, ClusteringSettings
 from fleetmix.utils.logging import FleetmixLogger
@@ -26,6 +27,63 @@ PRODUCT_WEIGHTS = {
     'Chilled': 1.0 / 3.0,   # Equal priority (1/3)
     'Dry': 1.0 / 3.0        # Equal priority (1/3)
 }
+
+
+@register_clusterer('minibatch_kmeans')
+class MiniBatchKMeansClusterer:
+    """MiniBatch KMeans clustering algorithm."""
+    
+    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+        """Cluster customers using MiniBatch KMeans."""
+        data = compute_cluster_metric_input(customers, settings)
+        model = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
+        return model.fit_predict(data).tolist()
+
+
+@register_clusterer('kmedoids')
+class KMedoidsClusterer:
+    """K-Medoids clustering algorithm."""
+    
+    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+        """Cluster customers using K-Medoids."""
+        data = compute_cluster_metric_input(customers, settings)
+        model = KMedoids(
+            n_clusters=n_clusters,
+            metric='euclidean',
+            method='fasterpam',
+            init='build',
+            max_iter=300,
+            random_state=42
+        )
+        return model.fit_predict(data).tolist()
+
+
+@register_clusterer('agglomerative')
+class AgglomerativeClusterer:
+    """Agglomerative clustering algorithm."""
+    
+    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+        """Cluster customers using Agglomerative clustering."""
+        # Agglomerative clustering needs precomputed distance matrix
+        data = compute_cluster_metric_input(customers, settings)
+        model = AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
+        return model.fit_predict(data).tolist()
+
+
+@register_clusterer('gaussian_mixture')
+class GaussianMixtureClusterer:
+    """Gaussian Mixture Model clustering algorithm."""
+    
+    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+        """Cluster customers using Gaussian Mixture Model."""
+        data = compute_cluster_metric_input(customers, settings)
+        model = GaussianMixture(
+            n_components=n_clusters,
+            random_state=42,
+            covariance_type='full'
+        )
+        return model.fit_predict(data).tolist()
+
 
 def compute_cluster_metric_input(
     customers: pd.DataFrame,
@@ -85,31 +143,6 @@ def compute_composite_distance(
     composite_distance = (geo_weight * geo_dist) + (demand_weight * demand_dist)
     
     return composite_distance
-
-def get_clustering_model(n_clusters: int, method: str):
-    """Return the clustering model based on the method name."""
-    if method == 'minibatch_kmeans':
-        return MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
-    elif method == 'kmedoids':
-        return KMedoids(
-            n_clusters=n_clusters,
-            metric='euclidean',
-            method='fasterpam',
-            init='build',
-            max_iter=300,
-            random_state=42
-        )
-    elif method.startswith('agglomerative'):
-        return AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
-    elif method == 'gaussian_mixture':
-        return GaussianMixture(
-            n_components=n_clusters,
-            random_state=42,
-            covariance_type='full'
-        )
-    else:
-        logger.error(f"❌ Unknown clustering method: {method}")
-        raise ValueError(f"Unknown clustering method: {method}")
 
 def get_cached_demand(
     customers: pd.DataFrame,
@@ -215,17 +248,20 @@ def create_normal_dataset_clusters(
         params
     )
     
-    # Get input data and cluster using weights from settings
-    data = compute_cluster_metric_input(
-        customers_copy,
-        settings
-    )
-    
     # Ensure the number of clusters doesn't exceed the number of customers
     num_clusters = min(num_clusters, len(customers_copy))
     
-    model = get_clustering_model(num_clusters, settings.method)
-    customers_copy['Cluster'] = model.fit_predict(data)
+    # Get the clusterer from registry
+    clusterer_class = CLUSTERER_REGISTRY.get(settings.method)
+    if clusterer_class is None:
+        logger.error(f"❌ Unknown clustering method: {settings.method}")
+        raise ValueError(f"Unknown clustering method: {settings.method}")
+    
+    # Create instance and cluster
+    clusterer = clusterer_class()
+    labels = clusterer.fit(customers_copy, settings=settings, n_clusters=num_clusters)
+    customers_copy['Cluster'] = labels
+    
     return customers_copy
 
 def generate_cluster_id_base(config_id: int) -> int:
@@ -300,15 +336,18 @@ def split_cluster(
     settings: ClusteringSettings
 ) -> List[pd.DataFrame]:
     """Split an oversized cluster into smaller ones."""
-    # Prepare data for splitting
-    split_data = compute_cluster_metric_input(
-        cluster_customers,
-        settings
-    )
+    # Get the clusterer from registry
+    clusterer_class = CLUSTERER_REGISTRY.get(settings.method)
+    if clusterer_class is None:
+        logger.error(f"❌ Unknown clustering method: {settings.method}")
+        raise ValueError(f"Unknown clustering method: {settings.method}")
     
-    # Split into two clusters
-    cluster_model = get_clustering_model(2, settings.method)
-    sub_labels = cluster_model.fit_predict(split_data)
+    # Create instance and split into 2 clusters
+    clusterer = clusterer_class()
+    sub_labels = clusterer.fit(cluster_customers, settings=settings, n_clusters=2)
+    
+    # Convert list to numpy array for indexing
+    sub_labels = np.array(sub_labels)
     
     # Create sub-clusters
     sub_clusters = []

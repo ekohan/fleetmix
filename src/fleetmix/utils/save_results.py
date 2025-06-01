@@ -26,6 +26,7 @@ import folium
 from typing import Dict
 from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution
 from fleetmix.utils.logging import FleetmixLogger
+from dataclasses import asdict
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -120,9 +121,12 @@ def save_optimization_results(
     
     # Add vehicle types
     for v_type, specs in parameters.vehicles.items():
-        for spec_name, value in specs.items():
-            metric_name = f'Vehicle {v_type} {spec_name}'
-            summary_metrics.append((metric_name, value))
+        summary_metrics.append((f'Vehicle Type {v_type} Capacity', specs.capacity))
+        summary_metrics.append((f'Vehicle Type {v_type} Fixed Cost', specs.fixed_cost))
+        # If VehicleSpec has an 'extra' field, we want to include those:
+        if hasattr(specs, 'extra') and specs.extra:
+            for extra_key, extra_value in specs.extra.items():
+                summary_metrics.append((f'Vehicle Type {v_type} {extra_key.replace("_", " ").title()}', extra_value))
 
     # Prepare cluster details
     cluster_details = solution.selected_clusters.copy()
@@ -184,7 +188,6 @@ def save_optimization_results(
             ('Solver', solution.solver_name),
             ('Solver Status', solution.solver_status),
             ('Solver Runtime (s)', solution.solver_runtime_sec),
-            ('Post-Optimization Runtime (s)', solution.post_optimization_runtime_sec),
             ('Total Fixed Cost', solution.total_fixed_cost),
             ('Total Variable Cost', solution.total_variable_cost),
             ('Total Penalties', solution.total_penalties),
@@ -196,10 +199,11 @@ def save_optimization_results(
     }
 
     # Process time measurements if provided
+    time_measurements_for_excel = []
+    time_measurements_for_json = {}
     if solution.time_measurements:
-        time_measurements_data = []
-        for measurement in solution.time_measurements:
-            time_measurements_data.extend([
+        for measurement in solution.time_measurements: 
+            time_measurements_for_excel.extend([
                 (f'{measurement.span_name}_wall_time', measurement.wall_time),
                 (f'{measurement.span_name}_process_user_time', measurement.process_user_time),
                 (f'{measurement.span_name}_process_system_time', measurement.process_system_time),
@@ -209,15 +213,22 @@ def save_optimization_results(
                  measurement.process_user_time + measurement.process_system_time + 
                  measurement.children_user_time + measurement.children_system_time)
             ])
+            # For JSON:
+            measurement_values_for_json = asdict(measurement)
+            span_name_for_json = measurement_values_for_json.pop('span_name')
+            time_measurements_for_json[span_name_for_json] = measurement_values_for_json
 
-        if time_measurements_data:
-            data['time_measurements'] = time_measurements_data
+    # Add to data dict for writing functions
+    if time_measurements_for_excel:
+        data['time_measurements_excel'] = time_measurements_for_excel # Used by _write_to_excel
+    if time_measurements_for_json:
+        data['time_measurements_json'] = time_measurements_for_json # Used by _write_to_json
 
     try:
         if format == 'json':
-            _write_to_json(output_filename, data)
+            _write_to_json(output_filename, data) # _write_to_json will use data['time_measurements_json']
         else:
-            _write_to_excel(output_filename, data)
+            _write_to_excel(output_filename, data) # _write_to_excel will use data['time_measurements_excel']
             
         # Only create visualization for optimization results
         if not is_benchmark:
@@ -267,8 +278,8 @@ def _write_to_excel(filename: str, data: dict) -> None:
         )
         
         # Sheet 7: Time Measurements (if available)
-        if 'time_measurements' in data:
-            pd.DataFrame(data['time_measurements'], columns=['Metric', 'Value']).to_excel(
+        if 'time_measurements_excel' in data: # MODIFIED key
+            pd.DataFrame(data['time_measurements_excel'], columns=['Metric', 'Value']).to_excel(
                 writer, sheet_name='Time Measurements', index=False
             )
 
@@ -306,8 +317,8 @@ def _write_to_json(filename: str, data: dict) -> None:
     }
     
     # Add time measurements if available
-    if 'time_measurements' in data:
-        json_data['Time Measurements'] = dict(data['time_measurements'])
+    if 'time_measurements_json' in data: # MODIFIED key
+        json_data['Time Measurements'] = data['time_measurements_json']
 
     with open(filename, 'w') as f:
         json.dump(json_data, f, cls=NumpyEncoder, indent=2)

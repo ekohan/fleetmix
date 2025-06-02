@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
-from .clustering.common import ClusteringSettings
+from .core_types import ClusteringContext
 
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
@@ -48,16 +48,16 @@ class CombinedClusterer:
         # Default sub_methods if not provided
         self.sub_methods = sub_methods or ['minibatch_kmeans', 'kmedoids', 'gaussian_mixture']
     
-    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int) -> List[int]:
         """
         Implementation that combines results from multiple clusterers.
         
         For the 'combine' method, we run multiple clustering algorithms and return
         all their results mapped to unique label ranges. This is handled specially
-        in generator.py to create multiple settings configurations.
+        in generator.py to create multiple context configurations.
         
         Note: This is a placeholder since the actual 'combine' logic is handled
-        at a higher level in generator.py by creating multiple ClusteringSettings.
+        at a higher level in generator.py by creating multiple ClusteringContext objects.
         This implementation should not be called directly.
         """
         logger.warning("CombinedClusterer.fit() called directly - this should be handled by generator.py")

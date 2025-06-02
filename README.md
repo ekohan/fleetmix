@@ -199,7 +199,7 @@ from typing import List
 class MyCustomClusterer:
     """Custom clustering implementation."""
     
-    def fit(self, customers: pd.DataFrame, *, settings, n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context, n_clusters: int) -> List[int]:
         """Implement your clustering logic here."""
         # Your custom clustering algorithm
         # Must return a list of cluster labels (integers)

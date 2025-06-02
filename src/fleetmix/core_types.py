@@ -29,13 +29,12 @@ class BenchmarkType(Enum):
     SINGLE_COMPARTMENT = "single_compartment"  # Upper bound - Separate VRPs per product
     MULTI_COMPARTMENT = "multi_compartment"    # Lower bound - Aggregate demand, post-process for compartments 
 
-# Example of a core type, expand as needed
 @dataclass
 class Customer:
     """Represents a single customer with their demands."""
     customer_id: str
     demands: Dict[str, float]  # e.g., {'dry': 10, 'chilled': 5}
-    location: Optional[Tuple[float, float]] = None  # (latitude, longitude)
+    location: Tuple[float, float]  # (latitude, longitude)
 
 
 def empty_dataframe_factory():
@@ -49,6 +48,73 @@ def empty_dict_factory():
 def empty_set_factory():
     """Ensures a new empty set is created for default."""
     return set()
+
+def empty_list_factory():
+    """Ensures a new empty list is created for default."""
+    return []
+
+
+@dataclass
+class VehicleOperationContext:
+    """Base context for vehicle operations - shared operational parameters."""
+    depot: 'DepotLocation'
+    avg_speed: float  # km/h
+    service_time: float  # minutes per customer
+    max_route_time: float  # hours
+
+
+@dataclass
+class ClusteringContext(VehicleOperationContext):
+    """Context for customer clustering algorithms."""
+    goods: List[str]
+    max_depth: int
+    route_time_estimation: str
+    geo_weight: float
+    demand_weight: float
+
+
+@dataclass
+class RouteTimeContext(VehicleOperationContext):
+    """Context for route time estimation algorithms."""
+    prune_tsp: bool = False
+    
+    def __post_init__(self):
+        """Allow max_route_time to be optional for route time estimation."""
+        # For route time estimation, max_route_time might be None during estimation
+        pass
+
+
+@dataclass
+class Cluster:
+    """Represents a cluster of customers that can be served by a vehicle configuration."""
+    cluster_id: int
+    config_id: int
+    customers: List[str]
+    total_demand: Dict[str, float]
+    centroid_latitude: float
+    centroid_longitude: float
+    goods_in_config: List[str]
+    route_time: float
+    method: str = ''
+    tsp_sequence: List[str] = field(default_factory=empty_list_factory)
+
+    def to_dict(self) -> Dict:
+        """Convert cluster to dictionary format."""
+        data = {
+            'Cluster_ID': self.cluster_id,
+            'Config_ID': self.config_id,
+            'Customers': self.customers,
+            'Total_Demand': self.total_demand,
+            'Centroid_Latitude': self.centroid_latitude,
+            'Centroid_Longitude': self.centroid_longitude,
+            'Goods_In_Config': self.goods_in_config,
+            'Route_Time': self.route_time,
+            'Method': self.method
+        }
+        # Only add sequence if it exists
+        if self.tsp_sequence:
+            data['TSP_Sequence'] = self.tsp_sequence
+        return data
 
 
 @dataclass

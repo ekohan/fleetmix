@@ -454,7 +454,7 @@ class VRPSolver:
         
         # Get the vehicle type from the solution
         vehicle_type = list(self.params.vehicles.values())[vehicle_type_idx]
-        total_vehicle_capacity = vehicle_type['capacity']
+        total_vehicle_capacity = vehicle_type.capacity  # Direct attribute access instead of ['capacity']
         
         for customer_id in route_customers:
             for good in self.params.goods:
@@ -568,15 +568,15 @@ class VRPSolver:
             # Get vehicle with smallest capacity that can handle this product
             compatible_vehicles = []
             for vehicle_name, vehicle_info in self.params.vehicles.items():
-                compartments = vehicle_info.get('compartments', {})
+                compartments = vehicle_info.compartments  # Direct attribute access
                 if compartments.get(good, False):
                     compatible_vehicles.append((vehicle_name, vehicle_info))
             
             if compatible_vehicles:
                 # Sort by capacity
-                compatible_vehicles.sort(key=lambda x: x[1]['capacity'])
+                compatible_vehicles.sort(key=lambda x: x[1].capacity)  # Direct attribute access
                 smallest_vehicle = compatible_vehicles[0]
-                capacity = smallest_vehicle[1]['capacity']
+                capacity = smallest_vehicle[1].capacity  # Direct attribute access
                 min_vehicles = np.ceil(demand / capacity)
                 min_vehicles_by_product[good] = min_vehicles
         

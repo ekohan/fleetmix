@@ -9,16 +9,14 @@ from unittest.mock import patch # For mocking subprocess
 import re # Add import for regex
 import string # For string.printable
 
-from fleetmix.app import app # Assuming your Typer app instance is named 'app' in fleetmix.app
+from fleetmix.app import app 
 from fleetmix import __version__
 
 runner = CliRunner()
 
 MINIMAL_DEMAND_CSV = "tests/_assets/cli_inputs/minimal_demand.csv"
 MINIMAL_CONFIG_YAML = "tests/_assets/configs/test_config_minimal.yaml"
-# Ensure this MCVRP instance exists in src/fleetmix/benchmarking/datasets/mcvrp/
 MCVRP_INSTANCE = "10_3_3_1_(09)" 
-# Ensure this CVRP instance exists in src/fleetmix/benchmarking/datasets/cvrp/
 CVRP_INSTANCE = "X-n129-k18" 
 
 EXPECTED_MINIMAL_DEMAND_CONTENT = "ClientID,Lat,Lon,ProductType,Kg\nC1,10.0,10.0,Dry,5\nC1,10.0,10.0,Chilled,0\nC1,10.0,10.0,Frozen,0\n"

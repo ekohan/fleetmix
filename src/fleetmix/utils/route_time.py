@@ -193,6 +193,10 @@ class LegacyEstimator:
 class BHHEstimator:
     """Beardwood-Halton-Hammersley estimation method."""
     
+    # Constants for the BHH formula
+    SETUP_TIME = 0.0  # α_vk: Setup time to dispatch vehicle configuration (hours)
+    BETA = 0.765      # β: Non-negative constant for BHH approximation
+    
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
@@ -202,16 +206,25 @@ class BHHEstimator:
         max_route_time: float,
         prune_tsp: bool,
     ) -> Tuple[float, List[str]]:
-        """BHH estimation: L ≈ 0.765 * sqrt(n) * sqrt(A)"""
+        """BHH estimation: t_vk ≈ α_vk + 2·δ_vk + β·√(n·A) + γ·n
+        
+        Where:
+        - α_vk: Setup time to dispatch vehicle configuration
+        - δ_vk: Line-haul travel time between depot and cluster centroid
+        - β: Non-negative constant (0.765)
+        - γ: Customer service time
+        - n: Number of customers
+        - A: Service area
+        """
         if len(cluster_customers) <= 1:
             # For 0 or 1 customer, service time is the primary component.
             # Assuming service_time is per customer.
             return calculate_total_service_time_hours(len(cluster_customers), service_time), []
             
-        # Calculate service time component
+        # Calculate service time component (γ·n)
         service_time_total = calculate_total_service_time_hours(len(cluster_customers), service_time)
         
-        # Calculate depot travel component
+        # Calculate depot travel component (2·δ_vk)
         centroid_lat = cluster_customers['Latitude'].mean()
         centroid_lon = cluster_customers['Longitude'].mean()
         depot_to_centroid = haversine(
@@ -220,7 +233,7 @@ class BHHEstimator:
         )
         depot_travel_time = 2 * depot_to_centroid / avg_speed  # Round trip hours
         
-        # Calculate intra-cluster travel component using BHH formula
+        # Calculate intra-cluster travel component using BHH formula (β·√(n·A))
         cluster_radius = max(
             haversine(
                 (centroid_lat, centroid_lon),
@@ -233,13 +246,14 @@ class BHHEstimator:
         )
         cluster_area = np.pi * (cluster_radius ** 2)
         intra_cluster_distance = (
-            0.765 * 
+            self.BETA *
             np.sqrt(len(cluster_customers)) * 
             np.sqrt(cluster_area)
         )
         intra_cluster_time = intra_cluster_distance / avg_speed
         
-        time = service_time_total + depot_travel_time + intra_cluster_time
+        # Total time: α_vk + 2·δ_vk + β·√(n·A) + γ·n
+        time = self.SETUP_TIME + service_time_total + depot_travel_time + intra_cluster_time
         return time, [] # Return empty sequence
 
 

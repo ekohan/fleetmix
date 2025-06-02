@@ -132,7 +132,7 @@ def test_cli_benchmark_mcvrp():
 def test_api_optimize():
     """Test the Python API with the smoke test data."""
     # Use the existing smoke test data files
-    smoke_dir = Path(__file__).parent / "_assets" / "smoke"
+    smoke_dir = Path(__file__).parent.parent / "_assets" / "smoke"
     demand_file = smoke_dir / "mini_demand.csv"
     config_file = smoke_dir / "mini.yaml"
     

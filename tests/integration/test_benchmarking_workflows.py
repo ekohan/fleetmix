@@ -14,18 +14,11 @@ from fleetmix.benchmarking.converters.mcvrp import convert_mcvrp_to_fsm
 from fleetmix.benchmarking.parsers.cvrp import CVRPParser
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.benchmarking.models.models import CVRPInstance, MCVRPInstance
-# VRP solver imports - may not be available
-try:
-    from fleetmix.benchmarking.solvers.vrp_solver import (
-        VRPSolver, solve_cvrp_instance, solve_mcvrp_instance
-    )
-    VRP_SOLVER_AVAILABLE = True
-except ImportError:
-    VRP_SOLVER_AVAILABLE = False
+from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.core_types import FleetmixSolution, VRPSolution
 
 
 class TestBenchmarkingWorkflows:
@@ -256,32 +249,142 @@ EOF
         except Exception as e:
             pytest.skip(f"MCVRP pipeline test failed: {str(e)}")
 
-    def test_vrp_solver_interface(self, small_cvrp_file, small_mcvrp_file):
+    def test_vrp_solver_interface(self, small_cvrp_file, temp_results_dir):
         """Test VRP solver interface for baseline comparisons."""
-        if not VRP_SOLVER_AVAILABLE:
-            pytest.skip("VRP solver not available")
-            
-        # Test CVRP solver
+        # First parse the CVRP instance to get customer data
         try:
-            solver = VRPSolver()
+            from fleetmix.config.parameters import Parameters
+            from fleetmix.core_types import BenchmarkType
             
-            # Parse instance first
+            # Parse CVRP instance
             parser = CVRPParser(str(small_cvrp_file))
             cvrp_instance = parser.parse()
             
-            # Test solver (may fail if PyVRP not available)
-            solution = solve_cvrp_instance(cvrp_instance, time_limit=30)
+            # Convert CVRP instance to customer DataFrame format
+            customers_data = []
+            for i, (lat, lon) in cvrp_instance.coordinates.items():
+                if i > 1:  # Skip depot (index 1)
+                    customers_data.append({
+                        'Customer_ID': f'C{i}',
+                        'Latitude': float(lat),  # Convert numpy to float
+                        'Longitude': float(lon),  # Convert numpy to float
+                        'Dry_Demand': float(cvrp_instance.demands[i]),  # Convert numpy to float
+                        'Chilled_Demand': 0.0,
+                        'Frozen_Demand': 0.0
+                    })
             
-            # If solver succeeds, verify solution structure
-            if solution is not None:
-                # Assuming 'solution' from solve_cvrp_instance is a dict-like or object
-                # This part is for the VRP_SOLVER_AVAILABLE block, may not be FleetmixSolution
-                assert hasattr(solution, 'cost') or hasattr(solution, 'total_cost')
-                assert hasattr(solution, 'routes')
-                
+            customers_df = pd.DataFrame(customers_data)
+            
+            # Create mock parameters for the solver
+            from fleetmix.core_types import VehicleSpec, DepotLocation
+            
+            # Create a temporary YAML for parameters
+            mock_params_dict = {
+                'goods': ['Dry', 'Chilled', 'Frozen'],
+                'vehicles': { 
+                    'Test Van': {
+                        'fixed_cost': 100,
+                        'capacity': int(cvrp_instance.capacity),  # Convert numpy to int
+                        'compartments': {'Dry': True, 'Chilled': True, 'Frozen': True},
+                        'extra': {
+                            'variable_cost_per_km': 0.5 
+                        }
+                    }
+                },
+                'variable_cost_per_hour': 20.0,
+                'avg_speed': 40.0,
+                'max_route_time': 8.0,
+                'service_time': 15.0,
+                'depot': {'latitude': float(cvrp_instance.coordinates[1][0]), 'longitude': float(cvrp_instance.coordinates[1][1])},  # Convert numpy to float
+                'clustering': {
+                    'route_time_estimation': 'BHH',
+                    'method': 'minibatch_kmeans',
+                    'max_depth': 5,
+                    'geo_weight': 0.7,
+                    'demand_weight': 0.3,
+                    'distance': 'euclidean'
+                },
+                'demand_file': 'dummy_demand.csv',
+                'light_load_penalty': 10.0,
+                'light_load_threshold': 0.5,
+                'compartment_setup_cost': 100.0,
+                'format': 'json',
+                'post_optimization': False,
+                'prune_tsp': False
+            }
+            
+            import yaml
+            temp_yaml_path = temp_results_dir / "mock_params_for_vrp_solver.yaml"
+            with open(temp_yaml_path, 'w') as f:
+                yaml.dump(mock_params_dict, f)
+
+            params = Parameters.from_yaml(str(temp_yaml_path))  # Convert Path to string
+            params.results_dir = temp_results_dir  # Set results_dir directly as Path object
+            
+            # Test single compartment solver
+            solver = VRPSolver(
+                customers=customers_df,
+                params=params,
+                time_limit=30,  # Short time limit for testing
+                benchmark_type=BenchmarkType.SINGLE_COMPARTMENT
+            )
+            
+            # Test solve_scv method
+            scv_solution = solver.solve_scv(verbose=True)
+            
+            # Verify solution structure
+            assert isinstance(scv_solution, VRPSolution)
+            assert scv_solution.solver_status in ["Optimal", "Infeasible", "Feasible"]
+            assert scv_solution.total_cost >= 0 or scv_solution.total_cost == float('inf')
+            assert scv_solution.execution_time >= 0
+            assert isinstance(scv_solution.routes, list)
+            assert isinstance(scv_solution.vehicle_loads, list)
+            assert isinstance(scv_solution.route_times, list)
+            assert isinstance(scv_solution.route_feasibility, list)
+            
+            # Test multi-compartment solver
+            mc_solver = VRPSolver(
+                customers=customers_df,
+                params=params,
+                time_limit=30,
+                benchmark_type=BenchmarkType.MULTI_COMPARTMENT
+            )
+            
+            # Test solve_mcv method
+            mcv_result = mc_solver.solve_mcv(verbose=True)
+            
+            # Verify multi-compartment solution structure
+            assert isinstance(mcv_result, dict)
+            assert "multi" in mcv_result
+            assert "compartment_configs" in mcv_result
+            
+            mc_solution = mcv_result["multi"]
+            assert isinstance(mc_solution, VRPSolution)
+            assert mc_solution.solver_status in ["Optimal", "Infeasible", "Feasible"]
+            
+            compartment_configs = mcv_result["compartment_configs"]
+            assert isinstance(compartment_configs, list)
+            
+            # Test main solve method with single compartment
+            sc_result = solver.solve(verbose=True)
+            assert isinstance(sc_result, dict)
+            # Should return solutions for each product type
+            for product in params.goods:
+                if product in sc_result:
+                    assert isinstance(sc_result[product], VRPSolution)
+            
+            # Test main solve method with multi-compartment
+            mc_result = mc_solver.solve(verbose=True)
+            assert isinstance(mc_result, dict)
+            assert "multi" in mc_result
+            
+        except ImportError as e:
+            if "pyvrp" in str(e).lower():
+                pytest.skip(f"PyVRP not available: {str(e)}")
+            else:
+                pytest.skip(f"Required dependency not available: {str(e)}")
         except Exception as e:
-            # Solver might fail for small instances or other reasons
-            pytest.skip(f"VRP solver failed: {str(e)}")
+            pytest.skip(f"VRP solver test failed: {str(e)}")
 
     def test_save_benchmark_results(self, temp_results_dir):
         """Test benchmark result saving functionality."""

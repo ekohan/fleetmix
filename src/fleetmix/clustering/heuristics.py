@@ -17,7 +17,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
 from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY
 
-from .common import Cluster, ClusteringSettings
+from fleetmix.core_types import Cluster, ClusteringContext
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -33,9 +33,9 @@ PRODUCT_WEIGHTS = {
 class MiniBatchKMeansClusterer:
     """MiniBatch KMeans clustering algorithm."""
     
-    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int) -> List[int]:
         """Cluster customers using MiniBatch KMeans."""
-        data = compute_cluster_metric_input(customers, settings)
+        data = compute_cluster_metric_input(customers, context, 'minibatch_kmeans')
         model = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
         return model.fit_predict(data).tolist()
 
@@ -44,9 +44,9 @@ class MiniBatchKMeansClusterer:
 class KMedoidsClusterer:
     """K-Medoids clustering algorithm."""
     
-    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int) -> List[int]:
         """Cluster customers using K-Medoids."""
-        data = compute_cluster_metric_input(customers, settings)
+        data = compute_cluster_metric_input(customers, context, 'kmedoids')
         model = KMedoids(
             n_clusters=n_clusters,
             metric='euclidean',
@@ -62,10 +62,10 @@ class KMedoidsClusterer:
 class AgglomerativeClusterer:
     """Agglomerative clustering algorithm."""
     
-    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int) -> List[int]:
         """Cluster customers using Agglomerative clustering."""
         # Agglomerative clustering needs precomputed distance matrix
-        data = compute_cluster_metric_input(customers, settings)
+        data = compute_cluster_metric_input(customers, context, 'agglomerative')
         model = AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
         return model.fit_predict(data).tolist()
 
@@ -74,9 +74,9 @@ class AgglomerativeClusterer:
 class GaussianMixtureClusterer:
     """Gaussian Mixture Model clustering algorithm."""
     
-    def fit(self, customers: pd.DataFrame, *, settings: ClusteringSettings, n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int) -> List[int]:
         """Cluster customers using Gaussian Mixture Model."""
-        data = compute_cluster_metric_input(customers, settings)
+        data = compute_cluster_metric_input(customers, context, 'gaussian_mixture')
         model = GaussianMixture(
             n_components=n_clusters,
             random_state=42,
@@ -87,19 +87,20 @@ class GaussianMixtureClusterer:
 
 def compute_cluster_metric_input(
     customers: pd.DataFrame,
-    settings: ClusteringSettings
+    context: ClusteringContext,
+    method: str
 ) -> np.ndarray:
     """Get appropriate input for clustering algorithm."""
     # Methods that need precomputed distance matrix
     needs_precomputed = (
-        settings.method.startswith('agglomerative') 
+        method.startswith('agglomerative')
     )
     
     if needs_precomputed:
-        logger.debug(f"Using precomputed distance matrix for method: {settings.method} with geo_weight={settings.geo_weight}, demand_weight={settings.demand_weight}")
-        return compute_composite_distance(customers, settings.goods, settings.geo_weight, settings.demand_weight)
+        logger.debug(f"Using precomputed distance matrix for method {method} with geo_weight={context.geo_weight}, demand_weight={context.demand_weight}")
+        return compute_composite_distance(customers, context.goods, context.geo_weight, context.demand_weight)
     else:
-        logger.debug(f"Using feature-based input for method: {settings.method}")
+        logger.debug(f"Using feature-based input for method {method}")
         # Ensure data is in the right format - contiguous float64 array
         data = customers[['Latitude', 'Longitude']].values
         return np.ascontiguousarray(data, dtype=np.float64)
@@ -167,9 +168,9 @@ def get_cached_demand(
 
 def get_cached_route_time(
     customers: pd.DataFrame,
-    settings: ClusteringSettings,
+    clustering_context: ClusteringContext,
     route_time_cache: Dict,
-    params: Parameters
+    main_params: Parameters
 ) -> Tuple[float, List[str]]:
     """Get route time and sequence (if TSP) from cache or compute and cache it."""
     key = tuple(sorted(customers['Customer_ID']))
@@ -179,12 +180,12 @@ def get_cached_route_time(
     
     route_time, route_sequence = estimate_route_time(
         cluster_customers=customers,
-        depot=settings.depot,
-        service_time=settings.service_time,
-        avg_speed=settings.avg_speed,
-        method=settings.route_time_estimation,
-        max_route_time=settings.max_route_time,
-        prune_tsp=params.prune_tsp
+        depot=clustering_context.depot,
+        service_time=clustering_context.service_time,
+        avg_speed=clustering_context.avg_speed,
+        method=clustering_context.route_time_estimation,
+        max_route_time=clustering_context.max_route_time,
+        prune_tsp=main_params.prune_tsp
     )
     
     route_time_cache[key] = (route_time, route_sequence)
@@ -206,8 +207,9 @@ def get_feasible_customers_subset(
 def create_initial_clusters(
     customers_subset: pd.DataFrame, 
     config: pd.Series, 
-    settings: ClusteringSettings,
-    params: Parameters
+    clustering_context: ClusteringContext,
+    main_params: Parameters,
+    method_name: str = 'minibatch_kmeans'
 ) -> pd.DataFrame:
     """Create initial clusters for the given customer subset."""
     # Create a working copy
@@ -215,12 +217,12 @@ def create_initial_clusters(
     
     # Add total demand directly if needed for the algorithm
     # This is equivalent to what add_demand_information was doing
-    customers_copy['Total_Demand'] = customers_copy[[f'{g}_Demand' for g in settings.goods]].sum(axis=1)
+    customers_copy['Total_Demand'] = customers_copy[[f'{g}_Demand' for g in clustering_context.goods]].sum(axis=1)
     
     if len(customers_copy) <= 2:
         return create_small_dataset_clusters(customers_copy)
     else:
-        return create_normal_dataset_clusters(customers_copy, config, settings, params)
+        return create_normal_dataset_clusters(customers_copy, config, clustering_context, main_params, method_name)
 
 def create_small_dataset_clusters(customers_subset: pd.DataFrame) -> pd.DataFrame:
     """Create clusters for small datasets (≤2 customers)."""
@@ -234,8 +236,9 @@ def create_small_dataset_clusters(customers_subset: pd.DataFrame) -> pd.DataFram
 def create_normal_dataset_clusters(
     customers_subset: pd.DataFrame, 
     config: pd.Series, 
-    settings: ClusteringSettings,
-    params: Parameters
+    clustering_context: ClusteringContext,
+    main_params: Parameters,
+    method_name: str
 ) -> pd.DataFrame:
     """Create clusters for normal-sized datasets."""
     customers_copy = customers_subset.copy()
@@ -244,22 +247,22 @@ def create_normal_dataset_clusters(
     num_clusters = estimate_num_initial_clusters(
         customers_copy,
         config,
-        settings,
-        params
+        clustering_context,
+        main_params
     )
     
     # Ensure the number of clusters doesn't exceed the number of customers
     num_clusters = min(num_clusters, len(customers_copy))
     
     # Get the clusterer from registry
-    clusterer_class = CLUSTERER_REGISTRY.get(settings.method)
+    clusterer_class = CLUSTERER_REGISTRY.get(method_name)
     if clusterer_class is None:
-        logger.error(f"❌ Unknown clustering method: {settings.method}")
-        raise ValueError(f"Unknown clustering method: {settings.method}")
+        logger.error(f"❌ Unknown clustering method: {method_name}")
+        raise ValueError(f"Unknown clustering method: {method_name}")
     
     # Create instance and cluster
     clusterer = clusterer_class()
-    labels = clusterer.fit(customers_copy, settings=settings, n_clusters=num_clusters)
+    labels = clusterer.fit(customers_copy, context=clustering_context, n_clusters=num_clusters)
     customers_copy['Cluster'] = labels
     
     return customers_copy
@@ -271,10 +274,10 @@ def generate_cluster_id_base(config_id: int) -> int:
 def check_constraints(
     cluster_customers: pd.DataFrame,
     config: pd.Series,
-    settings: ClusteringSettings,
+    clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
-    params: Parameters
+    main_params: Parameters
 ) -> tuple[bool, bool]:
     """
     Check if cluster violates capacity or time constraints.
@@ -285,7 +288,7 @@ def check_constraints(
     # Get demand from cache
     demand_dict = get_cached_demand(
         cluster_customers, 
-        settings.goods, 
+        clustering_context.goods, 
         demand_cache
     )
     cluster_demand = sum(demand_dict.values())
@@ -293,33 +296,33 @@ def check_constraints(
     # Get route time from cache (ignore sequence for constraint check)
     route_time, _ = get_cached_route_time(
         cluster_customers,
-        settings,
+        clustering_context,
         route_time_cache,
-        params
+        main_params
     )
     
     capacity_violated = cluster_demand > config['Capacity']
-    time_violated = route_time > settings.max_route_time
+    time_violated = route_time > clustering_context.max_route_time
     
     return capacity_violated, time_violated
 
 def should_split_cluster(
     cluster_customers: pd.DataFrame, 
     config: pd.Series, 
-    settings: ClusteringSettings, 
+    clustering_context: ClusteringContext,
     depth: int,
     demand_cache: Dict,
     route_time_cache: Dict,
-    params: Parameters
+    main_params: Parameters
 ) -> bool:
     """Determine if a cluster should be split based on constraints."""
     capacity_violated, time_violated = check_constraints(
         cluster_customers, 
         config, 
-        settings,
+        clustering_context,
         demand_cache,
         route_time_cache,
-        params
+        main_params
     )
     is_singleton_cluster = len(cluster_customers) <= 1
     
@@ -333,18 +336,19 @@ def should_split_cluster(
 
 def split_cluster(
     cluster_customers: pd.DataFrame, 
-    settings: ClusteringSettings
+    clustering_context: ClusteringContext,
+    method_name: str
 ) -> List[pd.DataFrame]:
     """Split an oversized cluster into smaller ones."""
     # Get the clusterer from registry
-    clusterer_class = CLUSTERER_REGISTRY.get(settings.method)
+    clusterer_class = CLUSTERER_REGISTRY.get(method_name)
     if clusterer_class is None:
-        logger.error(f"❌ Unknown clustering method: {settings.method}")
-        raise ValueError(f"Unknown clustering method: {settings.method}")
+        logger.error(f"❌ Unknown clustering method: {method_name}")
+        raise ValueError(f"Unknown clustering method: {method_name}")
     
     # Create instance and split into 2 clusters
     clusterer = clusterer_class()
-    sub_labels = clusterer.fit(cluster_customers, settings=settings, n_clusters=2)
+    sub_labels = clusterer.fit(cluster_customers, context=clustering_context, n_clusters=2)
     
     # Convert list to numpy array for indexing
     sub_labels = np.array(sub_labels)
@@ -367,25 +371,26 @@ def create_cluster(
     cluster_customers: pd.DataFrame, 
     config: pd.Series, 
     cluster_id: int, 
-    settings: ClusteringSettings,
+    clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
-    params: Parameters
+    main_params: Parameters,
+    method_name: str
 ) -> Cluster:
     """Create a Cluster object from customer data."""
     # Get demand from cache
     total_demand = get_cached_demand(
         cluster_customers, 
-        settings.goods, 
+        clustering_context.goods, 
         demand_cache
     )
     
     # Get route time and sequence from cache
     route_time, tsp_sequence = get_cached_route_time(
         cluster_customers,
-        settings,
+        clustering_context,
         route_time_cache,
-        params
+        main_params
     )
     
     cluster = Cluster(
@@ -395,9 +400,9 @@ def create_cluster(
         total_demand=total_demand,
         centroid_latitude=float(cluster_customers['Latitude'].mean()),
         centroid_longitude=float(cluster_customers['Longitude'].mean()),
-        goods_in_config=[g for g in settings.goods if config[g] == 1],
+        goods_in_config=[g for g in clustering_context.goods if config[g] == 1],
         route_time=route_time,
-        method=settings.method,
+        method=method_name,
         tsp_sequence=tsp_sequence
     )
     return cluster
@@ -405,10 +410,11 @@ def create_cluster(
 def process_clusters_recursively(
     initial_clusters_df: pd.DataFrame, 
     config: pd.Series, 
-    settings: ClusteringSettings,
+    clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
-    params: Parameters = None
+    main_params: Parameters = None,
+    method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process clusters recursively to ensure constraints are satisfied."""
     config_id = config['Config_ID']
@@ -429,7 +435,7 @@ def process_clusters_recursively(
     
     while clusters_to_check:
         cluster_customers, depth = clusters_to_check.pop()
-        max_depth_reached = depth >= settings.max_depth
+        max_depth_reached = depth >= clustering_context.max_depth
         
         # Check if max depth reached
         if max_depth_reached:
@@ -437,25 +443,25 @@ def process_clusters_recursively(
             capacity_violated, time_violated = check_constraints(
                 cluster_customers, 
                 config, 
-                settings,
+                clustering_context,
                 demand_cache,
                 route_time_cache,
-                params
+                main_params
             )
             
             if capacity_violated or time_violated:
-                logger.debug(f"⚠️ Max depth {settings.max_depth} reached but constraints still violated: "
+                logger.debug(f"⚠️ Max depth {clustering_context.max_depth} reached but constraints still violated: "
                               f"capacity={capacity_violated}, time={time_violated}, "
-                              f"method={settings.method}, config_id={config['Config_ID']}")
+                              f"method={method_name}, config_id={config['Config_ID']}")
                 skipped_count += 1
                 continue  # Skip this cluster
         
         # Not at max depth, check if we should split
-        if not max_depth_reached and should_split_cluster(cluster_customers, config, settings, depth, demand_cache, route_time_cache, params):
+        if not max_depth_reached and should_split_cluster(cluster_customers, config, clustering_context, depth, demand_cache, route_time_cache, main_params):
             split_count += 1
-            logger.debug(f"Splitting cluster for config {config_id} (size {len(cluster_customers)}) at depth {depth}/{settings.max_depth}")
+            logger.debug(f"Splitting cluster for config {config_id} (size {len(cluster_customers)}) at depth {depth}/{clustering_context.max_depth}")
             # Split oversized clusters
-            for sub_cluster in split_cluster(cluster_customers, settings):
+            for sub_cluster in split_cluster(cluster_customers, clustering_context, method_name):
                 clusters_to_check.append((sub_cluster, depth + 1))
         else:
             # Add valid cluster (either constraints satisfied or could not be split further)
@@ -464,10 +470,11 @@ def process_clusters_recursively(
                 cluster_customers, 
                 config,
                 cluster_id_base + current_cluster_id, 
-                settings,
+                clustering_context,
                 demand_cache,
                 route_time_cache,
-                params
+                main_params,
+                method_name
             )
             clusters.append(cluster)
     
@@ -482,8 +489,8 @@ def process_clusters_recursively(
 def estimate_num_initial_clusters(
     customers: pd.DataFrame,
     config: pd.Series,
-    settings: ClusteringSettings,
-    params: Parameters = None
+    clustering_context: ClusteringContext,
+    main_params: Parameters = None
 ) -> int:
     """
     Estimate the number of initial clusters needed based on capacity and time constraints.
@@ -491,12 +498,12 @@ def estimate_num_initial_clusters(
     if customers.empty:
         return 0
 
-    # Default prune_tsp flag if params not provided
-    prune_tsp_val = params.prune_tsp if params is not None else False
+    # Default prune_tsp flag if main_params not provided
+    prune_tsp_val = main_params.prune_tsp if main_params is not None else False
 
     # Calculate total demand for relevant goods
     total_demand = 0
-    for good in settings.goods:
+    for good in clustering_context.goods:
         if config[good]:  # Only consider goods this vehicle can carry
             total_demand += customers[f'{good}_Demand'].sum()
 
@@ -511,18 +518,18 @@ def estimate_num_initial_clusters(
     # Unpack the tuple returned by estimate_route_time
     avg_route_time, _ = estimate_route_time(
         cluster_customers=avg_cluster,
-        depot=settings.depot,
-        service_time=settings.service_time, # in minutes
-        avg_speed=settings.avg_speed,
-        method=settings.route_time_estimation, # Use the specific method for estimation
-        max_route_time=settings.max_route_time, # Pass max_route_time
+        depot=clustering_context.depot,
+        service_time=clustering_context.service_time, # in minutes
+        avg_speed=clustering_context.avg_speed,
+        method=clustering_context.route_time_estimation, # Use the specific method for estimation
+        max_route_time=clustering_context.max_route_time, # Pass max_route_time
         prune_tsp=prune_tsp_val # Use params.prune_tsp or default False
     )
 
     # Estimate clusters needed based on time
     clusters_by_time = np.ceil(
         avg_route_time * len(customers) / 
-        (settings.max_route_time * avg_customers_per_cluster)
+        (clustering_context.max_route_time * avg_customers_per_cluster)
     )
 
     # Take the maximum of the two estimates

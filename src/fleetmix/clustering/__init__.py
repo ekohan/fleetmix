@@ -2,9 +2,9 @@
 Customer clustering for the cluster-first heuristic (§4.2).
 """
 
-from .common import (
+from fleetmix.core_types import (
     Cluster,
-    ClusteringSettings,
+    ClusteringContext,
 )
 
 from .generator import (
@@ -21,7 +21,7 @@ from .heuristics import (
 __all__ = [
     'generate_clusters_for_configurations',
     'Cluster',
-    'ClusteringSettings',
+    'ClusteringContext',
     'compute_composite_distance',
     'estimate_num_initial_clusters',
     '_is_customer_feasible',

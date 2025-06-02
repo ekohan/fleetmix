@@ -12,6 +12,7 @@ from pyvrp.stop import MaxIterations
 
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.registry import register_route_time_estimator, ROUTE_TIME_ESTIMATOR_REGISTRY
+from fleetmix.core_types import RouteTimeContext, DepotLocation
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -157,16 +158,22 @@ def estimate_route_time(
     if estimator_class is None:
         raise ValueError(f"Unknown route time estimation method: {method}")
     
-    # Create instance and estimate
-    estimator = estimator_class()
-    return estimator.estimate_route_time(
-        cluster_customers=cluster_customers,
-        depot=depot,
-        service_time=service_time,
+    # Create RouteTimeContext object with proper max_route_time handling
+    depot_location = DepotLocation(latitude=depot['latitude'], longitude=depot['longitude'])
+    # For route time estimation, use a large default if max_route_time is None
+    effective_max_route_time = max_route_time if max_route_time is not None else 24 * 7  # 1 week default
+    
+    context = RouteTimeContext(
+        depot=depot_location,
         avg_speed=avg_speed,
-        max_route_time=max_route_time,
+        service_time=service_time,
+        max_route_time=effective_max_route_time,
         prune_tsp=prune_tsp
     )
+    
+    # Create instance and estimate
+    estimator = estimator_class()
+    return estimator.estimate_route_time(cluster_customers, context)
 
 
 @register_route_time_estimator('Legacy')
@@ -176,16 +183,12 @@ class LegacyEstimator:
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
-        depot: Dict[str, float],
-        service_time: float,
-        avg_speed: float,
-        max_route_time: float,
-        prune_tsp: bool,
+        context: RouteTimeContext,
     ) -> Tuple[float, List[str]]:
         """Legacy estimation: 1 hour travel + service time."""
         num_customers = len(cluster_customers)
         # Convert minutes to hours for service_time component
-        time = 1 + calculate_total_service_time_hours(num_customers, service_time)
+        time = 1 + calculate_total_service_time_hours(num_customers, context.service_time)
         return time, [] # Return empty sequence
 
 
@@ -200,11 +203,7 @@ class BHHEstimator:
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
-        depot: Dict[str, float],
-        service_time: float,
-        avg_speed: float,
-        max_route_time: float,
-        prune_tsp: bool,
+        context: RouteTimeContext,
     ) -> Tuple[float, List[str]]:
         """BHH estimation: t_vk ≈ α_vk + 2·δ_vk + β·√(n·A) + γ·n
         
@@ -219,19 +218,19 @@ class BHHEstimator:
         if len(cluster_customers) <= 1:
             # For 0 or 1 customer, service time is the primary component.
             # Assuming service_time is per customer.
-            return calculate_total_service_time_hours(len(cluster_customers), service_time), []
+            return calculate_total_service_time_hours(len(cluster_customers), context.service_time), []
             
         # Calculate service time component (γ·n)
-        service_time_total = calculate_total_service_time_hours(len(cluster_customers), service_time)
+        service_time_total = calculate_total_service_time_hours(len(cluster_customers), context.service_time)
         
         # Calculate depot travel component (2·δ_vk)
         centroid_lat = cluster_customers['Latitude'].mean()
         centroid_lon = cluster_customers['Longitude'].mean()
         depot_to_centroid = haversine(
-            (depot['latitude'], depot['longitude']),
+            (context.depot.latitude, context.depot.longitude),
             (centroid_lat, centroid_lon)
         )
-        depot_travel_time = 2 * depot_to_centroid / avg_speed  # Round trip hours
+        depot_travel_time = 2 * depot_to_centroid / context.avg_speed  # Round trip hours
         
         # Calculate intra-cluster travel component using BHH formula (β·√(n·A))
         cluster_radius = max(
@@ -250,7 +249,7 @@ class BHHEstimator:
             np.sqrt(len(cluster_customers)) * 
             np.sqrt(cluster_area)
         )
-        intra_cluster_time = intra_cluster_distance / avg_speed
+        intra_cluster_time = intra_cluster_distance / context.avg_speed
         
         # Total time: α_vk + 2·δ_vk + β·√(n·A) + γ·n
         time = self.SETUP_TIME + service_time_total + depot_travel_time + intra_cluster_time
@@ -264,40 +263,29 @@ class TSPEstimator:
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
-        depot: Dict[str, float],
-        service_time: float,
-        avg_speed: float,
-        max_route_time: float,
-        prune_tsp: bool,
+        context: RouteTimeContext,
     ) -> Tuple[float, List[str]]:
         """Estimate route time by solving a TSP for the cluster using PyVRP."""
         # Prune TSP computation based on BHH estimate if requested
-        if prune_tsp and max_route_time is not None:
-            logger.warning(f"Prune TSP: {prune_tsp}, Max Route Time: {max_route_time}")
+        if context.prune_tsp and context.max_route_time is not None:
+            logger.warning(f"Prune TSP: {context.prune_tsp}, Max Route Time: {context.max_route_time}")
             # Use BHH estimator for pruning
             bhh_estimator = BHHEstimator()
-            bhh_time, _ = bhh_estimator.estimate_route_time(
-                cluster_customers, depot, service_time, avg_speed, max_route_time, prune_tsp
-            )
+            bhh_time, _ = bhh_estimator.estimate_route_time(cluster_customers, context)
             # Add a 20% margin to account for BHH underestimation
-            if bhh_time > max_route_time * 1.2:
+            if bhh_time > context.max_route_time * 1.2:
                 logger.warning(
-                    f"Cluster skipped TSP computation: BHH estimate {bhh_time:.2f}h greatly exceeds max_route_time {max_route_time}h"
+                    f"Cluster skipped TSP computation: BHH estimate {bhh_time:.2f}h greatly exceeds max_route_time {context.max_route_time}h"
                 )
-                return max_route_time * 1.01, []  # Slightly over max, empty sequence
+                return context.max_route_time * 1.01, []  # Slightly over max, empty sequence
         
         # Call the implementation
-        return self._pyvrp_tsp_estimation(
-            cluster_customers, depot, service_time, avg_speed, max_route_time
-        )
+        return self._pyvrp_tsp_estimation(cluster_customers, context)
     
     def _pyvrp_tsp_estimation(
         self,
         cluster_customers: pd.DataFrame,
-        depot: Dict[str, float],
-        service_time: float,  # minutes
-        avg_speed: float,      # km/h
-        max_route_time: float = None  # hours, optional parameter
+        context: RouteTimeContext,
     ) -> Tuple[float, List[str]]:
         """
         Estimate route time by solving a TSP for the cluster using PyVRP.
@@ -306,10 +294,7 @@ class TSPEstimator:
 
         Args:
             cluster_customers: DataFrame containing customer data for the cluster.
-            depot: Depot location coordinates {'latitude': float, 'longitude': float}.
-            service_time: Service time per customer (minutes).
-            avg_speed: Average vehicle speed (km/h).
-            max_route_time: Maximum route time in hours (optional, defaults to 1 week if None).
+            context: Route time context including depot, service time, speeds, etc.
 
         Returns:
             Tuple: (Estimated route time in hours, List of customer IDs in visit sequence or [])
@@ -320,13 +305,13 @@ class TSPEstimator:
         if num_customers == 0:
             return 0.0, []
         if num_customers == 1:
-            depot_coord = (depot['latitude'], depot['longitude'])
+            depot_coord = (context.depot.latitude, context.depot.longitude)
             cust_row = cluster_customers.iloc[0]
             cust_coord = (cust_row['Latitude'], cust_row['Longitude'])
             dist_to = haversine(depot_coord, cust_coord)
             dist_from = haversine(cust_coord, depot_coord)
-            travel_time_hours = (dist_to + dist_from) / avg_speed
-            service_time_hours = calculate_total_service_time_hours(1, service_time)
+            travel_time_hours = (dist_to + dist_from) / context.avg_speed
+            service_time_hours = calculate_total_service_time_hours(1, context.service_time)
             # Sequence for single customer: Depot -> Customer -> Depot
             sequence = ["Depot", cust_row['Customer_ID'], "Depot"]
             return travel_time_hours + service_time_hours, sequence
@@ -339,8 +324,8 @@ class TSPEstimator:
 
         # Create PyVRP Depot object (scaling coordinates for precision)
         pyvrp_depot = Depot(
-            x=int(depot['latitude'] * 10000), 
-            y=int(depot['longitude'] * 10000)
+            x=int(context.depot.latitude * 10000), 
+            y=int(context.depot.longitude * 10000)
         )
 
         # Create PyVRP Client objects
@@ -350,18 +335,13 @@ class TSPEstimator:
                 x=int(customer['Latitude'] * 10000),
                 y=int(customer['Longitude'] * 10000),
                 delivery=[1],  # Dummy demand for TSP
-                service_duration=int(service_time * 60) # Service time in seconds
+                service_duration=int(context.service_time * 60) # Service time in seconds
             ))
 
         # Create a single VehicleType with effectively infinite capacity and duration
         # Capacity needs to be at least num_customers for dummy demands
-        # Use max_route_time if provided, otherwise use a week as effectively infinite
-        # Determine effective max_route_time in hours, default to one week if None or infinite
-        if max_route_time is None or np.isinf(max_route_time):
-            effective_max_route_time = 24 * 7  # one week
-        else:
-            effective_max_route_time = max_route_time
-        max_duration_seconds = int(effective_max_route_time * 3600)  # Convert hours to seconds
+        # Use max_route_time from context
+        max_duration_seconds = int(context.max_route_time * 3600)  # Convert hours to seconds
         vehicle_type = VehicleType(
             num_available=1, 
             capacity=[num_customers + 1], # Sufficient capacity for dummy demands
@@ -436,14 +416,14 @@ class TSPEstimator:
         if not cache_ready:
             logger.debug(f"Cache not ready or slicing failed. Computing matrices on-the-fly for cluster TSP (Size: {num_customers})")
             n_locations = num_customers + 1 # Customers + Depot
-            locations_coords = [(depot['latitude'], depot['longitude'])] + \
+            locations_coords = [(context.depot.latitude, context.depot.longitude)] + \
                                list(zip(cluster_customers['Latitude'], cluster_customers['Longitude']))
 
             distance_matrix = np.zeros((n_locations, n_locations), dtype=int)
             duration_matrix = np.zeros((n_locations, n_locations), dtype=int)
 
             # Speed in km/s for duration calculation
-            avg_speed_kps = avg_speed / 3600 if avg_speed > 0 else 0
+            avg_speed_kps = context.avg_speed / 3600 if context.avg_speed > 0 else 0
 
             for i in range(n_locations):
                 for j in range(i + 1, n_locations):
@@ -468,7 +448,7 @@ class TSPEstimator:
         if distance_matrix is None or duration_matrix is None:
             logger.error("Distance/Duration matrices could not be obtained for TSP.")
             # Return a large value indicating failure/infeasibility and empty sequence
-            return (max_route_time or 24 * 7) * 1.1, [] 
+            return context.max_route_time * 1.1, [] 
 
         problem_data = ProblemData(
             clients=pyvrp_clients,
@@ -520,6 +500,5 @@ class TSPEstimator:
             return total_duration_seconds / 3600.0, sequence
         else:
             logger.warning(f"TSP solution infeasible for cluster. Returning max time. Num customers: {num_customers}")
-            # If max_route_time is provided, return that value (or slightly higher)
-            # Otherwise use 24*7 (1 week) as the default max
-            return (max_route_time or 24*7) * 1.01, []  # Return slightly over max_route_time and empty sequence
+            # Return the max route time from context (or slightly higher)
+            return context.max_route_time * 1.01, []  # Return slightly over max_route_time and empty sequence

@@ -14,19 +14,20 @@ import itertools
 from dataclasses import replace
 
 from fleetmix.config.parameters import Parameters
-from .common import Cluster, ClusteringSettings, Symbols
+from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation
 from .heuristics import (
     get_feasible_customers_subset,
     create_initial_clusters,
     process_clusters_recursively,
-    compute_composite_distance, # TODO: remove
-    estimate_num_initial_clusters, # TODO: remove
-    get_cached_demand, # TODO: remove
-    get_cached_route_time # TODO: remove
 )
 
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
+
+class Symbols:
+    """Unicode symbols for logging."""
+    CHECKMARK = "✓"
+    CROSS = "✗"
 
 def generate_clusters_for_configurations(
     customers: pd.DataFrame,
@@ -67,11 +68,11 @@ def generate_clusters_for_configurations(
             return pd.DataFrame()
         logger.info(f"Feasibility mapping generated for {len(feasible_customers)} customers.")
 
-        # 2. Generate list of ClusteringSettings objects for all runs
-        list_of_settings = _get_clustering_settings_list(params)
+        # 2. Generate list of (ClusteringContext, method_name) tuples for all runs
+        context_and_methods = _get_clustering_context_list(params)
 
         # 3. Precompute distance/duration matrices if TSP route estimation is used
-        tsp_needed = any(s.route_time_estimation == 'TSP' for s in list_of_settings)
+        tsp_needed = any(clustering_context.route_time_estimation == 'TSP' for clustering_context, _ in context_and_methods)
         if tsp_needed:
             logger.info("TSP route estimation detected. Precomputing global distance/duration matrices...")
             # Call the function from route_time module to build and cache matrices
@@ -82,21 +83,22 @@ def generate_clusters_for_configurations(
 
         cluster_id_generator = itertools.count()
 
-        # 4. Process configurations in parallel for each settings configuration
+        # 4. Process configurations in parallel for each context configuration
         all_clusters = []
-        for settings_for_run in list_of_settings:
-            logger.info(f"--- Running Configuration: {settings_for_run.method} (GeoW: {settings_for_run.geo_weight:.2f}, DemW: {settings_for_run.demand_weight:.2f}) ---")
+        for clustering_context, method_name in context_and_methods:
+            logger.info(f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---")
 
-            # Run clustering for all configurations using these settings in parallel, process-based
+            # Run clustering for all configurations using these context in parallel, process-based
             clusters_by_config = Parallel(n_jobs=-1, backend='loky')(
                 delayed(process_configuration)(
                     config, 
                     customers, 
                     feasible_customers, 
-                    settings_for_run,
+                    clustering_context,
                     shared_demand_cache,
                     shared_route_time_cache,
-                    params
+                    params,
+                    method_name
                 )
                 for _, config in configurations_df.iterrows()
             )
@@ -107,7 +109,7 @@ def generate_clusters_for_configurations(
                     # Assign unique Cluster_ID
                     cluster.cluster_id = next(cluster_id_generator)
                     all_clusters.append(cluster)
-            logger.info(f"--- Configuration {settings_for_run.method} completed, generated {len([c for config_clusters in clusters_by_config for c in config_clusters])} raw clusters ---")
+            logger.info(f"--- Configuration {method_name} completed, generated {len([c for config_clusters in clusters_by_config for c in config_clusters])} raw clusters ---")
 
         logger.info(f"Cache statistics: {len(shared_demand_cache)} demand entries, {len(shared_route_time_cache)} route time entries")
 
@@ -146,10 +148,11 @@ def process_configuration(
     config: pd.Series,
     customers: pd.DataFrame,
     feasible_customers: Dict,
-    settings: ClusteringSettings,
+    context: ClusteringContext,
     demand_cache: Dict = None,
     route_time_cache: Dict = None,
-    params: Parameters = None
+    main_params: Parameters = None,
+    method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process a single vehicle configuration to generate feasible clusters."""
     # 1. Get customers that can be served by the configuration
@@ -158,10 +161,10 @@ def process_configuration(
         return []
     
     # 2. Create initial clusters (one large cluster for the subset)
-    initial_clusters_df = create_initial_clusters(customers_subset, config, settings, params)
+    initial_clusters_df = create_initial_clusters(customers_subset, config, context, main_params, method_name)
     
     # 3. Process clusters recursively until constraints are satisfied
-    return process_clusters_recursively(initial_clusters_df, config, settings, demand_cache, route_time_cache, params)
+    return process_clusters_recursively(initial_clusters_df, config, context, demand_cache, route_time_cache, main_params, method_name)
 
 def validate_cluster_coverage(clusters_df, customers_df):
     """Validate that all customers are covered by at least one cluster."""
@@ -229,16 +232,17 @@ def _deduplicate_clusters(clusters_df: pd.DataFrame) -> pd.DataFrame:
         logger.debug(f"Finished deduplication: No duplicate clusters found ({len(deduplicated_df)} clusters).")
     return deduplicated_df
 
-def _get_clustering_settings_list(params: Parameters) -> List[ClusteringSettings]:
-    """Generates a list of ClusteringSettings objects for all runs."""
-    settings_list = []
+def _get_clustering_context_list(params: Parameters) -> List[Tuple[ClusteringContext, str]]:
+    """Generates a list of (ClusteringContext, method_name) tuples for all runs."""
+    context_list = []
 
-    # Create a base settings object with common parameters
-    # The weights here will be used ONLY if a single method is specified
-    base_settings = ClusteringSettings(
-        method=params.clustering['method'],
+    # Convert depot dict to DepotLocation
+    depot_location = DepotLocation(latitude=params.depot['latitude'], longitude=params.depot['longitude'])
+
+    # Create base context object with common parameters
+    base_context = ClusteringContext(
         goods=params.goods,
-        depot=params.depot,
+        depot=depot_location,
         avg_speed=params.avg_speed,
         service_time=params.service_time,
         max_route_time=params.max_route_time,
@@ -248,8 +252,9 @@ def _get_clustering_settings_list(params: Parameters) -> List[ClusteringSettings
         demand_weight=params.clustering['demand_weight']
     )
 
-    if base_settings.method == 'combine':
-        logger.info("🔄 Generating settings variations for 'combine' method")
+    method = params.clustering['method']
+    if method == 'combine':
+        logger.info("🔄 Generating context variations for 'combine' method")
         
         # Check if sub_methods are specified in the clustering params
         sub_methods = params.clustering.get('combine_sub_methods', None)
@@ -257,30 +262,26 @@ def _get_clustering_settings_list(params: Parameters) -> List[ClusteringSettings
             # Use default sub_methods
             sub_methods = ['minibatch_kmeans', 'kmedoids', 'gaussian_mixture']
         
-        # 1. Base methods - Assume primarily geographical (Geo=1, Dem=0)
-        for name in sub_methods:
-            settings_list.append(replace(
-                base_settings, # Start from base
-                method=name # Set correct method name
-            ))
+        # 1. Base methods - Use default weights from base_context
+        for method_name in sub_methods:
+            context_list.append((base_context, method_name))
 
         # 2. Agglomerative with different explicit weights
         weight_combinations = [
             (1.0, 0.0), (0.8, 0.2), (0.6, 0.4), (0.4, 0.6), (0.2, 0.8), (0.0, 1.0)
         ]
         for geo_w, demand_w in weight_combinations:
-            settings_list.append(replace(
-                base_settings,
-                method='agglomerative',
+            agglomerative_context = replace(
+                base_context,
                 geo_weight=geo_w,
                 demand_weight=demand_w
-            ))
+            )
+            context_list.append((agglomerative_context, 'agglomerative'))
 
     else:
-        # Single method specified: Use the base_settings as configured initially
-        # (which already includes the method name and default weights from params)
-        logger.info(f"📍 Using single method configuration: {base_settings.method}")
-        settings_list.append(base_settings)
+        # Single method specified: Use the base_context as configured initially
+        logger.info(f"📍 Using single method configuration: {method}")
+        context_list.append((base_context, method))
 
-    logger.info(f"Generated {len(settings_list)} distinct clustering settings configurations.")
-    return settings_list 
+    logger.info(f"Generated {len(context_list)} distinct clustering context configurations.")
+    return context_list 

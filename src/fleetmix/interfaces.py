@@ -3,6 +3,7 @@ from typing import Protocol, List, Dict, Tuple, Any
 import pandas as pd
 import pulp
 
+from fleetmix.core_types import ClusteringContext, RouteTimeContext
 
 class Clusterer(Protocol):
     """Protocol for clustering algorithms.
@@ -10,7 +11,7 @@ class Clusterer(Protocol):
     Implementation note: fit() returns cluster labels (List[int]) to maintain 
     compatibility with sklearn-style fit_predict() pattern used throughout the codebase.
     """
-    def fit(self, customers: pd.DataFrame, *, settings: 'ClusteringSettings', n_clusters: int) -> List[int]:
+    def fit(self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int) -> List[int]:
         """Cluster customers into n_clusters groups. Returns cluster labels."""
         ...
 
@@ -20,11 +21,7 @@ class RouteTimeEstimator(Protocol):
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
-        depot: Dict[str, float],
-        service_time: float,
-        avg_speed: float,
-        max_route_time: float,
-        prune_tsp: bool,
+        context: RouteTimeContext,
     ) -> Tuple[float, List[str]]:
         """Returns (route_time_hours, sequence)"""
         ...

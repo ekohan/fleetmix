@@ -18,12 +18,26 @@ from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimiz
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.logging import LogLevel, setup_logging, log_progress, log_success, log_error
 from fleetmix.core_types import FleetmixSolution
+from fleetmix.config.parameters import Parameters
 
 app = typer.Typer(
     help="Fleetmix: Fleet Size and Mix optimizer for heterogeneous fleets",
     add_completion=False,
 )
 console = Console()
+
+
+def _get_default_config() -> Parameters:
+    """Load default configuration to get default values for CLI parameters."""
+    try:
+        return Parameters.from_yaml()
+    except Exception:
+        # Fallback to hardcoded defaults if config loading fails
+        return None
+
+
+# Load default config once at module level
+_DEFAULT_CONFIG = _get_default_config()
 
 
 def _get_available_instances(suite: str) -> list[str]:
@@ -61,7 +75,7 @@ def _list_instances(suite: str) -> None:
     console.print(f"[dim]Usage: fleetmix benchmark {suite} --instance INSTANCE_NAME[/dim]")
 
 
-def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] = None, verbose: bool = False) -> None:
+def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] = None, format: str = "json", verbose: bool = False) -> None:
     """Run a single benchmark instance."""
     if suite == "mcvrp":
         # Run single MCVRP instance
@@ -95,14 +109,15 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
             verbose=verbose
         )
 
-        # Save results as JSON for later batch analysis
-        output_path = params.results_dir / f"mcvrp_{instance}.json"
+        # Save results with specified format
+        ext = "xlsx" if format == "excel" else "json"
+        output_path = params.results_dir / f"mcvrp_{instance}.{ext}"
         save_optimization_results(
             solution=solution,
             configurations_df=configs_df,
             parameters=params,
             filename=str(output_path),
-            format="json",
+            format=format,
             is_benchmark=True,
             expected_vehicles=params.expected_vehicles
         )
@@ -180,14 +195,15 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
             verbose=verbose
         )
 
-        # Save results as JSON for later batch analysis
-        output_path = params.results_dir / f"cvrp_{instance}_normal.json"
+        # Save results with specified format
+        ext = "xlsx" if format == "excel" else "json"
+        output_path = params.results_dir / f"cvrp_{instance}_normal.{ext}"
         save_optimization_results(
             solution=solution,
             configurations_df=configs_df,
             parameters=params,
             filename=str(output_path),
-            format="json",
+            format=format,
             is_benchmark=True,
             expected_vehicles=params.expected_vehicles
         )
@@ -235,12 +251,112 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         log_success(f"Results saved to {output_path.name}")
 
 
+def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False) -> None:
+    """Run benchmarks for all MCVRP instances."""
+    datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "mcvrp"
+    
+    for dat_path in sorted(datasets_dir.glob("*.dat")):
+        instance = dat_path.stem
+        log_progress(f"Running MCVRP instance {instance}...")
+        
+        try:
+            # Use the unified pipeline interface for conversion
+            customers_df, params = convert_to_fsm(
+                VRPType.MCVRP,
+                instance_path=dat_path
+            )
+            
+            # Override output directory if specified
+            if output_dir:
+                params.results_dir = output_dir
+            
+            # Use the unified pipeline interface for optimization
+            start_time = time.time()
+            solution, configs_df = run_optimization(
+                customers_df=customers_df,
+                params=params,
+                verbose=verbose
+            )
+
+            # Save results with specified format
+            format = "json"
+            output_path = params.results_dir / f"mcvrp_{instance}.{format}"
+            save_optimization_results(
+                solution=solution,
+                configurations_df=configs_df,
+                parameters=params,
+                filename=str(output_path),
+                format=format,
+                is_benchmark=True,
+                expected_vehicles=params.expected_vehicles
+            )
+            log_success(f"Saved results to {output_path.name}")
+            
+        except Exception as e:
+            log_error(f"Error processing MCVRP instance {instance}: {e}")
+            if debug:
+                console.print_exception()
+
+
+def _run_all_cvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False) -> None:
+    """Run benchmarks for all CVRP instances."""
+    datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "cvrp"
+    
+    for vrp_path in sorted(datasets_dir.glob("X-n*.vrp")):
+        instance = vrp_path.stem
+        log_progress(f"Running CVRP instance {instance}...")
+        
+        try:
+            # Use the unified pipeline interface for conversion
+            # CVRP requires benchmark_type and uses instance_names instead of instance_path
+            customers_df, params = convert_to_fsm(
+                VRPType.CVRP,
+                instance_names=[instance],
+                benchmark_type=CVRPBenchmarkType.NORMAL
+            )
+            
+            # Override output directory if specified
+            if output_dir:
+                params.results_dir = output_dir
+            
+            # Use the unified pipeline interface for optimization
+            start_time = time.time()
+            solution, configs_df = run_optimization(
+                customers_df=customers_df,
+                params=params,
+                verbose=verbose
+            )
+
+            # Save results with specified format
+            format = "json"
+            output_path = params.results_dir / f"cvrp_{instance}_normal.{format}"
+            save_optimization_results(
+                solution=solution,
+                configurations_df=configs_df,
+                parameters=params,
+                filename=str(output_path),
+                format=format,
+                is_benchmark=True,
+                expected_vehicles=params.expected_vehicles
+            )
+            log_success(f"Saved results to {output_path.name}")
+            
+        except Exception as e:
+            log_error(f"Error processing CVRP instance {instance}: {e}")
+            if debug:
+                console.print_exception()
+
+
 @app.command()
 def optimize(
     demand: Path = typer.Option(..., "--demand", "-d", help="Path to customer demand CSV file"),
     config: Optional[Path] = typer.Option(None, "--config", "-c", help="Path to configuration YAML file"),
     output: Path = typer.Option("results", "--output", "-o", help="Output directory"),
-    format: str = typer.Option("excel", "--format", "-f", help="Output format (excel or json)"),
+    format: str = typer.Option(
+        _DEFAULT_CONFIG.format if _DEFAULT_CONFIG else "excel", 
+        "--format", "-f", 
+        help="Output format (excel or json)"
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Minimal output (errors only)"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
@@ -333,6 +449,11 @@ def benchmark(
     suite: str = typer.Argument(..., help="Benchmark suite to run: 'mcvrp' or 'cvrp'"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output directory"),
     instance: Optional[str] = typer.Option(None, "--instance", "-i", help="Specific instance to run (if not specified, runs all instances)"),
+    format: str = typer.Option(
+        _DEFAULT_CONFIG.format if _DEFAULT_CONFIG else "json", 
+        "--format", "-f", 
+        help="Output format (excel or json)"
+    ),
     list_instances: bool = typer.Option(False, "--list", "-l", help="List available instances and exit"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Minimal output (errors only)"),
@@ -351,6 +472,10 @@ def benchmark(
         log_error(f"Invalid suite '{suite}'. Choose 'mcvrp' or 'cvrp'")
         raise typer.Exit(1)
     
+    if format not in ["excel", "json"]:
+        log_error("Invalid format. Choose 'excel' or 'json'")
+        raise typer.Exit(1)
+    
     # Handle --list flag
     if list_instances:
         _list_instances(suite)
@@ -358,7 +483,7 @@ def benchmark(
     
     if instance:
         # Run single instance
-        _run_single_instance(suite, instance, output, verbose)
+        _run_single_instance(suite, instance, output, format, verbose)
     else:
         # Run all instances
         try:
@@ -366,26 +491,14 @@ def benchmark(
                 log_progress(f"Running {suite.upper()} benchmark suite...")
                 
             if suite == "mcvrp":
-                from fleetmix.cli.run_all_mcvrp import main as run_mcvrp
-                # Temporarily redirect stdout to capture output
-                import io
-                from contextlib import redirect_stdout
-                
-                f = io.StringIO()
-                with redirect_stdout(f):
-                    run_mcvrp()
+                # Implement batch MCVRP processing using pipeline interface
+                _run_all_mcvrp_instances(output, verbose, debug)
                         
             else:  # cvrp
-                from fleetmix.cli.run_all_cvrp import main as run_cvrp
-                f = io.StringIO()
-                with redirect_stdout(f):
-                    run_cvrp()
+                # Implement batch CVRP processing using pipeline interface
+                _run_all_cvrp_instances(output, verbose, debug)
             
             log_success(f"{suite.upper()} benchmark completed successfully!")
-            
-            if debug:
-                console.print("\n[dim]Benchmark output:[/dim]")
-                console.print(f.getvalue())
                 
         except Exception as e:
             log_error(f"Error running benchmark: {e}")
@@ -402,7 +515,11 @@ def convert(
                                                   help="Benchmark type for CVRP: normal, split, scaled, combined"),
     num_goods: int = typer.Option(3, "--num-goods", help="Number of goods for CVRP (2 or 3)"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output directory"),
-    format: str = typer.Option("excel", "--format", "-f", help="Output format (excel or json)"),
+    format: str = typer.Option(
+        _DEFAULT_CONFIG.format if _DEFAULT_CONFIG else "excel", 
+        "--format", "-f", 
+        help="Output format (excel or json)"
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Minimal output (errors only)"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),

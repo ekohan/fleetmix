@@ -118,7 +118,8 @@ def test_benchmark_run_mcvrp_instance(tmp_path):
     result = runner.invoke(app, [
         "benchmark", "mcvrp",
         "--instance", MCVRP_INSTANCE,
-        "--output", str(output_dir)
+        "--output", str(output_dir),
+        "--format", "json"
     ])
     assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     assert output_dir.exists()
@@ -130,7 +131,8 @@ def test_benchmark_run_cvrp_instance(tmp_path):
     result = runner.invoke(app, [
         "benchmark", "cvrp",
         "--instance", CVRP_INSTANCE,
-        "--output", str(output_dir)
+        "--output", str(output_dir),
+        "--format", "json"
     ])
     assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     assert output_dir.exists()

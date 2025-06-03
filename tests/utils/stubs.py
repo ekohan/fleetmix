@@ -209,8 +209,7 @@ EOF"""
                 expected_vehicles=1
             )
     
-    # Patch both the old and new paths for backward compatibility
-    monkeypatch.setattr("fleetmix.benchmarking.cvrp_to_fsm.CVRPParser", DummyParser)
+    # Patch the parser module
     monkeypatch.setattr("fleetmix.benchmarking.parsers.cvrp.CVRPParser", DummyParser)
     
     yield
@@ -249,37 +248,6 @@ def stub_mcvrp_parser(monkeypatch):
     yield
 
 @contextlib.contextmanager
-def stub_vehicle_configurations(monkeypatch):
-    """Stub generate_vehicle_configurations in fleetmix.cli.cvrp_to_fsm."""
-    import pandas as pd
-    import fleetmix.cli.cvrp_to_fsm as mod
-    monkeypatch.setattr(
-        mod,
-        'generate_vehicle_configurations',
-        lambda vehicles, goods: pd.DataFrame([
-            {'Config_ID': 1, 'Vehicle_Type': 'A', 'Capacity': 1, 'Fixed_Cost': 0, 'Dry': 1, 'Chilled': 0, 'Frozen': 0}
-        ])
-    )
-    yield
-
-@contextlib.contextmanager
-def stub_benchmark_clustering(monkeypatch):
-    """Stub generate_clusters_for_configurations in fleetmix.cli.cvrp_to_fsm."""
-    import pandas as pd
-    import fleetmix.cli.cvrp_to_fsm as mod
-    monkeypatch.setattr(
-        mod,
-        'generate_clusters_for_configurations',
-        lambda *args, **kwargs: pd.DataFrame([
-            {"Cluster_ID": "c1", "Customers": ["C1"],
-             "Total_Demand": {"Dry": 1, "Chilled": 0, "Frozen": 0},
-             "Centroid_Latitude": 0.0, "Centroid_Longitude": 0.0,
-             "Route_Time": 0.1, "Config_ID": 1}
-        ])
-    )
-    yield
-
-@contextlib.contextmanager
 def stub_demand(monkeypatch):
     """
     Stub customer demand loading for imports in any module.
@@ -296,13 +264,9 @@ def stub_demand(monkeypatch):
     
     # Patch all known imports in fleetmix modules
     import fleetmix.utils.data_processing as dp_mod
-    import fleetmix.cli.main as main_mod
-    import fleetmix.cli.run_benchmark as rb_mod
     monkeypatch.setattr(dp_mod, "load_customer_demand", fake_demand)
-    monkeypatch.setattr(main_mod, "load_customer_demand", fake_demand)
-    monkeypatch.setattr(rb_mod, "load_customer_demand", fake_demand)
     
-    yield 
+    yield
 
 def stub_parse_mcvrp(path):
     """Stub parse_mcvrp function."""

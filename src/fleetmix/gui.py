@@ -118,15 +118,15 @@ def convert_numpy_types(obj):
     return obj
 
 
-def run_optimization_in_process(demand_path: str, params_dict: dict, output_dir: str, status_file: str):
+def run_optimization_in_process(demand_path: str, params_file: str, output_dir: str, status_file: str):
     """Runs optimization in separate process to support multiprocessing."""
     try:
         # Update status
         with open(status_file, 'w') as f:
             json.dump({"stage": "Initializing...", "progress": 0}, f)
         
-        # Create Parameters object from dict
-        params = Parameters(**params_dict)
+        # Load parameters from YAML file
+        params = Parameters.from_yaml(params_file)
         
         # Update status - generating clusters
         with open(status_file, 'w') as f:
@@ -197,7 +197,26 @@ def collect_parameters_from_ui() -> Parameters:
                     if isinstance(params_dict[parts[0]], dict):
                         params_dict[parts[0]][parts[1]] = st.session_state[key]
     
-    return params_dict
+    # Convert vehicle dictionaries to VehicleSpec objects if needed
+    if 'vehicles' in params_dict and isinstance(params_dict['vehicles'], dict):
+        vehicles_converted = {}
+        for vtype, vdata in params_dict['vehicles'].items():
+            if isinstance(vdata, dict) and 'capacity' in vdata and 'fixed_cost' in vdata:
+                # Convert dict to VehicleSpec
+                from fleetmix.core_types import VehicleSpec
+                vehicles_converted[vtype] = VehicleSpec(
+                    capacity=vdata['capacity'],
+                    fixed_cost=vdata['fixed_cost'],
+                    compartments=vdata.get('compartments', {}),
+                    extra={k: v for k, v in vdata.items() if k not in ['capacity', 'fixed_cost', 'compartments']}
+                )
+            else:
+                # Already a VehicleSpec object
+                vehicles_converted[vtype] = vdata
+        params_dict['vehicles'] = vehicles_converted
+    
+    # Create and return Parameters object
+    return Parameters(**params_dict)
 
 
 def display_results(solution: Dict[str, Any], output_dir: Path):
@@ -484,8 +503,12 @@ def main():
             
             st.session_state.uploaded_data.to_csv(demand_path, index=False)
             
-            params_dict = collect_parameters_from_ui()
-            params_dict['demand_file'] = str(demand_path) # Ensure it's a string for the process
+            params = collect_parameters_from_ui()
+            params.demand_file = str(demand_path)  # Update the demand file path
+            
+            # Save parameters to a temporary YAML file for multiprocessing
+            params_file = temp_dir / "params.yaml"
+            params.to_yaml(params_file)
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_dir = Path("results") / f"gui_run_{timestamp}"
@@ -501,7 +524,7 @@ def main():
                 st.session_state.error_info = None # Reset error info for new run
                 process = multiprocessing.Process(
                     target=run_optimization_in_process,
-                    args=(str(demand_path), params_dict, str(output_dir), str(status_file))
+                    args=(str(demand_path), str(params_file), str(output_dir), str(status_file))
                 )
                 process.start()
                 st.session_state.optimization_process = process

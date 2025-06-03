@@ -97,6 +97,10 @@ class Parameters:
 
         data['config_file_path'] = resolved_config_path
 
+        # Convert results_dir string back to Path if it exists
+        if 'results_dir' in data and isinstance(data['results_dir'], str):
+            data['results_dir'] = Path(data['results_dir'])
+
         required_fields = ['goods', 'demand_file', 'clustering']
         missing_fields = [field for field in required_fields if field not in data]
         

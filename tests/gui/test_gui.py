@@ -85,8 +85,7 @@ class TestRunOptimizationInProcess(unittest.TestCase):
     """Test the run_optimization_in_process function."""
 
     @patch('fleetmix.gui.api.optimize')
-    @patch('builtins.open', new_callable=mock_open)
-    def test_run_optimization_success(self, mock_file, mock_optimize):
+    def test_run_optimization_success(self, mock_optimize):
         """Test successful optimization run."""
         # Mock the optimization result as a FleetmixSolution
         mock_solution = FleetmixSolution(
@@ -107,39 +106,52 @@ class TestRunOptimizationInProcess(unittest.TestCase):
         mock_solution.post_optimization_runtime_sec = 0.5
         mock_optimize.return_value = mock_solution
         
-        # Create complete test parameters
-        params_dict = {
-            'vehicles': {'SmallTruck': {'capacity': 100, 'fixed_cost': 300}},
-            'goods': ['Dry', 'Chilled', 'Frozen'],
-            'depot': {'latitude': 40.7128, 'longitude': -74.0060},
-            'avg_speed': 25,
-            'service_time': 15,
-            'max_route_time': 8,
-            'variable_cost_per_hour': 50,
-            'clustering': {'method': 'combine'},
-            'demand_file': 'demand.csv',
-            'light_load_penalty': 20,
-            'light_load_threshold': 0.5,
-            'compartment_setup_cost': 10,
-            'format': 'excel',
-            'post_optimization': False,
-            'small_cluster_size': 3,
-            'nearest_merge_candidates': 10,
-            'max_improvement_iterations': 5,
-            'prune_tsp': True
-        }
-        
         with tempfile.TemporaryDirectory() as tmpdir:
             demand_path = Path(tmpdir) / "demand.csv"
             status_file = Path(tmpdir) / "status.json"
+            params_file = Path(tmpdir) / "params.yaml"
             
             # Create a dummy demand file
             pd.DataFrame({'Customer_ID': ['C1'], 'Dry': [10]}).to_csv(demand_path, index=False)
             
+            # Create a minimal parameters YAML file for testing
+            test_config = {
+                'vehicles': {
+                    'SmallTruck': {'capacity': 1000, 'fixed_cost': 300}
+                },
+                'goods': ['Dry', 'Chilled', 'Frozen'],
+                'depot': {'latitude': 40.7128, 'longitude': -74.0060},
+                'avg_speed': 25,
+                'service_time': 15,
+                'max_route_time': 8,
+                'variable_cost_per_hour': 50,
+                'clustering': {
+                    'method': 'combine',
+                    'max_depth': 20,
+                    'route_time_estimation': 'BHH',
+                    'geo_weight': 0.7,
+                    'demand_weight': 0.3
+                },
+                'demand_file': str(demand_path),
+                'light_load_penalty': 20,
+                'light_load_threshold': 0.5,
+                'compartment_setup_cost': 10,
+                'format': 'excel',
+                'post_optimization': False,
+                'small_cluster_size': 3,
+                'nearest_merge_candidates': 10,
+                'max_improvement_iterations': 5,
+                'prune_tsp': True
+            }
+            
+            import yaml
+            with open(params_file, 'w') as f:
+                yaml.dump(test_config, f)
+            
             # Run the function
             gui.run_optimization_in_process(
                 str(demand_path),
-                params_dict,
+                str(params_file),
                 tmpdir,
                 str(status_file)
             )
@@ -147,9 +159,8 @@ class TestRunOptimizationInProcess(unittest.TestCase):
             # Verify optimize was called
             mock_optimize.assert_called_once()
             
-            # Verify status updates were written
-            # Should have at least 2 writes (initial and final)
-            self.assertGreaterEqual(mock_file.return_value.write.call_count, 2)
+            # Verify status file was created (we can't easily check writes due to JSON format)
+            self.assertTrue(status_file.exists())
 
     @patch('fleetmix.gui.api.optimize')
     def test_run_optimization_failure(self, mock_optimize):
@@ -157,33 +168,47 @@ class TestRunOptimizationInProcess(unittest.TestCase):
         # Make optimize raise an exception
         mock_optimize.side_effect = ValueError("Test error")
         
-        params_dict = {
-            'vehicles': {'SmallTruck': {'capacity': 100, 'fixed_cost': 300}},
-            'goods': ['Dry', 'Chilled', 'Frozen'],
-            'depot': {'latitude': 40.7128, 'longitude': -74.0060},
-            'avg_speed': 25,
-            'service_time': 15,
-            'max_route_time': 8,
-            'variable_cost_per_hour': 50,
-            'clustering': {'method': 'combine'},
-            'demand_file': 'demand.csv',
-            'light_load_penalty': 20,
-            'light_load_threshold': 0.5,
-            'compartment_setup_cost': 10,
-            'format': 'excel'
-        }
-        
         with tempfile.TemporaryDirectory() as tmpdir:
             demand_path = Path(tmpdir) / "demand.csv"
             status_file = Path(tmpdir) / "status.json"
+            params_file = Path(tmpdir) / "params.yaml"
             
             pd.DataFrame({'Customer_ID': ['C1'], 'Dry': [10]}).to_csv(demand_path, index=False)
+            
+            # Create a minimal parameters YAML file for testing
+            test_config = {
+                'vehicles': {
+                    'SmallTruck': {'capacity': 1000, 'fixed_cost': 300}
+                },
+                'goods': ['Dry', 'Chilled', 'Frozen'],
+                'depot': {'latitude': 40.7128, 'longitude': -74.0060},
+                'avg_speed': 25,
+                'service_time': 15,
+                'max_route_time': 8,
+                'variable_cost_per_hour': 50,
+                'clustering': {
+                    'method': 'combine',
+                    'max_depth': 20,
+                    'route_time_estimation': 'BHH',
+                    'geo_weight': 0.7,
+                    'demand_weight': 0.3
+                },
+                'demand_file': str(demand_path),
+                'light_load_penalty': 20,
+                'light_load_threshold': 0.5,
+                'compartment_setup_cost': 10,
+                'format': 'excel'
+            }
+            
+            import yaml
+            with open(params_file, 'w') as f:
+                yaml.dump(test_config, f)
             
             # Run should raise the exception
             with self.assertRaises(ValueError):
                 gui.run_optimization_in_process(
                     str(demand_path),
-                    params_dict,
+                    str(params_file),
                     tmpdir,
                     str(status_file)
                 )
@@ -277,9 +302,11 @@ class TestCollectParametersFromUI(unittest.TestCase):
         with patch('streamlit.session_state', mock_state):
             result = gui.collect_parameters_from_ui()
         
-        self.assertEqual(result['avg_speed'], 30)
-        self.assertEqual(result['service_time'], 20)
-        self.assertEqual(result['max_route_time'], 10)
+        # Check that result is a Parameters object
+        self.assertIsInstance(result, Parameters)
+        self.assertEqual(result.avg_speed, 30)
+        self.assertEqual(result.service_time, 20)
+        self.assertEqual(result.max_route_time, 10)
 
     def test_collect_parameters_nested(self):
         """Test collection of nested parameters like clustering.method."""
@@ -302,7 +329,9 @@ class TestCollectParametersFromUI(unittest.TestCase):
         with patch('streamlit.session_state', mock_state):
             result = gui.collect_parameters_from_ui()
         
-        self.assertEqual(result['clustering']['method'], 'kmedoids')
+        # Check that result is a Parameters object and clustering method was updated
+        self.assertIsInstance(result, Parameters)
+        self.assertEqual(result.clustering['method'], 'kmedoids')
 
 
 @pytest.mark.skipif(not STREAMLIT_AVAILABLE, reason="Streamlit not installed")

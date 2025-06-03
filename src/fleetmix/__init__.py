@@ -3,6 +3,12 @@
 # Export API function
 from .api import optimize
 
+# Export canonical VRP interface functions
+from .pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
+
+# Export canonical clustering function
+from .clustering import generate_clusters_for_configurations
+
 # Version
 __version__ = "0.1.0b1"
 
@@ -16,6 +22,10 @@ from . import utils
 # Public API
 __all__ = [
     "optimize",
+    "VRPType", 
+    "convert_to_fsm",
+    "run_optimization", 
+    "generate_clusters_for_configurations",
     "optimization", 
     "clustering",
     "post_optimization",

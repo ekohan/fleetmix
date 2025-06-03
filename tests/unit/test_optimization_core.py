@@ -6,7 +6,7 @@ import pulp
 from pathlib import Path
 
 from fleetmix.optimization.core import (
-    solve_fsm_problem,
+    optimize_fleet_selection,
     _create_model,
     _extract_solution,
     _validate_solution,
@@ -74,9 +74,9 @@ def params_with_post_opt():
     return Parameters.from_yaml(str(config_path))
 
 
-def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
+def test_optimize_fleet_selection_basic(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
     """Test basic FSM problem solving."""
-    result = solve_fsm_problem(
+    result = optimize_fleet_selection(
         clusters_df=simple_clusters_df,
         configurations_df=simple_configs_df,
         customers_df=simple_customers_df,
@@ -99,9 +99,9 @@ def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_c
     assert result.solver_status == 'Optimal'
 
 
-def test_solve_fsm_problem_with_post_optimization(simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt):
+def test_optimize_fleet_selection_with_post_optimization(simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt):
     """Test FSM problem solving with post-optimization enabled."""
-    result = solve_fsm_problem(
+    result = optimize_fleet_selection(
         clusters_df=simple_clusters_df,
         configurations_df=simple_configs_df,
         customers_df=simple_customers_df,
@@ -230,7 +230,7 @@ def test_solve_with_infeasible_clusters():
     
     # This should exit with an error
     with pytest.raises(SystemExit):
-        solve_fsm_problem(
+        optimize_fleet_selection(
             clusters_df=clusters_df,
             configurations_df=configs_df,
             customers_df=customers_df,

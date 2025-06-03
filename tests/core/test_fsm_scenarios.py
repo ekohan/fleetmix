@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pytest
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.optimization import optimize_fleet_selection
 from fleetmix.config.parameters import Parameters
 
 # Define geographic coordinates for test customers
@@ -440,7 +440,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         )
         assert missing == exp["missing_customers"]
     else:
-        result = solve_fsm_problem(
+        result = optimize_fleet_selection(
             clusters_df, config_df, customers_df, params, verbose=False
         )
         # Compare expected

@@ -8,7 +8,7 @@ from fleetmix.core_types import (
 )
 
 from .generator import (
-    generate_clusters_for_configurations,
+    generate_feasible_clusters,
     _is_customer_feasible,
 )
 
@@ -19,7 +19,7 @@ from .heuristics import (
 )
 
 __all__ = [
-    'generate_clusters_for_configurations',
+    'generate_feasible_clusters',
     'Cluster',
     'ClusteringContext',
     'compute_composite_distance',

@@ -10,8 +10,8 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.utils.save_results import save_optimization_results
-from fleetmix.clustering import generate_clusters_for_configurations
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.clustering import generate_feasible_clusters
+from fleetmix.optimization import optimize_fleet_selection
 from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.core_types import FleetmixSolution
@@ -141,7 +141,7 @@ def optimize(
             # Step 4: Generate clusters
             try:
                 with time_recorder.measure("clustering"):
-                    clusters_df = generate_clusters_for_configurations(
+                    clusters_df = generate_feasible_clusters(
                         customers=customers,
                         configurations_df=configs_df,
                         params=params
@@ -168,7 +168,7 @@ def optimize(
             # Step 5: Solve optimization problem
             try:
                 with time_recorder.measure("fsm_initial"):
-                    solution = solve_fsm_problem(
+                    solution = optimize_fleet_selection(
                         clusters_df=clusters_df,
                         configurations_df=configs_df,
                         customers_df=customers,

@@ -7,7 +7,7 @@ from .api import optimize
 from .pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 
 # Export canonical clustering function
-from .clustering import generate_clusters_for_configurations
+from .clustering import generate_feasible_clusters
 
 # Version
 __version__ = "0.1.0b1"
@@ -25,7 +25,7 @@ __all__ = [
     "VRPType", 
     "convert_to_fsm",
     "run_optimization", 
-    "generate_clusters_for_configurations",
+    "generate_feasible_clusters",
     "optimization", 
     "clustering",
     "post_optimization",

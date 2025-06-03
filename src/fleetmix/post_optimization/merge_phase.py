@@ -6,7 +6,7 @@ small, neighbouring clusters after the core FSM model has been solved.
 
 Rationale
 ~~~~~~~~~
-The MILP in ``fleetmix.optimization.solve_fsm_problem`` chooses from a *fixed* pool of clusters.  Once an
+The MILP in ``fleetmix.optimization.optimize_fleet_selection`` chooses from a *fixed* pool of clusters.  Once an
 initial solution is available, additional cost savings can sometimes be obtained by *merging* two
 clusters and serving the combined demand with a larger vehicle—provided capacity and route‐time
 constraints remain feasible.
@@ -33,7 +33,7 @@ Route‐time calculations for the same customer sets are memoised in the module�
 Outcome
 -------
 Returns the *best* improved solution dictionary, identical in structure to the one produced by
-``fleetmix.optimization.solve_fsm_problem`` but with potentially lower total cost.
+``fleetmix.optimization.optimize_fleet_selection`` but with potentially lower total cost.
 """
 
 from typing import Dict, Tuple
@@ -92,7 +92,7 @@ def improve_solution(
 
     Args:
         initial_solution: Solution dictionary returned by
-            :func:`fleetmix.optimization.solve_fsm_problem`.
+            :func:`fleetmix.optimization.optimize_fleet_selection`.
         configurations_df: Vehicle configuration catalogue (same as used in the
             optimisation step).
         customers_df: Original customer dataframe; required for route-time
@@ -109,7 +109,7 @@ def improve_solution(
         >>> improved['total_cost'] <= sol['total_cost']
         True
     """
-    from fleetmix.optimization import solve_fsm_problem
+    from fleetmix.optimization import optimize_fleet_selection
 
     best_solution = initial_solution
     best_cost = best_solution.total_cost if best_solution.total_cost is not None else float('inf')
@@ -144,7 +144,7 @@ def improve_solution(
         combined_clusters = pd.concat([selected_clusters, merged_clusters], ignore_index=True)
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
-        trial_solution = solve_fsm_problem(
+        trial_solution = optimize_fleet_selection(
             combined_clusters,
             configurations_df,
             customers_df,

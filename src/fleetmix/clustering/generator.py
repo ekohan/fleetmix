@@ -29,7 +29,7 @@ class Symbols:
     CHECKMARK = "✓"
     CROSS = "✗"
 
-def generate_clusters_for_configurations(
+def generate_feasible_clusters(
     customers: pd.DataFrame,
     configurations_df: pd.DataFrame,
     params: Parameters,

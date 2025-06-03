@@ -10,12 +10,12 @@ import tempfile
 import shutil
 import yaml
 
-from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.clustering.heuristics import (
     get_feasible_customers_subset, 
     create_initial_clusters
 )
-from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.optimization.core import optimize_fleet_selection
 from fleetmix.post_optimization.merge_phase import improve_solution
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.utils.route_time import (
@@ -180,7 +180,7 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
+        clusters_df = generate_feasible_clusters(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config
@@ -306,7 +306,7 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
+        clusters_df = generate_feasible_clusters(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config
@@ -319,7 +319,7 @@ class TestCoreAlgorithms:
         realistic_config.results_dir = temp_results_dir
         
         # Run optimization
-        solution = solve_fsm_problem(
+        solution = optimize_fleet_selection(
             clusters_df=clusters_df,
             configurations_df=configs_df,
             customers_df=realistic_customers,
@@ -345,7 +345,7 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
+        clusters_df = generate_feasible_clusters(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config
@@ -356,7 +356,7 @@ class TestCoreAlgorithms:
         
         realistic_config.results_dir = temp_results_dir
         
-        solution = solve_fsm_problem(
+        solution = optimize_fleet_selection(
             clusters_df=clusters_df,
             configurations_df=configs_df,
             customers_df=realistic_customers,
@@ -422,7 +422,7 @@ class TestCoreAlgorithms:
         # Reduce time limits for testing
         realistic_config.clustering['time_limit_minutes'] = 2
         
-        clusters_df = generate_clusters_for_configurations(
+        clusters_df = generate_feasible_clusters(
             customers=large_customers,
             configurations_df=configs_df,
             params=realistic_config
@@ -463,7 +463,7 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
+        clusters_df = generate_feasible_clusters(
             customers=single_customer,
             configurations_df=configs_df,
             params=realistic_config
@@ -493,7 +493,7 @@ class TestCoreAlgorithms:
         
         # Time the clustering phase
         start_time = time.time()
-        clusters_df = generate_clusters_for_configurations(
+        clusters_df = generate_feasible_clusters(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config

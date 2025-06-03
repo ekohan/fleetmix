@@ -119,7 +119,7 @@ def test_benchmark_run_mcvrp_instance(tmp_path):
         "benchmark", "mcvrp",
         "--instance", MCVRP_INSTANCE,
         "--output", str(output_dir),
-        "--format", "json"  # Explicitly specify JSON format
+        "--format", "json"
     ])
     assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     assert output_dir.exists()
@@ -132,7 +132,7 @@ def test_benchmark_run_cvrp_instance(tmp_path):
         "benchmark", "cvrp",
         "--instance", CVRP_INSTANCE,
         "--output", str(output_dir),
-        "--format", "json"  # Explicitly specify JSON format
+        "--format", "json"
     ])
     assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     assert output_dir.exists()

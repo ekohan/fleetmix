@@ -29,6 +29,7 @@ src/*.egg-info/
 *.docx
 *.xml
 *.egg-info/
+*.txt
 
 # TODO: do add the paper
 paper_wip.txt

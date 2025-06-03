@@ -251,7 +251,7 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         log_success(f"Results saved to {output_path.name}")
 
 
-def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, format: str = "json", verbose: bool = False, debug: bool = False) -> None:
+def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False) -> None:
     """Run benchmarks for all MCVRP instances."""
     datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "mcvrp"
     
@@ -279,8 +279,8 @@ def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, format: str = "j
             )
 
             # Save results with specified format
-            ext = "xlsx" if format == "excel" else "json"
-            output_path = params.results_dir / f"mcvrp_{instance}.{ext}"
+            format = "json"
+            output_path = params.results_dir / f"mcvrp_{instance}.{format}"
             save_optimization_results(
                 solution=solution,
                 configurations_df=configs_df,
@@ -298,7 +298,7 @@ def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, format: str = "j
                 console.print_exception()
 
 
-def _run_all_cvrp_instances(output_dir: Optional[Path] = None, format: str = "json", verbose: bool = False, debug: bool = False) -> None:
+def _run_all_cvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False) -> None:
     """Run benchmarks for all CVRP instances."""
     datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "cvrp"
     
@@ -328,8 +328,8 @@ def _run_all_cvrp_instances(output_dir: Optional[Path] = None, format: str = "js
             )
 
             # Save results with specified format
-            ext = "xlsx" if format == "excel" else "json"
-            output_path = params.results_dir / f"cvrp_{instance}_normal.{ext}"
+            format = "json"
+            output_path = params.results_dir / f"cvrp_{instance}_normal.{format}"
             save_optimization_results(
                 solution=solution,
                 configurations_df=configs_df,
@@ -492,11 +492,11 @@ def benchmark(
                 
             if suite == "mcvrp":
                 # Implement batch MCVRP processing using pipeline interface
-                _run_all_mcvrp_instances(output, format, verbose, debug)
+                _run_all_mcvrp_instances(output, verbose, debug)
                         
             else:  # cvrp
                 # Implement batch CVRP processing using pipeline interface
-                _run_all_cvrp_instances(output, format, verbose, debug)
+                _run_all_cvrp_instances(output, verbose, debug)
             
             log_success(f"{suite.upper()} benchmark completed successfully!")
                 

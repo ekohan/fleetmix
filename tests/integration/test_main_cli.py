@@ -1,61 +1,54 @@
-import sys
+"""Test integration of the main CLI workflow."""
 import pytest
-import pandas as pd
 from pathlib import Path
+from typer.testing import CliRunner
+from fleetmix.app import app
+from tests.utils.stubs import stub_clustering, stub_solver, stub_demand, stub_save_results
 
-import fleetmix.cli.main as main_mod
-from tests.utils.stubs import stub_clustering, stub_solver, stub_demand
+runner = CliRunner()
 
-@pytest.fixture
-def stub_dependencies(monkeypatch, tmp_results_dir):
-    """Fixture to stub dependencies for integration tests."""
-    # Set output directory env var
-    monkeypatch.setenv('PROJECT_RESULTS_DIR', str(tmp_results_dir))
+def test_main_generates_excel(tmp_path, monkeypatch):
+    """Test that the main optimize command succeeds with Excel format."""
+    # Create a dummy demand file since validation happens before stub
+    demand_file = tmp_path / "dummy_demand.csv"
+    demand_file.write_text("Customer_ID,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand\nC1,0,0,10,0,0\n")
     
-    # Use context managers for all our stubs to make it explicit
-    with stub_demand(monkeypatch), stub_clustering(monkeypatch), stub_solver(monkeypatch):
-        yield
+    with (stub_clustering(monkeypatch), stub_solver(monkeypatch), 
+          stub_demand(monkeypatch), stub_save_results(monkeypatch, tmp_path)):
+        result = runner.invoke(app, [
+            "optimize",
+            "--demand", str(demand_file),
+            "--output", str(tmp_path),
+            "--format", "excel"
+        ])
+        
+        if result.exit_code != 0:
+            print(f"STDOUT: {result.stdout}")
+            print(f"STDERR: {result.stderr}")
+            print(f"Exception: {result.exception}")
+        
+        # Just verify the command succeeds - output file creation is handled by stubs
+        assert result.exit_code == 0
 
-
-def test_main_generates_excel(tmp_results_dir, monkeypatch, stub_dependencies):
-    """Test that the main CLI can generate Excel output."""
-    # Set CLI arguments - when directly calling main(), don't include interpreter args
-    sys.argv = [
-        'fleetmix',  # Program name only
-        '--config', 'tests/_assets/smoke/mini.yaml',
-        '--format', 'excel',
-        '--demand-file', 'smoke/mini_demand.csv'
-    ]
+def test_main_generates_json(tmp_path, monkeypatch):
+    """Test that the main optimize command succeeds with JSON format."""
+    # Create a dummy demand file since validation happens before stub
+    demand_file = tmp_path / "dummy_demand.csv"
+    demand_file.write_text("Customer_ID,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand\nC1,0,0,10,0,0\n")
     
-    # Run main function
-    main_mod.main()
-    
-    # Create the output file for verification
-    out_file = Path(tmp_results_dir) / 'output.xlsx'
-    out_file.write_text('dummy')
-    
-    # Verify the file exists
-    assert out_file.exists(), f"Expected output.xlsx in {tmp_results_dir}"
-    assert out_file.read_text() == 'dummy'
-
-
-def test_main_generates_json(tmp_results_dir, monkeypatch, stub_dependencies):
-    """Test that the main CLI can generate JSON output."""
-    # Set CLI arguments - when directly calling main(), don't include interpreter args
-    sys.argv = [
-        'fleetmix',  # Program name only
-        '--config', 'tests/_assets/smoke/mini.yaml',
-        '--format', 'json',
-        '--demand-file', 'smoke/mini_demand.csv'
-    ]
-    
-    # Run main function
-    main_mod.main()
-    
-    # Create the output file for verification
-    out_file = Path(tmp_results_dir) / 'output.json'
-    out_file.write_text('dummy')
-    
-    # Verify the file exists
-    assert out_file.exists(), f"Expected output.json in {tmp_results_dir}"
-    assert out_file.read_text() == 'dummy' 
+    with (stub_clustering(monkeypatch), stub_solver(monkeypatch), 
+          stub_demand(monkeypatch), stub_save_results(monkeypatch, tmp_path)):
+        result = runner.invoke(app, [
+            "optimize", 
+            "--demand", str(demand_file),
+            "--output", str(tmp_path),
+            "--format", "json"
+        ])
+        
+        if result.exit_code != 0:
+            print(f"STDOUT: {result.stdout}")
+            print(f"STDERR: {result.stderr}")
+            print(f"Exception: {result.exception}")
+        
+        # Just verify the command succeeds - output file creation is handled by stubs
+        assert result.exit_code == 0 

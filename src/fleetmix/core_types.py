@@ -170,6 +170,43 @@ class VehicleSpec:
         return data
 
 @dataclass
+class VehicleConfiguration:
+    """Represents a specific vehicle configuration with compartment assignments."""
+    config_id: int
+    vehicle_type: str
+    capacity: int
+    fixed_cost: float
+    compartments: Dict[str, bool]
+
+    def __getitem__(self, key: str) -> Any:
+        """Support bracket notation access for backward compatibility."""
+        if key == 'Config_ID':
+            return self.config_id
+        elif key == 'Vehicle_Type':
+            return self.vehicle_type
+        elif key == 'Capacity':
+            return self.capacity
+        elif key == 'Fixed_Cost':
+            return self.fixed_cost
+        elif key in self.compartments:
+            return 1 if self.compartments[key] else 0
+        else:
+            raise KeyError(f"'{key}' not found in VehicleConfiguration")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary format."""
+        data = {
+            'Config_ID': self.config_id,
+            'Vehicle_Type': self.vehicle_type,
+            'Capacity': self.capacity,
+            'Fixed_Cost': self.fixed_cost
+        }
+        # Add compartment flags
+        for good, has_compartment in self.compartments.items():
+            data[good] = 1 if has_compartment else 0
+        return data
+
+@dataclass
 class DepotLocation:
     latitude: float
     longitude: float

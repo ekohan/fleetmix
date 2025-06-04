@@ -14,7 +14,7 @@ import itertools
 from dataclasses import replace
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation
+from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation, VehicleConfiguration
 from .heuristics import (
     get_feasible_customers_subset,
     create_initial_clusters,
@@ -31,7 +31,7 @@ class Symbols:
 
 def generate_clusters_for_configurations(
     customers: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     params: Parameters,
 ) -> pd.DataFrame:
     """
@@ -39,14 +39,14 @@ def generate_clusters_for_configurations(
     
     Args:
         customers: DataFrame containing customer data
-        configurations_df: DataFrame containing vehicle configurations
+        configurations: List of vehicle configurations
         params: Parameters object containing vehicle configuration parameters
     
     Returns:
         DataFrame containing all generated clusters
     """
     logger.info("--- Starting Cluster Generation Process ---")
-    if customers.empty or configurations_df.empty:
+    if customers.empty or not configurations:
         logger.warning("Input customers or configurations are empty. Returning empty DataFrame.")
         return pd.DataFrame()
 
@@ -60,7 +60,7 @@ def generate_clusters_for_configurations(
         logger.info("Generating feasibility mapping...")
         feasible_customers = _generate_feasibility_mapping(
             customers, 
-            configurations_df,
+            configurations,
             params.goods
         )
         if not feasible_customers:
@@ -100,7 +100,7 @@ def generate_clusters_for_configurations(
                     params,
                     method_name
                 )
-                for _, config in configurations_df.iterrows()
+                for config in configurations
             )
             
             # Flatten the list of lists returned by Parallel and assign IDs
@@ -145,7 +145,7 @@ def generate_clusters_for_configurations(
     return unique_clusters_df
 
 def process_configuration(
-    config: pd.Series,
+    config: VehicleConfiguration,
     customers: pd.DataFrame,
     feasible_customers: Dict,
     context: ClusteringContext,
@@ -156,7 +156,7 @@ def process_configuration(
 ) -> List[Cluster]:
     """Process a single vehicle configuration to generate feasible clusters."""
     # 1. Get customers that can be served by the configuration
-    customers_subset = get_feasible_customers_subset(customers, feasible_customers, config['Config_ID'])
+    customers_subset = get_feasible_customers_subset(customers, feasible_customers, config.config_id)
     if customers_subset.empty:
         return []
     
@@ -181,7 +181,7 @@ def validate_cluster_coverage(clusters_df, customers_df):
 
 def _generate_feasibility_mapping(
     customers: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     goods: List[str]
 ) -> Dict:
     """Generate mapping of feasible configurations for each customer."""
@@ -191,9 +191,9 @@ def _generate_feasibility_mapping(
         customer_id = customer['Customer_ID']
         feasible_configs = []
         
-        for _, config in configurations_df.iterrows():
+        for config in configurations:
             if _is_customer_feasible(customer, config, goods):
-                feasible_configs.append(config['Config_ID'])
+                feasible_configs.append(config.config_id)
         
         if feasible_configs:
             feasible_customers[customer_id] = feasible_configs
@@ -202,14 +202,14 @@ def _generate_feasibility_mapping(
 
 def _is_customer_feasible(
     customer: pd.Series,
-    config: pd.Series,
+    config: VehicleConfiguration,
     goods: List[str]
 ) -> bool:
     """Check if a customer's demands can be served by a configuration."""
     for good in goods:
-        if customer[f'{good}_Demand'] > 0 and not config[good]:
+        if customer[f'{good}_Demand'] > 0 and not config.compartments[good]:
             return False
-        if customer[f'{good}_Demand'] > config['Capacity']:
+        if customer[f'{good}_Demand'] > config.capacity:
             return False
     return True
 

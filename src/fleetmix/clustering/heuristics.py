@@ -17,7 +17,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
 from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY
 
-from fleetmix.core_types import Cluster, ClusteringContext
+from fleetmix.core_types import Cluster, ClusteringContext, VehicleConfiguration
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -206,7 +206,7 @@ def get_feasible_customers_subset(
 
 def create_initial_clusters(
     customers_subset: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     main_params: Parameters,
     method_name: str = 'minibatch_kmeans'
@@ -235,7 +235,7 @@ def create_small_dataset_clusters(customers_subset: pd.DataFrame) -> pd.DataFram
 
 def create_normal_dataset_clusters(
     customers_subset: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     main_params: Parameters,
     method_name: str
@@ -273,7 +273,7 @@ def generate_cluster_id_base(config_id: int) -> int:
 
 def check_constraints(
     cluster_customers: pd.DataFrame,
-    config: pd.Series,
+    config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
@@ -301,14 +301,14 @@ def check_constraints(
         main_params
     )
     
-    capacity_violated = cluster_demand > config['Capacity']
+    capacity_violated = cluster_demand > config.capacity
     time_violated = route_time > clustering_context.max_route_time
     
     return capacity_violated, time_violated
 
 def should_split_cluster(
     cluster_customers: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     depth: int,
     demand_cache: Dict,
@@ -369,7 +369,7 @@ def split_cluster(
 
 def create_cluster(
     cluster_customers: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     cluster_id: int, 
     clustering_context: ClusteringContext,
     demand_cache: Dict,
@@ -395,12 +395,12 @@ def create_cluster(
     
     cluster = Cluster(
         cluster_id=cluster_id,
-        config_id=config['Config_ID'],
+        config_id=config.config_id,
         customers=cluster_customers['Customer_ID'].tolist(),
         total_demand=total_demand,
         centroid_latitude=float(cluster_customers['Latitude'].mean()),
         centroid_longitude=float(cluster_customers['Longitude'].mean()),
-        goods_in_config=[g for g in clustering_context.goods if config[g] == 1],
+        goods_in_config=[g for g in clustering_context.goods if config.compartments[g]],
         route_time=route_time,
         method=method_name,
         tsp_sequence=tsp_sequence
@@ -409,7 +409,7 @@ def create_cluster(
 
 def process_clusters_recursively(
     initial_clusters_df: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
@@ -417,7 +417,7 @@ def process_clusters_recursively(
     method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process clusters recursively to ensure constraints are satisfied."""
-    config_id = config['Config_ID']
+    config_id = config.config_id
     cluster_id_base = generate_cluster_id_base(config_id)
     current_cluster_id = 0
     clusters = [] 
@@ -452,7 +452,7 @@ def process_clusters_recursively(
             if capacity_violated or time_violated:
                 logger.debug(f"⚠️ Max depth {clustering_context.max_depth} reached but constraints still violated: "
                               f"capacity={capacity_violated}, time={time_violated}, "
-                              f"method={method_name}, config_id={config['Config_ID']}")
+                              f"method={method_name}, config_id={config.config_id}")
                 skipped_count += 1
                 continue  # Skip this cluster
         
@@ -488,7 +488,7 @@ def process_clusters_recursively(
 
 def estimate_num_initial_clusters(
     customers: pd.DataFrame,
-    config: pd.Series,
+    config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     main_params: Parameters = None
 ) -> int:
@@ -504,11 +504,11 @@ def estimate_num_initial_clusters(
     # Calculate total demand for relevant goods
     total_demand = 0
     for good in clustering_context.goods:
-        if config[good]:  # Only consider goods this vehicle can carry
+        if config.compartments[good]:  # Only consider goods this vehicle can carry
             total_demand += customers[f'{good}_Demand'].sum()
 
     # Estimate clusters needed based on capacity
-    clusters_by_capacity = np.ceil(total_demand / config['Capacity'])
+    clusters_by_capacity = np.ceil(total_demand / config.capacity)
 
     # Estimate time for an average route
     avg_customers_per_cluster = len(customers) / clusters_by_capacity

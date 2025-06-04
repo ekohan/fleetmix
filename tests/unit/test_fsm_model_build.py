@@ -4,13 +4,39 @@ import pytest
 
 from fleetmix.optimization import _create_model
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleConfiguration
+
+
+def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
+    """Convert DataFrame to List[VehicleConfiguration] for testing."""
+    configs = []
+    for _, row in df.iterrows():
+        # Determine compartments based on goods columns
+        compartments = {}
+        goods_cols = ['Dry', 'Chilled', 'Frozen']
+        for good in goods_cols:
+            if good in row:
+                compartments[good] = bool(row[good])
+        
+        config = VehicleConfiguration(
+            config_id=row['Config_ID'],
+            vehicle_type=row.get('Vehicle_Type', 'Test'),
+            capacity=row['Capacity'],
+            fixed_cost=row['Fixed_Cost'],
+            compartments=compartments
+        )
+        configs.append(config)
+    return configs
 
 
 def test_create_model_basic(toy_fsm_model_build_data):
     # Use shared toy data fixture for model build tests
     clusters_df, configurations_df, params = toy_fsm_model_build_data
+    
+    # Convert DataFrame to List[VehicleConfiguration]
+    configurations = dataframe_to_configurations(configurations_df)
 
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations_df, params)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
 
     # Model should be a pulp problem
     assert isinstance(model, pulp.LpProblem)

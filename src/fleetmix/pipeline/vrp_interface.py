@@ -54,13 +54,10 @@ def run_optimization(
                 params=params
             )
 
-        # Convert configs to DataFrame for optimization module
-        configs_df = vehicle_configurations_to_dataframe(configs)
-
         with time_recorder.measure("fsm_initial"):
             solution = solve_fsm_problem(
                 clusters_df=clusters_df,
-                configurations_df=configs_df,
+                configurations=configs,
                 customers_df=customers_df,
                 parameters=params,
                 verbose=verbose,
@@ -76,4 +73,6 @@ def run_optimization(
     log_detail(f"Vehicles Used: {sum(solution.vehicles_used.values())}")
     log_detail(f"Expected Vehicles: {params.expected_vehicles}")
 
+    # Convert configs to DataFrame for return (for save_optimization_results compatibility)
+    configs_df = vehicle_configurations_to_dataframe(configs)
     return solution, configs_df 

@@ -36,13 +36,13 @@ Returns the *best* improved solution dictionary, identical in structure to the o
 ``fleetmix.optimization.solve_fsm_problem`` but with potentially lower total cost.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import pandas as pd
 import numpy as np
 from haversine import haversine_vector, Unit
 from dataclasses import replace
 
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
 from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
 from fleetmix.config.parameters import Parameters
 
@@ -52,6 +52,22 @@ logger = FleetmixLogger.get_logger(__name__)
 
 # Cache for merged cluster route times
 _merged_route_time_cache: Dict[Tuple[str, ...], Tuple[float, list | None]] = {}
+
+# Helper functions for working with List[VehicleConfiguration]
+def _find_config_by_id(configurations: List[VehicleConfiguration], config_id: str) -> VehicleConfiguration:
+    """Find configuration by ID from list."""
+    for config in configurations:
+        if str(config.config_id) == str(config_id):
+            return config
+    raise KeyError(f"Configuration {config_id} not found")
+
+def _create_config_lookup(configurations: List[VehicleConfiguration]) -> Dict[str, VehicleConfiguration]:
+    """Create a dictionary lookup for configurations."""
+    return {str(config.config_id): config for config in configurations}
+
+def _configs_to_dataframe(configurations: List[VehicleConfiguration]) -> pd.DataFrame:
+    """Convert configurations to DataFrame when pandas operations are needed."""
+    return pd.DataFrame([config.to_dict() for config in configurations])
 
 def _get_merged_route_time(
     customers: pd.DataFrame,
@@ -79,7 +95,7 @@ def _get_merged_route_time(
 
 def improve_solution(
     initial_solution: FleetmixSolution,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     customers_df: pd.DataFrame,
     params: Parameters
 ) -> FleetmixSolution:
@@ -93,8 +109,8 @@ def improve_solution(
     Args:
         initial_solution: Solution dictionary returned by
             :func:`fleetmix.optimization.solve_fsm_problem`.
-        configurations_df: Vehicle configuration catalogue (same as used in the
-            optimisation step).
+        configurations: List of vehicle configurations, each containing
+            capacity, fixed cost, and compartment information.
         customers_df: Original customer dataframe; required for route-time
             recalculation and centroid updates when evaluating merges.
         params: Parameter object controlling thresholds such as
@@ -124,14 +140,15 @@ def improve_solution(
             break
 
         # Ensure goods columns exist
+        config_lookup = _create_config_lookup(configurations)
         for good in params.goods:
             if good not in selected_clusters.columns:
                 selected_clusters[good] = selected_clusters['Config_ID'].map(
-                    lambda x: configurations_df[configurations_df['Config_ID'] == x].iloc[0][good]
+                    lambda x: config_lookup[str(x)][good]
                 )
         merged_clusters = generate_merge_phase_clusters(
             selected_clusters,
-            configurations_df,
+            configurations,
             customers_df,
             params
         )
@@ -146,7 +163,7 @@ def improve_solution(
         internal_params = replace(params, post_optimization=False)
         trial_solution = solve_fsm_problem(
             combined_clusters,
-            configurations_df,
+            configurations,
             customers_df,
             internal_params
         )
@@ -180,7 +197,7 @@ def improve_solution(
 
 def generate_merge_phase_clusters(
     selected_clusters: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     customers_df: pd.DataFrame,
     params: Parameters
 ) -> pd.DataFrame:
@@ -195,7 +212,7 @@ def generate_merge_phase_clusters(
     }
     
     # Create an indexed DataFrame for efficient configuration lookups
-    configs_indexed = configurations_df.set_index('Config_ID')
+    configs_indexed = _configs_to_dataframe(configurations).set_index('Config_ID')
     # Index customers for fast lookup
     customers_indexed = customers_df.set_index('Customer_ID')
     
@@ -261,7 +278,7 @@ def generate_merge_phase_clusters(
                 logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={params.max_route_time:.2f}")
                 continue
             stats['attempted'] += 1
-            target_config = configs_indexed.loc[target['Config_ID']]
+            target_config = _find_config_by_id(configurations, target['Config_ID'])
             is_valid, route_time, demands, tsp_sequence = validate_merged_cluster(
                 small, target, target_config, customers_indexed, params
             )
@@ -291,7 +308,7 @@ def generate_merge_phase_clusters(
                 'Centroid_Latitude': centroid_lat,
                 'Centroid_Longitude': centroid_lon
             }
-            if tsp_sequence is not None:
+            if tsp_sequence is not None: 
                 new_cluster['TSP_Sequence'] = tsp_sequence
             for good in params.goods:
                 new_cluster[good] = target_config[good]
@@ -322,11 +339,11 @@ def generate_merge_phase_clusters(
 def validate_merged_cluster(
     cluster1: pd.Series,
     cluster2: pd.Series,
-    config: pd.Series,
+    config: VehicleConfiguration,
     customers_df: pd.DataFrame,
     params: Parameters
 ) -> Tuple[bool, float, Dict, list | None]:
-    """Validate if two clusters can be merged."""
+    """Validate if two clusters can be merged using the given vehicle configuration."""
     # Index customers for fast lookup
     if customers_df.index.name != 'Customer_ID':
         customers_indexed = customers_df.set_index('Customer_ID', drop=False)
@@ -341,7 +358,7 @@ def validate_merged_cluster(
         merged_goods[g] = demand1 + demand2
     
     # Validate capacity
-    if any(demand > config['Capacity'] for demand in merged_goods.values()):
+    if any(demand > config.capacity for demand in merged_goods.values()):
         return False, 0, {}, None
 
     # Get all customers from both clusters

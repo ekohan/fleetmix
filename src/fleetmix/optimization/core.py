@@ -42,7 +42,7 @@ Typical usage
 """
 
 import time
-from typing import Dict, Tuple, Set, Any
+from typing import Dict, Tuple, Set, Any, List
 import pandas as pd
 import pulp
 import sys
@@ -53,12 +53,28 @@ from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
 logger = FleetmixLogger.get_logger(__name__)
+
+# Helper functions for working with List[VehicleConfiguration]
+def _find_config_by_id(configurations: List[VehicleConfiguration], config_id: str) -> VehicleConfiguration:
+    """Find configuration by ID from list."""
+    for config in configurations:
+        if config.config_id == config_id:
+            return config
+    raise KeyError(f"Configuration {config_id} not found")
+
+def _create_config_lookup(configurations: List[VehicleConfiguration]) -> Dict[str, VehicleConfiguration]:
+    """Create a dictionary lookup for configurations."""
+    return {str(config.config_id): config for config in configurations}
+
+def _configs_to_dataframe(configurations: List[VehicleConfiguration]) -> pd.DataFrame:
+    """Convert configurations to DataFrame when pandas operations are needed."""
+    return pd.DataFrame([config.to_dict() for config in configurations])
 
 def solve_fsm_problem(
     clusters_df: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     customers_df: pd.DataFrame,
     parameters: Parameters,
     solver=None,
@@ -76,9 +92,8 @@ def solve_fsm_problem(
         clusters_df: Output of the clustering stage. Must contain at least the
             columns ``['Cluster_ID', 'Customers', 'Config_ID', 'Total_Demand',
             'Route_Time']``.
-        configurations_df: Catalogue of vehicle configurations (one row per
-            ``Config_ID``) with capacity, fixed cost, and boolean columns per
-            good.
+        configurations: List of vehicle configurations, each containing
+            capacity, fixed cost, and compartment information.
         customers_df: Original customer data used for validation—ensures every
             customer is covered in the final solution.
         parameters: Fully populated :class:`fleetmix.config.parameters.Parameters`
@@ -106,7 +121,7 @@ def solve_fsm_problem(
         returned.
     """
     # Create optimization model
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations_df, parameters)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, parameters)
     
     # Select solver: use provided or pick based on FSM_SOLVER env
     solver = solver or pick_solver(verbose)
@@ -131,12 +146,12 @@ def solve_fsm_problem(
                 cluster_id = cluster['Cluster_ID']
                 has_feasible_vehicle = False
                 
-                for _, config in configurations_df.iterrows():
+                for config in configurations:
                     # Check if vehicle can serve cluster
                     total_demand = sum(cluster['Total_Demand'].values())
                     goods_required = set(g for g in parameters.goods if cluster['Total_Demand'][g] > 0)
                     
-                    if total_demand <= config['Capacity']:
+                    if total_demand <= config.capacity:
                         # Check goods compatibility
                         if all(config[g] == 1 for g in goods_required):
                             has_feasible_vehicle = True
@@ -172,19 +187,20 @@ def solve_fsm_problem(
     missing_customers = _validate_solution(
         selected_clusters, 
         customers_df,
-        configurations_df
+        configurations
     )
     
     # Add goods columns from configurations before calculating statistics
+    config_lookup = _create_config_lookup(configurations)
     for good in parameters.goods:
         selected_clusters[good] = selected_clusters['Config_ID'].map(
-            lambda x: configurations_df[configurations_df['Config_ID'] == x].iloc[0][good]
+            lambda x: config_lookup[str(x)][good]
         )
 
     # Calculate statistics using the actual optimization costs
     solution = _calculate_solution_statistics(
         selected_clusters,
-        configurations_df,
+        configurations,
         parameters,
         model,
         x_vars,
@@ -205,7 +221,7 @@ def solve_fsm_problem(
                 post_start = time.time()
                 solution = improve_solution(
                     solution,
-                    configurations_df,
+                    configurations,
                     customers_df,
                     parameters
                 )
@@ -215,7 +231,7 @@ def solve_fsm_problem(
             post_start = time.time()
             solution = improve_solution(
                 solution,
-                configurations_df,
+                configurations,
                 customers_df,
                 parameters
             )
@@ -229,7 +245,7 @@ def solve_fsm_problem(
 
 def _create_model(
     clusters_df: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     parameters: Parameters
 ) -> Tuple[pulp.LpProblem, Dict[str, pulp.LpVariable], Dict[Tuple[str, Any], pulp.LpVariable], Dict[Tuple[str, str], float]]:
     """
@@ -263,10 +279,10 @@ def _create_model(
         cluster_goods_required = set(g for g in parameters.goods if cluster['Total_Demand'][g] > 0)
         q_k = sum(cluster['Total_Demand'].values())
 
-        for _, config in configurations_df.iterrows():
-            v = config['Config_ID']
+        for config in configurations:
+            v = config.config_id
             # Check capacity
-            if q_k > config['Capacity']:
+            if q_k > config.capacity:
                 continue  # Vehicle cannot serve this cluster
 
             # Check product compatibility
@@ -298,10 +314,10 @@ def _create_model(
         cluster = clusters_df.loc[clusters_df['Cluster_ID'] == k].iloc[0]
         for v in V_k[k]:
             if v != 'NoVehicle':
-                config = configurations_df.loc[configurations_df['Config_ID'] == v].iloc[0]
+                config = _find_config_by_id(configurations, v)
                 # Calculate load percentage
                 total_demand = sum(cluster['Total_Demand'][g] for g in parameters.goods)
-                capacity = config['Capacity']
+                capacity = config.capacity
                 load_percentage = total_demand / capacity
 
                 # Apply fixed penalty if under threshold
@@ -380,7 +396,7 @@ def _extract_solution(
 def _validate_solution(
     selected_clusters: pd.DataFrame,
     customers_df: pd.DataFrame,
-    configurations_df: pd.DataFrame
+    configurations: List[VehicleConfiguration]
 ) -> Set:
     """
     Validate that all customers are served in the solution.
@@ -416,7 +432,7 @@ def _validate_solution(
 
 def _calculate_solution_statistics(
     selected_clusters: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     parameters: Parameters,
     model: pulp.LpProblem,
     x_vars: Dict,
@@ -453,7 +469,7 @@ def _calculate_solution_statistics(
     # Select only necessary columns from configurations_df to avoid merge conflicts with goods columns
     # already present in selected_clusters (this part is already good)
     cols_to_merge_from_config = ['Config_ID', 'Fixed_Cost', 'Vehicle_Type', 'Capacity'] 
-    config_subset_for_merge = configurations_df[cols_to_merge_from_config]
+    config_subset_for_merge = _configs_to_dataframe(configurations)[cols_to_merge_from_config]
 
     selected_clusters = selected_clusters.merge(
         config_subset_for_merge, 
@@ -493,7 +509,7 @@ def _calculate_solution_statistics(
 
 def _calculate_cluster_cost(
     cluster: pd.Series,
-    config: pd.Series,
+    config: VehicleConfiguration,
     parameters: Parameters
 ) -> float:
     """
@@ -506,14 +522,14 @@ def _calculate_cluster_cost(
     Note: Light load penalties are handled separately in the model creation.
     Args:
         cluster: The cluster data as a Pandas Series.
-        config: The vehicle configuration data as a Pandas Series.
+        config: The vehicle configuration data as a VehicleConfiguration object.
         parameters: Parameters object containing optimization parameters.
 
     Returns:
         Base cost of serving the cluster with the given vehicle configuration.
     """
     # Base costs
-    fixed_cost = config['Fixed_Cost']
+    fixed_cost = config.fixed_cost
     route_time = cluster['Route_Time']
     variable_cost = parameters.variable_cost_per_hour * route_time
 

@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleConfiguration
 
 # Define geographic coordinates for test customers
 CUSTOMER_COORDS = {
@@ -289,6 +290,27 @@ SCENARIOS = [
     ),
 ]
 
+def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
+    """Convert DataFrame to List[VehicleConfiguration] for testing."""
+    configs = []
+    for _, row in df.iterrows():
+        # Determine compartments based on goods columns
+        compartments = {}
+        goods_cols = ['Dry', 'Chilled', 'Frozen']
+        for good in goods_cols:
+            if good in row:
+                compartments[good] = bool(row[good])
+        
+        config = VehicleConfiguration(
+            config_id=row['Config_ID'],
+            vehicle_type=row.get('Vehicle_Type', 'Test'),
+            capacity=row['Capacity'],
+            fixed_cost=row['Fixed_Cost'],
+            compartments=compartments
+        )
+        configs.append(config)
+    return configs
+
 @pytest.mark.parametrize(["name", "clusters", "configs", "upd", "exp"], SCENARIOS)
 def test_fsm_scenarios(name, clusters, configs, upd, exp):
     # --- Start Change 2 ---
@@ -319,6 +341,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
     # Build DataFrames
     clusters_df = pd.DataFrame(clusters)
     config_df   = pd.DataFrame(configs)
+    configurations = dataframe_to_configurations(config_df)
     
     # Ensure all customers mentioned in clusters are in customers_df
     # Create a comprehensive list of all customers that need coordinates
@@ -432,16 +455,16 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
     if exp["missing_customers"]:
         # Infeasible: model should inject NoVehicle and warn
         model, y_vars, x_vars, c_vk = _create_model(
-            clusters_df, config_df, params
+            clusters_df, configurations, params
         )
         selected = _extract_solution(clusters_df, y_vars, x_vars)
         missing = _validate_solution(
-            selected, customers_df, config_df
+            selected, customers_df, configurations
         )
         assert missing == exp["missing_customers"]
     else:
         result = solve_fsm_problem(
-            clusters_df, config_df, customers_df, params, verbose=False
+            clusters_df, configurations, customers_df, params, verbose=False
         )
         # Compare expected
         assert result.missing_customers == exp["missing_customers"]

@@ -179,13 +179,10 @@ def optimize(
         
         # Step 5: Solve optimization problem
         try:
-            # Convert configs to DataFrame for the optimization module (which still expects DataFrame)
-            configs_df = vehicle_configurations_to_dataframe(configs)
-            
             with time_recorder.measure("fsm_initial"):
                 solution = solve_fsm_problem(
                     clusters_df=clusters_df,
-                    configurations_df=configs_df,
+                    configurations=configs,
                     customers_df=customers_df,
                     parameters=params,
                     verbose=verbose,

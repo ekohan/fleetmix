@@ -5,11 +5,35 @@ import pytest
 
 from fleetmix.optimization import _create_model, _extract_solution, _validate_solution
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleConfiguration
+
+
+def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
+    """Convert DataFrame to List[VehicleConfiguration] for testing."""
+    configs = []
+    for _, row in df.iterrows():
+        # Determine compartments based on goods columns
+        compartments = {}
+        goods_cols = ['Dry', 'Chilled', 'Frozen']
+        for good in goods_cols:
+            if good in row:
+                compartments[good] = bool(row[good])
+        
+        config = VehicleConfiguration(
+            config_id=row['Config_ID'],
+            vehicle_type=row.get('Vehicle_Type', 'Test'),
+            capacity=row['Capacity'],
+            fixed_cost=row['Fixed_Cost'],
+            compartments=compartments
+        )
+        configs.append(config)
+    return configs
 
 
 def test_create_model_constraints(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, config_df, params)
+    configurations = dataframe_to_configurations(config_df)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
     # Each customer coverage constraint exists
     for cid in ['C1', 'C2']:
         cname = f"Customer_Coverage_{cid}"
@@ -20,12 +44,13 @@ def test_create_model_constraints(toy_fsm_edge_data):
 
 def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
+    configurations = dataframe_to_configurations(config_df)
     # small cluster demand -> light-load penalty applies
     params.light_load_penalty = 100
     costs = []
     for thr in [0.0, 0.5, 0.9]:
         params.light_load_threshold = thr
-        model, y_vars, x_vars, c_vk = _create_model(clusters_df, config_df, params)
+        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
         costs.append(c_vk[(1, 1)])
     # Objective cost non-decreasing as threshold increases
     assert costs[0] <= costs[1] <= costs[2]
@@ -33,11 +58,12 @@ def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
 
 def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
     clusters_df, config_df, params = toy_fsm_edge_data
+    configurations = dataframe_to_configurations(config_df)
     # Make demand exceed capacity
     clusters_df.at[0, 'Total_Demand'] = {'Dry': 100, 'Chilled': 0, 'Frozen': 0}
     # Set caplog to capture DEBUG messages from the specific logger
     caplog.set_level(logging.DEBUG, logger='fleetmix.optimization.core') 
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, config_df, params)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
     # 'NoVehicle' var should be present and y_1==0 forced
     assert any(v == 'NoVehicle' for (v, k) in x_vars)
     # There should be an unserviceable-cluster constraint
@@ -53,6 +79,7 @@ def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
 
 def test_extract_and_validate_solution(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
+    configurations = dataframe_to_configurations(config_df)
     # Build y_vars: cluster 1 selected
     y = pulp.LpVariable('y_1', cat='Binary'); y.varValue = 1
     y_vars = {1: y}
@@ -67,5 +94,5 @@ def test_extract_and_validate_solution(toy_fsm_edge_data):
         {'Customer_ID': 'C1', 'Dry_Demand': 0, 'Chilled_Demand': 0, 'Frozen_Demand': 0},
         {'Customer_ID': 'C2', 'Dry_Demand': 0, 'Chilled_Demand': 0, 'Frozen_Demand': 0}
     ])
-    missing = _validate_solution(selected, customers_df, config_df)
+    missing = _validate_solution(selected, customers_df, configurations)
     assert missing == set() 

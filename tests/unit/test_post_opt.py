@@ -5,7 +5,7 @@ import sys
 import fleetmix.post_optimization.merge_phase as merge_phase
 import fleetmix.optimization
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
 
 # Helper to create a minimal clusters DataFrame with goods columns
 def make_cluster_df(cluster_id):
@@ -28,6 +28,16 @@ def make_cluster_df(cluster_id):
         **{g: 1 for g in goods}
     }])
 
+# Create a minimal configurations list
+def make_configs():
+    return [VehicleConfiguration(
+        config_id=1,
+        vehicle_type='Test',
+        capacity=1000,
+        fixed_cost=100,
+        compartments={'Dry': True, 'Chilled': True, 'Frozen': True}
+    )]
+
 # Create a minimal configurations DataFrame
 def make_config_df():
     return pd.DataFrame([{
@@ -44,11 +54,11 @@ def test_no_merges(monkeypatch):
     """Scenario B: no feasible merges => exit immediately without solving"""
     calls = {'gen': 0, 'solve': 0}
 
-    def fake_gen(selected_clusters, configurations_df, customers_df, params):
+    def fake_gen(selected_clusters, configurations, customers_df, params):
         calls['gen'] += 1
         return pd.DataFrame()  # always empty
 
-    def fake_solve(combined, configurations_df, customers_df, params, solver=None, verbose=False):
+    def fake_solve(combined, configurations, customers_df, params, solver=None, verbose=False):
         calls['solve'] += 1
         return FleetmixSolution(selected_clusters=make_cluster_df('m'), total_cost=50)
 
@@ -66,7 +76,7 @@ def test_no_merges(monkeypatch):
         initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
 
-        result = merge_phase.improve_solution(initial_solution, make_config_df(), pd.DataFrame(), params)
+        result = merge_phase.improve_solution(initial_solution, make_configs(), pd.DataFrame(), params)
         assert result.total_cost == initial_solution.total_cost
         assert result.selected_clusters.equals(initial_solution.selected_clusters)
         assert calls['gen'] == 1
@@ -81,13 +91,13 @@ def test_single_merge_then_no_more(monkeypatch):
     """Scenario A: one merge lowers cost, next yields none"""
     calls = {'gen': 0, 'solve': 0}
 
-    def fake_gen(selected_clusters, configurations_df, customers_df, params):
+    def fake_gen(selected_clusters, configurations, customers_df, params):
         calls['gen'] += 1
         if calls['gen'] == 1:
             return make_cluster_df('m1')
         return pd.DataFrame()
 
-    def fake_solve(combined, configurations_df, customers_df, params, solver=None, verbose=False):
+    def fake_solve(combined, configurations, customers_df, params, solver=None, verbose=False):
         calls['solve'] += 1
         return FleetmixSolution(selected_clusters=make_cluster_df('m1'), total_cost=90)
 
@@ -105,7 +115,7 @@ def test_single_merge_then_no_more(monkeypatch):
         initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
 
-        result = merge_phase.improve_solution(initial_solution, make_config_df(), pd.DataFrame(), params)
+        result = merge_phase.improve_solution(initial_solution, make_configs(), pd.DataFrame(), params)
         assert result.total_cost == 90
         assert calls['gen'] == 2
         assert calls['solve'] == 1
@@ -119,12 +129,12 @@ def test_iteration_cap(monkeypatch):
     """Scenario C: always merge & improve => stops at iteration cap"""
     calls = {'gen': 0, 'solve': 0}
 
-    def fake_gen(selected_clusters, configurations_df, customers_df, params):
+    def fake_gen(selected_clusters, configurations, customers_df, params):
         calls['gen'] += 1
         # always return a dummy merge
         return make_cluster_df(f'g{calls["gen"]}')
 
-    def fake_solve(combined, configurations_df, customers_df, params, solver=None, verbose=False):
+    def fake_solve(combined, configurations, customers_df, params, solver=None, verbose=False):
         calls['solve'] += 1
         # decreasing cost each call
         cost = 100 - calls['solve']
@@ -146,7 +156,7 @@ def test_iteration_cap(monkeypatch):
         params = Parameters.from_yaml()
         params.max_improvement_iterations = 3
 
-        result = merge_phase.improve_solution(initial_solution, make_config_df(), pd.DataFrame(), params)
+        result = merge_phase.improve_solution(initial_solution, make_configs(), pd.DataFrame(), params)
         assert calls['solve'] == 3
         assert result.total_cost == 100 - 3
     finally:

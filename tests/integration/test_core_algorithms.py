@@ -311,13 +311,10 @@ class TestCoreAlgorithms:
             params=realistic_config
         )
         
-        # Convert configs to DataFrame for optimization
-        configs_df = vehicle_configs_to_dataframe(configs)
-        
-        # Solve the FSM problem
+        # Solve the FSM problem using the new API
         solution = solve_fsm_problem(
             clusters_df=clusters_df,
-            configurations_df=configs_df,
+            configurations=configs,
             customers_df=realistic_customers,
             parameters=realistic_config,
             verbose=True
@@ -343,12 +340,9 @@ class TestCoreAlgorithms:
             params=realistic_config
         )
         
-        # Convert configs to DataFrame for optimization
-        configs_df = vehicle_configs_to_dataframe(configs)
-        
         solution = solve_fsm_problem(
             clusters_df=clusters_df,
-            configurations_df=configs_df,
+            configurations=configs,
             customers_df=realistic_customers,
             parameters=realistic_config,
             verbose=False
@@ -359,7 +353,7 @@ class TestCoreAlgorithms:
             try:
                 improved_solution = improve_solution(
                     initial_solution=solution,
-                    configurations_df=configs_df,
+                    configurations=configs,
                     customers_df=realistic_customers,
                     params=realistic_config
                 )

@@ -4,10 +4,35 @@ import pytest
 
 import fleetmix.optimization as optimization
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleConfiguration
+
+
+def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
+    """Convert DataFrame to List[VehicleConfiguration] for testing."""
+    configs = []
+    for _, row in df.iterrows():
+        # Determine compartments based on goods columns
+        compartments = {}
+        goods_cols = ['Dry', 'Chilled', 'Frozen']
+        for good in goods_cols:
+            if good in row:
+                compartments[good] = bool(row[good])
+        
+        config = VehicleConfiguration(
+            config_id=row['Config_ID'],
+            vehicle_type=row.get('Vehicle_Type', 'Test'),
+            capacity=row['Capacity'],
+            fixed_cost=row['Fixed_Cost'],
+            compartments=compartments
+        )
+        configs.append(config)
+    return configs
+
 
 def test_create_model_counts(toy_fsm_core_data):
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
-    model, y_vars, x_vars, c_vk = optimization._create_model(clusters_df, config_df, params)
+    configurations = dataframe_to_configurations(config_df)
+    model, y_vars, x_vars, c_vk = optimization._create_model(clusters_df, configurations, params)
     # Exactly one cluster variable and one assignment x-var
     assert len(y_vars) == 1, "Should create one y var"
     assert len(x_vars) == 1, "Should create one x var per vehicle-cluster"
@@ -44,12 +69,13 @@ def test_extract_solution():
 
 def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
+    configurations = dataframe_to_configurations(config_df)
     # Build base data and violate capacity so no config is feasible
     clusters_df.at[0, 'Total_Demand'] = {'Dry': 100, 'Chilled': 0, 'Frozen': 0}
     # Capture warnings/debug from model construction for the specific logger
     caplog.set_level(logging.DEBUG, logger='fleetmix.optimization.core')
     # Create model
-    model, y_vars, x_vars, c_vk = optimization._create_model(clusters_df, config_df, params)
+    model, y_vars, x_vars, c_vk = optimization._create_model(clusters_df, configurations, params)
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
     assert any(v == 'NoVehicle' for v, k in x_vars.keys()), "Should inject NoVehicle for infeasible cluster"
     # Check warning about unserviceable cluster (now expecting DEBUG level)
@@ -64,7 +90,7 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     
     # Use pytest's raises to catch the expected sys.exit(1) call
     with pytest.raises(SystemExit) as excinfo:
-        optimization.solve_fsm_problem(clusters_df, config_df, customers_df, params)
+        optimization.solve_fsm_problem(clusters_df, configurations, customers_df, params)
     
     # Verify that the exit code is 1 as expected
     assert excinfo.value.code == 1

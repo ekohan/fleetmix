@@ -15,6 +15,7 @@ results/*.xlsx
 results/*.json
 results/*.html
 results/*.csv
+results/
 
 # Testing
 .hypothesis/

@@ -1,0 +1,91 @@
+# Heterogeneous Fleet Configuration
+# =================================
+# This configuration demonstrates how different vehicle types can have
+# different operational parameters in the fleetmix optimizer.
+
+# Define the types of goods to be delivered
+goods: 
+  - Dry      # Documents, packages, non-perishable items
+  - Chilled  # Food, medicine requiring refrigeration
+  - Frozen   # Frozen food requiring freezer
+
+# Vehicle fleet configuration with per-vehicle operational parameters
+vehicles:
+  # Bike: Fast urban delivery for small packages
+  Bike:
+    capacity: 50              # 50 kg capacity (small cargo box)
+    fixed_cost: 30            # $30 per bike per day
+    avg_speed: 15.0           # 15 km/h average in urban traffic
+    service_time: 5.0         # 5 minutes per delivery (quick drop-off)
+    max_route_time: 2.0       # 2 hour shifts (rider fatigue)
+    compartments:
+      Dry: true               # Can carry packages
+      Chilled: true           # Has insulated box
+      Frozen: false           # No freezer capability
+    extra:
+      variable_cost_per_km: 0.1  # Low operating cost
+      emissions_per_km: 0.0      # Zero emissions
+      
+  # Truck: Traditional delivery vehicle for bulk orders
+  Truck:
+    capacity: 500             # 500 kg capacity
+    fixed_cost: 150           # $150 per truck per day
+    avg_speed: 25.0           # 25 km/h in urban traffic (slower than bikes)
+    service_time: 15.0        # 15 minutes per stop (loading/unloading)
+    max_route_time: 8.0       # Full 8-hour work day
+    compartments:
+      Dry: true               # Large dry storage
+      Chilled: true           # Refrigerated section
+      Frozen: true            # Freezer section
+    extra:
+      variable_cost_per_km: 0.5  # Fuel and maintenance
+      emissions_per_km: 0.25     # CO2 emissions in kg
+      
+  # Drone: Autonomous aerial delivery for urgent small packages
+  Drone:
+    capacity: 5               # 5 kg payload limit
+    fixed_cost: 20            # $20 per drone per day (charging/monitoring)
+    avg_speed: 40.0           # 40 km/h direct flight (fastest)
+    service_time: 2.0         # 2 minutes (automated drop-off)
+    max_route_time: 0.5       # 30 minutes battery life
+    compartments:
+      Dry: true               # Small package compartment
+      Chilled: false          # No temperature control
+      Frozen: false           # No freezer
+    extra:
+      variable_cost_per_km: 0.2  # Electricity cost
+      emissions_per_km: 0.0      # Zero direct emissions
+      max_altitude: 120          # meters
+      weather_restricted: true   # Cannot fly in bad weather
+
+# Depot location (distribution center)
+depot:
+  latitude: 40.7580
+  longitude: -73.9855
+  name: "Manhattan Distribution Center"
+
+# Cost parameters
+variable_cost_per_hour: 25.0    # Labor cost per hour
+light_load_penalty: 10.0        # Penalty for underutilized vehicles
+light_load_threshold: 0.3       # 30% utilization threshold
+compartment_setup_cost: 50.0    # Cost to configure multi-compartment
+
+# Clustering algorithm parameters
+clustering:
+  method: combine               # Use multiple clustering methods
+  route_time_estimation: BHH    # Beardwood-Halton-Hammersley estimation
+  max_depth: 20                 # Maximum cluster size
+  geo_weight: 0.8              # Prioritize geographic proximity (urban)
+  demand_weight: 0.2           # Lower weight on demand similarity
+
+# Post-optimization improvement
+post_optimization: true
+small_cluster_size: 2          # Clusters with ≤2 customers
+nearest_merge_candidates: 5    # Check 5 nearest clusters for merging
+max_improvement_iterations: 3  # Maximum merge iterations
+
+# Output format
+format: excel                  # Generate Excel report
+
+# Demand file path (will be specified at runtime)
+demand_file: urban_customers.csv 

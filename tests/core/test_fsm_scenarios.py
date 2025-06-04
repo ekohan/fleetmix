@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pytest
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.optimization import optimize_fleet_selection
 from fleetmix.config.parameters import Parameters
 
 # Define geographic coordinates for test customers
@@ -40,6 +40,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         # parameter overrides
@@ -74,6 +77,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
             {
                 "Config_ID": 2,
@@ -83,6 +89,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
         ],
         {"variable_cost_per_hour": 1},
@@ -115,6 +124,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
             {
                 "Config_ID": 2,
@@ -124,6 +136,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
         ],
         {"variable_cost_per_hour": 1},
@@ -156,6 +171,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         {
@@ -192,6 +210,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 1,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         {
@@ -227,6 +248,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         {"variable_cost_per_hour": 1},
@@ -265,6 +289,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
             {
                 "Config_ID": 2,
@@ -274,6 +301,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
         ],
         {"variable_cost_per_hour": 1},
@@ -440,7 +470,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         )
         assert missing == exp["missing_customers"]
     else:
-        result = solve_fsm_problem(
+        result = optimize_fleet_selection(
             clusters_df, config_df, customers_df, params, verbose=False
         )
         # Compare expected

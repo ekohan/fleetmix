@@ -7,11 +7,11 @@ import pandas as pd
 from fleetmix.benchmarking.converters.vrp import convert_vrp_to_fsm
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-from fleetmix.clustering import generate_clusters_for_configurations
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.clustering import generate_feasible_clusters
+from fleetmix.optimization import optimize_fleet_selection
 from fleetmix.utils.logging import log_progress, log_success, log_detail
 from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 class VRPType(Enum):
     CVRP = 'cvrp'
@@ -41,17 +41,19 @@ def run_optimization(
     with time_recorder.measure("global"):
         # Generate vehicle configurations and clusters
         with time_recorder.measure("vehicle_configuration"):
-            configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
+            from fleetmix.utils.vehicle_configurations import _generate_vehicle_configurations_df
+            configs_df = _generate_vehicle_configurations_df(params.vehicles, params.goods)
         
         with time_recorder.measure("clustering"):
-            clusters_df = generate_clusters_for_configurations(
+            from fleetmix.clustering.generator import _generate_feasible_clusters_df
+            clusters_df = _generate_feasible_clusters_df(
                 customers=customers_df,
                 configurations_df=configs_df,
                 params=params
             )
 
         with time_recorder.measure("fsm_initial"):
-            solution = solve_fsm_problem(
+            solution = optimize_fleet_selection(
                 clusters_df=clusters_df,
                 configurations_df=configs_df,
                 customers_df=customers_df,

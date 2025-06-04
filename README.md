@@ -89,15 +89,22 @@ fleetmix version
 ### Python API
 
 ```python
-import fleetmix
+from fleetmix import optimize
 
-solution = fleetmix.optimize(
+# Run optimization
+solution = optimize(
     demand="customers.csv",
     config="fleet_config.yaml"
 )
 
-print(f"Total cost: ${solution['total_cost']:,.2f}")
-print(f"Vehicles used: {len(solution['vehicles_used'])}")
+# Access results
+print(f"Total cost: ${solution.total_cost:,.2f}")
+print(f"Vehicles used: {solution.total_vehicles}")
+print(f"Missing customers: {len(solution.missing_customers)}")
+
+# Inspect cluster assignments
+for cluster in solution.selected_clusters:
+    print(f"Cluster {cluster.cluster_id}: {cluster.customer_ids}")
 ```
 
 ### Web Interface
@@ -172,14 +179,91 @@ fleetmix convert --type mcvrp --instance 10_3_3_3_\(01\)
 
 ## 🐍 Python API
 
-```python
-import fleetmix as fm
+### Simple Usage
 
-customers_df = ...  # build a DataFrame
-solution = fm.optimize(demand=customers_df, config="config.yaml")
+```python
+from fleetmix import optimize
+
+# Run optimization
+solution = optimize(
+    demand="customers.csv",  # or pandas DataFrame
+    config="config.yaml"     # or Parameters object
+)
+
+# Access results with clean types
+print(f"Total cost: ${solution.total_cost:,.2f}")
+print(f"Vehicles: {solution.total_vehicles}")
+
+for cluster in solution.selected_clusters:
+    print(f"Cluster {cluster.cluster_id}: {cluster.customer_ids}")
 ```
 
-Retrieve metrics via `solution[...]` keys (see docstring for full schema).
+### Advanced: Direct Access to Matheuristic Stages
+
+The four stages of the matheuristic are directly accessible:
+
+```python
+from fleetmix import (
+    generate_vehicle_configurations,
+    generate_feasible_clusters,
+    optimize_fleet_selection,
+    improve_solution,
+    Parameters
+)
+
+# Load parameters
+params = Parameters.from_yaml("config.yaml")
+
+# Stage 1: Generate vehicle-compartment combinations
+configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
+
+# Stage 2: Generate feasible customer clusters
+clusters_df = generate_feasible_clusters(
+    customers=customers_df,
+    configurations_df=configs_df,
+    params=params
+)
+
+# Stage 3: Solve the fleet selection MILP
+solution = optimize_fleet_selection(
+    clusters_df=clusters_df,
+    configurations_df=configs_df,
+    customers_df=customers_df,
+    parameters=params
+)
+
+# Stage 4: Post-optimization improvement
+improved = improve_solution(
+    solution,
+    configs_df,
+    customers_df,
+    params
+)
+```
+
+### Core Types
+
+```python
+from fleetmix import VehicleConfiguration, ClusterAssignment, FleetmixSolution
+
+# Work with clean dataclasses
+config = VehicleConfiguration(
+    config_id=1,
+    vehicle_type="refrigerated_truck",
+    compartments={"dry": True, "chilled": True, "frozen": False},
+    capacity=1000,
+    fixed_cost=500.0
+)
+
+cluster = ClusterAssignment(
+    cluster_id=1,
+    config_id=1,
+    customer_ids=["C001", "C002", "C003"],
+    route_time=2.5,
+    total_demand={"dry": 300, "chilled": 200, "frozen": 0},
+    centroid=(40.7128, -74.0060)
+)
+```
 
 ---
 
@@ -235,15 +319,18 @@ Upper‑ and lower‑bound reference solutions are generated automatically for s
 
 ```
 src/fleetmix/
-  api.py                # Python API facade
+  __init__.py           # Clean public API (10 symbols)
+  api.py                # Main optimize() function
+  types.py              # Public dataclasses
+  internal_types.py     # Internal dataclasses
   app.py                # CLI (Typer)
-  clustering/           # capacity & time‑feasible cluster generation
+  clustering/           # Capacity & time‑feasible cluster generation
   optimization/         # MILP core (PuLP/Gurobi)
-  post_optimization/    # merge‑phase heuristic
-  benchmarking/         # datasets • converters • baselines
-  gui.py                # lightweight web GUI
+  post_optimization/    # Merge‑phase heuristic
+  benchmarking/         # Datasets • converters • baselines
+  gui.py                # Lightweight web GUI
   utils/                # I/O, logging, etc.
-docs/                   # code↔paper map • design notes
+docs/                   # Code↔paper map • API docs • design notes
 ```
 
 ---

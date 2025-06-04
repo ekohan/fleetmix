@@ -5,7 +5,7 @@ Solves the **Fleet Size-and-Mix with Heterogeneous Multi-Compartment Vehicles** 
 problem, corresponding to Model (2) in Section 4.3 of the research paper.
 
 Given a pool of candidate clusters K (created in ``fleetmix.clustering`` via
-:func:`generate_clusters_for_configurations`) and a catalogue of
+:func:`generate_feasible_clusters`) and a catalogue of
 vehicle configurations V, this module builds and solves an integer linear programme that
 selects a subset of clusters and assigns exactly one vehicle configuration to each selected
 cluster.
@@ -34,10 +34,10 @@ Solver interface
 
 Typical usage
 -------------
->>> from fleetmix.clustering import generate_clusters_for_configurations
->>> from fleetmix.optimization import solve_fsm_problem
->>> clusters = generate_clusters_for_configurations(customers, configs, params)
->>> solution = solve_fsm_problem(clusters, configs, customers, params)
+>>> from fleetmix.clustering import generate_feasible_clusters
+>>> from fleetmix.optimization import optimize_fleet_selection
+>>> clusters = generate_feasible_clusters(customers, configs, params)
+>>> solution = optimize_fleet_selection(clusters, configs, customers, params)
 >>> print(solution['total_cost'])
 """
 
@@ -53,10 +53,10 @@ from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 logger = FleetmixLogger.get_logger(__name__)
 
-def solve_fsm_problem(
+def optimize_fleet_selection(
     clusters_df: pd.DataFrame,
     configurations_df: pd.DataFrame,
     customers_df: pd.DataFrame,
@@ -96,7 +96,7 @@ def solve_fsm_problem(
             ``vehicles_used`` (dict), and solver metadata.
 
     Example:
-        >>> sol = solve_fsm_problem(clusters, configs, customers, params)
+        >>> sol = optimize_fleet_selection(clusters, configs, customers, params)
         >>> sol['total_cost']
         10543.75
 
@@ -198,32 +198,22 @@ def solve_fsm_problem(
     solution.solver_runtime_sec = solver_time
     
     # Improvement phase
-    post_optimization_time = None
     if parameters.post_optimization:
         if time_recorder:
             with time_recorder.measure("fsm_post_optimization"):
-                post_start = time.time()
                 solution = improve_solution(
                     solution,
                     configurations_df,
                     customers_df,
                     parameters
                 )
-                post_end = time.time()
-                post_optimization_time = post_end - post_start
         else:
-            post_start = time.time()
             solution = improve_solution(
                 solution,
                 configurations_df,
                 customers_df,
                 parameters
             )
-            post_end = time.time()
-            post_optimization_time = post_end - post_start
-
-    # Record post-optimization runtime
-    solution.post_optimization_runtime_sec = post_optimization_time
 
     return solution
 

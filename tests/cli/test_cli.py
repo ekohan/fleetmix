@@ -10,7 +10,7 @@ import pandas as pd
 
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
-from fleetmix.core_types import FleetmixSolution
+from fleetmix import FleetmixSolution  # Use public type
 
 
 def test_cli_version():

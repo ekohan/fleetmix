@@ -8,7 +8,7 @@ import yaml
 
 from fleetmix.utils import PROJECT_ROOT
 from fleetmix.utils.logging import FleetmixLogger
-from fleetmix.core_types import VehicleSpec, DepotLocation
+from fleetmix.internal_types import VehicleSpec, DepotLocation
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -17,9 +17,6 @@ class Parameters:
     """Configuration parameters for the optimization"""
     vehicles: Dict[str, VehicleSpec]
     variable_cost_per_hour: float
-    avg_speed: float
-    max_route_time: float
-    service_time: float
     depot: DepotLocation
     goods: List[str]
     clustering: Dict
@@ -76,21 +73,34 @@ class Parameters:
         raw_vehicles_data = data.pop("vehicles")
         parsed_vehicles = {}
         for v_name, v_details in raw_vehicles_data.items():
-            spec_kwargs = {
-                'capacity': v_details.pop('capacity'),
-                'fixed_cost': v_details.pop('fixed_cost')
-            }
+            # Extract required fields: capacity, fixed_cost, avg_speed, service_time, max_route_time
+            try:
+                spec_kwargs = {
+                    'capacity': v_details.pop('capacity'),
+                    'fixed_cost': v_details.pop('fixed_cost'),
+                    'avg_speed': v_details.pop('avg_speed'),
+                    'service_time': v_details.pop('service_time'),
+                    'max_route_time': v_details.pop('max_route_time')
+                }
+            except KeyError as e:
+                raise ValueError(
+                    f"Missing required vehicle parameter '{e.args[0]}' for vehicle '{v_name}' in config {resolved_config_path}"
+                )
             # Handle compartments: should be Dict[str, bool]
-            # If compartments is defined in YAML, use it directly. Otherwise, VehicleSpec defaults to empty dict.
             if 'compartments' in v_details:
-                spec_kwargs['compartments'] = v_details.pop('compartments') 
+                spec_kwargs['compartments'] = v_details.pop('compartments')
             # Else, VehicleSpec will use its default_factory for compartments
             
             # Remaining items go into extra
-            spec_kwargs['extra'] = v_details 
+            spec_kwargs['extra'] = v_details
+
+            spec_kwargs.setdefault('avg_speed', 30.0)
+            spec_kwargs.setdefault('service_time', 25.0)
+            spec_kwargs.setdefault('max_route_time', 10.0)
             parsed_vehicles[v_name] = VehicleSpec(**spec_kwargs)
         
         vehicles = parsed_vehicles
+        # End per-vehicle spec construction
 
         raw_depot = data.pop("depot")
         depot = DepotLocation(**raw_depot)
@@ -100,6 +110,10 @@ class Parameters:
         # Convert results_dir string back to Path if it exists
         if 'results_dir' in data and isinstance(data['results_dir'], str):
             data['results_dir'] = Path(data['results_dir'])
+
+        # Remove now-unneeded global operational parameters
+        for key in ['avg_speed', 'service_time', 'max_route_time']:
+            data.pop(key, None)
 
         required_fields = ['goods', 'demand_file', 'clustering']
         missing_fields = [field for field in required_fields if field not in data]

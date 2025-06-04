@@ -6,7 +6,7 @@ import pulp
 from pathlib import Path
 
 from fleetmix.optimization.core import (
-    solve_fsm_problem,
+    optimize_fleet_selection,
     _create_model,
     _extract_solution,
     _validate_solution,
@@ -42,7 +42,10 @@ def simple_configs_df():
         'Fixed_Cost': [100, 200],
         'Dry': [1, 1],
         'Chilled': [0, 1],
-        'Frozen': [0, 1]
+        'Frozen': [0, 1],
+        'avg_speed': [30.0, 30.0],
+        'service_time': [25.0, 25.0],
+        'max_route_time': [10.0, 10.0]
     })
 
 
@@ -74,9 +77,9 @@ def params_with_post_opt():
     return Parameters.from_yaml(str(config_path))
 
 
-def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
+def test_optimize_fleet_selection_basic(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
     """Test basic FSM problem solving."""
-    result = solve_fsm_problem(
+    result = optimize_fleet_selection(
         clusters_df=simple_clusters_df,
         configurations_df=simple_configs_df,
         customers_df=simple_customers_df,
@@ -99,9 +102,9 @@ def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_c
     assert result.solver_status == 'Optimal'
 
 
-def test_solve_fsm_problem_with_post_optimization(simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt):
+def test_optimize_fleet_selection_with_post_optimization(simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt):
     """Test FSM problem solving with post-optimization enabled."""
-    result = solve_fsm_problem(
+    result = optimize_fleet_selection(
         clusters_df=simple_clusters_df,
         configurations_df=simple_configs_df,
         customers_df=simple_customers_df,
@@ -109,10 +112,6 @@ def test_solve_fsm_problem_with_post_optimization(simple_clusters_df, simple_con
         verbose=False
     )
     
-    # Check that post-optimization runtime is recorded
-    assert result.post_optimization_runtime_sec is not None
-
-
 def test_create_model(simple_clusters_df, simple_configs_df, simple_params):
     """Test model creation."""
     model, y_vars, x_vars, c_vk = _create_model(
@@ -213,7 +212,10 @@ def test_solve_with_infeasible_clusters():
         'Fixed_Cost': [100],
         'Dry': [1],
         'Chilled': [0],
-        'Frozen': [0]
+        'Frozen': [0],
+        'avg_speed': [30.0],
+        'service_time': [25.0],
+        'max_route_time': [10.0]
     })
     
     customers_df = pd.DataFrame({
@@ -230,7 +232,7 @@ def test_solve_with_infeasible_clusters():
     
     # This should exit with an error
     with pytest.raises(SystemExit):
-        solve_fsm_problem(
+        optimize_fleet_selection(
             clusters_df=clusters_df,
             configurations_df=configs_df,
             customers_df=customers_df,

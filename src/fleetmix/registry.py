@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
-from .core_types import ClusteringContext
+from .internal_types import ClusteringContext
 
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)

@@ -21,7 +21,7 @@ try:
     import streamlit as st
     from fleetmix import gui
     from fleetmix.config.parameters import Parameters
-    from fleetmix.core_types import FleetmixSolution
+    from fleetmix.internal_types import FleetmixSolution
     STREAMLIT_AVAILABLE = True
 except ImportError:
     STREAMLIT_AVAILABLE = False
@@ -102,8 +102,6 @@ class TestRunOptimizationInProcess(unittest.TestCase):
             solver_runtime_sec=1.5,
             selected_clusters=pd.DataFrame()
         )
-        # Add post_optimization_runtime_sec as an attribute (not in constructor)
-        mock_solution.post_optimization_runtime_sec = 0.5
         mock_optimize.return_value = mock_solution
         
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -117,13 +115,16 @@ class TestRunOptimizationInProcess(unittest.TestCase):
             # Create a minimal parameters YAML file for testing
             test_config = {
                 'vehicles': {
-                    'SmallTruck': {'capacity': 1000, 'fixed_cost': 300}
+                    'SmallTruck': {
+                        'capacity': 1000, 
+                        'fixed_cost': 300,
+                        'avg_speed': 25.0,
+                        'service_time': 15.0,
+                        'max_route_time': 8.0
+                    }
                 },
                 'goods': ['Dry', 'Chilled', 'Frozen'],
                 'depot': {'latitude': 40.7128, 'longitude': -74.0060},
-                'avg_speed': 25,
-                'service_time': 15,
-                'max_route_time': 8,
                 'variable_cost_per_hour': 50,
                 'clustering': {
                     'method': 'combine',
@@ -178,13 +179,16 @@ class TestRunOptimizationInProcess(unittest.TestCase):
             # Create a minimal parameters YAML file for testing
             test_config = {
                 'vehicles': {
-                    'SmallTruck': {'capacity': 1000, 'fixed_cost': 300}
+                    'SmallTruck': {
+                        'capacity': 1000, 
+                        'fixed_cost': 300,
+                        'avg_speed': 25.0,
+                        'service_time': 15.0,
+                        'max_route_time': 8.0
+                    }
                 },
                 'goods': ['Dry', 'Chilled', 'Frozen'],
                 'depot': {'latitude': 40.7128, 'longitude': -74.0060},
-                'avg_speed': 25,
-                'service_time': 15,
-                'max_route_time': 8,
                 'variable_cost_per_hour': 50,
                 'clustering': {
                     'method': 'combine',
@@ -290,9 +294,9 @@ class TestCollectParametersFromUI(unittest.TestCase):
         # Define items in session state
         session_items = {
             'parameters': mock_params,
-            'param_avg_speed': 30,
-            'param_service_time': 20,
-            'param_max_route_time': 10
+            'param_variable_cost_per_hour': 60,
+            'param_light_load_penalty': 100,
+            'param_light_load_threshold': 0.3
         }
         
         # Mock iteration and getitem
@@ -304,9 +308,9 @@ class TestCollectParametersFromUI(unittest.TestCase):
         
         # Check that result is a Parameters object
         self.assertIsInstance(result, Parameters)
-        self.assertEqual(result.avg_speed, 30)
-        self.assertEqual(result.service_time, 20)
-        self.assertEqual(result.max_route_time, 10)
+        self.assertEqual(result.variable_cost_per_hour, 60)
+        self.assertEqual(result.light_load_penalty, 100)
+        self.assertEqual(result.light_load_threshold, 0.3)
 
     def test_collect_parameters_nested(self):
         """Test collection of nested parameters like clustering.method."""

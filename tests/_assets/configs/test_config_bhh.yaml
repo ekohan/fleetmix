@@ -1,49 +1,33 @@
-# Test configuration with BHH route time estimation
 vehicles:
   Van:
     capacity: 80
     fixed_cost: 120
-
-# Cost Parameters
+    avg_speed: 30.0
+    service_time: 25.0
+    max_route_time: 10.0
 variable_cost_per_hour: 25.0
-
-# Time Parameters
 avg_speed: 35
 max_route_time: 10
 service_time: 15
-
-# Location
 depot:
   latitude: 40.7128
-  longitude: -74.0060
-
-# Product Types
+  longitude: -74.006
 goods:
-  - Dry
-  - Chilled
-
-# Clustering Parameters
+- Dry
+- Chilled
 clustering:
   max_depth: 3
   method: minibatch_kmeans
   distance: euclidean
   geo_weight: 0.8
   demand_weight: 0.2
-  route_time_estimation: BHH  # Using BHH method
-
-# Data Files
+  route_time_estimation: BHH
 demand_file: test_demand.csv
-
-# Math model Parameters
 light_load_penalty: 0
 light_load_threshold: 0.5
 compartment_setup_cost: 10
-
-# Post-optimization
 post_optimization: true
 small_cluster_size: 5
 nearest_merge_candidates: 10
 max_improvement_iterations: 3
-
-# Output format
-format: json 
+format: json

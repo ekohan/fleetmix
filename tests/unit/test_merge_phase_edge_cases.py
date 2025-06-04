@@ -13,7 +13,7 @@ from fleetmix.post_optimization.merge_phase import (
     _get_merged_route_time
 )
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 
 @pytest.fixture
@@ -74,7 +74,10 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
         'Fixed_Cost': [100],
         'Dry': [1],
         'Chilled': [0],
-        'Frozen': [0]
+        'Frozen': [0],
+        'avg_speed': [30.0],
+        'service_time': [25.0],
+        'max_route_time': [10.0]
     })
     
     customers_df = pd.DataFrame({
@@ -111,7 +114,10 @@ def test_generate_merge_phase_clusters_with_small_clusters(simple_params):
         'Fixed_Cost': [100],
         'Dry': [1],
         'Chilled': [0],
-        'Frozen': [0]
+        'Frozen': [0],
+        'avg_speed': [30.0],
+        'service_time': [25.0],
+        'max_route_time': [10.0]
     })
     
     customers_df = pd.DataFrame({
@@ -146,7 +152,10 @@ def test_validate_merged_cluster_missing_customers(simple_params):
         'Capacity': 50,
         'Dry': 1,
         'Chilled': 0,
-        'Frozen': 0
+        'Frozen': 0,
+        'avg_speed': 30.0,
+        'service_time': 25.0,
+        'max_route_time': 10.0
     })
     
     # Only has Cust1 and Cust2, missing Missing1
@@ -157,7 +166,8 @@ def test_validate_merged_cluster_missing_customers(simple_params):
     }).set_index('Customer_ID')
     
     is_valid, route_time, demands, sequence = validate_merged_cluster(
-        cluster1, cluster2, config, customers_df, simple_params
+        cluster1, cluster2, config, customers_df, simple_params,
+        30.0, 25.0, 10.0
     )
     
     assert not is_valid
@@ -184,7 +194,10 @@ def test_validate_merged_cluster_invalid_locations(simple_params):
         'Capacity': 50,
         'Dry': 1,
         'Chilled': 0,
-        'Frozen': 0
+        'Frozen': 0,
+        'avg_speed': 30.0,
+        'service_time': 25.0,
+        'max_route_time': 10.0
     })
     
     # Cust2 has NaN location
@@ -195,7 +208,8 @@ def test_validate_merged_cluster_invalid_locations(simple_params):
     }).set_index('Customer_ID')
     
     is_valid, route_time, demands, sequence = validate_merged_cluster(
-        cluster1, cluster2, config, customers_df, simple_params
+        cluster1, cluster2, config, customers_df, simple_params,
+        30.0, 25.0, 10.0
     )
     
     assert not is_valid
@@ -222,7 +236,10 @@ def test_validate_merged_cluster_capacity_exceeded(simple_params):
         'Capacity': 50,  # Total demand would be 60, exceeding capacity
         'Dry': 1,
         'Chilled': 0,
-        'Frozen': 0
+        'Frozen': 0,
+        'avg_speed': 30.0,
+        'service_time': 25.0,
+        'max_route_time': 10.0
     })
     
     customers_df = pd.DataFrame({
@@ -232,7 +249,8 @@ def test_validate_merged_cluster_capacity_exceeded(simple_params):
     }).set_index('Customer_ID')
     
     is_valid, route_time, demands, sequence = validate_merged_cluster(
-        cluster1, cluster2, config, customers_df, simple_params
+        cluster1, cluster2, config, customers_df, simple_params,
+        30.0, 25.0, 10.0
     )
     
     assert not is_valid
@@ -252,11 +270,11 @@ def test_get_merged_route_time_caching(simple_params):
     })
     
     # First call should compute
-    time1, seq1 = _get_merged_route_time(customers, simple_params)
+    time1, seq1 = _get_merged_route_time(customers, simple_params, 30.0, 25.0, 10.0)
     assert len(_merged_route_time_cache) == 1
     
     # Second call should use cache
-    time2, seq2 = _get_merged_route_time(customers, simple_params)
+    time2, seq2 = _get_merged_route_time(customers, simple_params, 30.0, 25.0, 10.0)
     assert time1 == time2
     assert seq1 == seq2
     assert len(_merged_route_time_cache) == 1  # Still only one entry 

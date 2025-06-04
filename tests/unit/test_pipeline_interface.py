@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 class DummyParams:
     def __init__(self):
@@ -26,12 +26,12 @@ def stub_everything(monkeypatch):
         lambda *args, **kw: pd.DataFrame()
     )
     monkeypatch.setattr(
-        'fleetmix.pipeline.vrp_interface.generate_clusters_for_configurations',
+        'fleetmix.pipeline.vrp_interface.generate_feasible_clusters',
         lambda *args, **kw: pd.DataFrame()
     )
     # Stub solver in pipeline
     monkeypatch.setattr(
-        'fleetmix.pipeline.vrp_interface.solve_fsm_problem',
+        'fleetmix.pipeline.vrp_interface.optimize_fleet_selection',
         lambda *args, **kw: FleetmixSolution(
             total_cost=0,
             vehicles_used={},

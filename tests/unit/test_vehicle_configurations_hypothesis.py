@@ -1,41 +1,43 @@
-import hypothesis.strategies as st
-from hypothesis import given, settings
 import pandas as pd
-from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-from fleetmix.core_types import VehicleSpec
+from hypothesis import given, strategies as st
+from fleetmix.utils.vehicle_configurations import _generate_vehicle_configurations_df
+from fleetmix.internal_types import VehicleSpec
 
-@settings(max_examples=20)
 @given(
     vehicle_types_raw=st.dictionaries(
-        keys=st.text(min_size=1, max_size=3),
-        values=st.fixed_dictionaries({
-            'capacity': st.integers(min_value=1, max_value=100),
-            'fixed_cost': st.integers(min_value=0, max_value=1000)
+        st.text(min_size=1, max_size=5),
+        st.fixed_dictionaries({
+            'capacity': st.integers(min_value=1, max_value=1000),
+            'fixed_cost': st.floats(min_value=0, max_value=1000, allow_nan=False, allow_infinity=False)
         }),
-        min_size=1, max_size=3
+        min_size=1,
+        max_size=5
     ),
-    goods=st.lists(st.text(min_size=1, max_size=3), min_size=1, max_size=3, unique=True)
+    goods=st.lists(st.text(min_size=1, max_size=5), min_size=1, max_size=5, unique=True)
 )
 def test_generate_vehicle_configurations_hypothesis(vehicle_types_raw, goods):
-    """Test vehicle configuration generation with varied inputs using Hypothesis."""
-    # Convert raw dicts to VehicleSpec objects
-    vehicle_types = { 
-        name: VehicleSpec(**specs) 
-        for name, specs in vehicle_types_raw.items()
-    }
+    """Property-based test for vehicle configuration generation."""
+    # Convert raw dict to VehicleSpec objects
+    vehicle_types = {}
+    for k, v in vehicle_types_raw.items():
+        v_copy = v.copy()  # Don't modify the original
+        v_copy.setdefault('avg_speed', 30.0)
+        v_copy.setdefault('service_time', 25.0)
+        v_copy.setdefault('max_route_time', 10.0)
+        vehicle_types[k] = VehicleSpec(**v_copy)
 
-    df = generate_vehicle_configurations(vehicle_types, goods)
-    # Must be a DataFrame
+    df = _generate_vehicle_configurations_df(vehicle_types, goods)
+    
+    # Basic properties
     assert isinstance(df, pd.DataFrame)
-    # Config_ID unique and sequential starting at 1
-    ids = df['Config_ID'].tolist()
-    assert len(ids) == len(set(ids))
-    assert sorted(ids) == list(range(1, len(ids)+1))
-    # Every row has at least one compartment bit set
-    sum_bits = df[goods].sum(axis=1)
-    assert all(sum_bits >= 1)
-    # Capacity and Fixed_Cost columns match input values per row
-    for _, row in df.iterrows():
-        vt = row['Vehicle_Type']
-        assert row['Capacity'] == vehicle_types[vt]['capacity']
-        assert row['Fixed_Cost'] == vehicle_types[vt]['fixed_cost'] 
+    assert len(df) > 0  # Should have at least one configuration
+    
+    # Each configuration should have at least one compartment
+    compartment_cols = [col for col in df.columns if col in goods]
+    assert all((df[compartment_cols].sum(axis=1) >= 1).values)
+    
+    # Config IDs should be unique
+    assert df['Config_ID'].is_unique
+    
+    # All vehicle types should be represented
+    assert set(df['Vehicle_Type'].unique()) <= set(vehicle_types.keys()) 

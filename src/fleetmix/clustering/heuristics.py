@@ -17,7 +17,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
 from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY
 
-from fleetmix.core_types import Cluster, ClusteringContext
+from fleetmix.internal_types import Cluster, ClusteringContext
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
 

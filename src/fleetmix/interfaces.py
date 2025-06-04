@@ -3,7 +3,7 @@ from typing import Protocol, List, Dict, Tuple, Any
 import pandas as pd
 import pulp
 
-from fleetmix.core_types import ClusteringContext, RouteTimeContext
+from fleetmix.internal_types import ClusteringContext, RouteTimeContext
 
 class Clusterer(Protocol):
     """Protocol for clustering algorithms.

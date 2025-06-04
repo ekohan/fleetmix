@@ -18,7 +18,7 @@ from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
-from fleetmix.core_types import FleetmixSolution, VRPSolution
+from fleetmix.internal_types import FleetmixSolution, VRPSolution
 
 
 class TestBenchmarkingWorkflows:
@@ -254,7 +254,7 @@ EOF
         # First parse the CVRP instance to get customer data
         try:
             from fleetmix.config.parameters import Parameters
-            from fleetmix.core_types import BenchmarkType
+            from fleetmix.internal_types import BenchmarkType
             
             # Parse CVRP instance
             parser = CVRPParser(str(small_cvrp_file))
@@ -276,7 +276,7 @@ EOF
             customers_df = pd.DataFrame(customers_data)
             
             # Create mock parameters for the solver
-            from fleetmix.core_types import VehicleSpec, DepotLocation
+            from fleetmix.internal_types import VehicleSpec, DepotLocation
             
             # Create a temporary YAML for parameters
             mock_params_dict = {
@@ -285,6 +285,9 @@ EOF
                     'Test Van': {
                         'fixed_cost': 100,
                         'capacity': int(cvrp_instance.capacity),  # Convert numpy to int
+                        'avg_speed': 40.0,
+                        'service_time': 15.0,
+                        'max_route_time': 8.0,
                         'compartments': {'Dry': True, 'Chilled': True, 'Frozen': True},
                         'extra': {
                             'variable_cost_per_km': 0.5 
@@ -292,9 +295,6 @@ EOF
                     }
                 },
                 'variable_cost_per_hour': 20.0,
-                'avg_speed': 40.0,
-                'max_route_time': 8.0,
-                'service_time': 15.0,
                 'depot': {'latitude': float(cvrp_instance.coordinates[1][0]), 'longitude': float(cvrp_instance.coordinates[1][1])},  # Convert numpy to float
                 'clustering': {
                     'route_time_estimation': 'BHH',
@@ -428,7 +428,7 @@ EOF
         
         # Create mock parameters
         from fleetmix.config.parameters import Parameters
-        from fleetmix.core_types import VehicleSpec, DepotLocation
+        from fleetmix.internal_types import VehicleSpec, DepotLocation
 
         # Create a temporary YAML for the mock_params to load from
         mock_params_dict = {
@@ -437,6 +437,9 @@ EOF
                 'Test Van': {
                     'fixed_cost': 100,
                     'capacity': 400,
+                    'avg_speed': 40.0,
+                    'service_time': 15.0,
+                    'max_route_time': 8.0,
                     'compartments': {'Dry': True, 'Chilled': False, 'Frozen': False},
                     'extra': {
                         'variable_cost_per_km': 0.5 
@@ -444,9 +447,6 @@ EOF
                 }
             },
             'variable_cost_per_hour': 20.0,
-            'avg_speed': 40.0,
-            'max_route_time': 8.0,
-            'service_time': 15.0,
             'depot': {'latitude': 0.0, 'longitude': 0.0},
             'clustering': {
                 'route_time_estimation': 'Legacy',

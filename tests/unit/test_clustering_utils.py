@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from fleetmix.clustering import compute_composite_distance, estimate_num_initial_clusters
-from fleetmix.core_types import ClusteringContext, DepotLocation
+from fleetmix.internal_types import ClusteringContext, DepotLocation
 from fleetmix.config.parameters import Parameters
 
 

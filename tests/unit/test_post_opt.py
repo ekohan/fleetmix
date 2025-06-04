@@ -5,7 +5,7 @@ import sys
 import fleetmix.post_optimization.merge_phase as merge_phase
 import fleetmix.optimization
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 # Helper to create a minimal clusters DataFrame with goods columns
 def make_cluster_df(cluster_id):

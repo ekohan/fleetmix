@@ -53,7 +53,7 @@ from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 logger = FleetmixLogger.get_logger(__name__)
 
 def optimize_fleet_selection(
@@ -198,32 +198,22 @@ def optimize_fleet_selection(
     solution.solver_runtime_sec = solver_time
     
     # Improvement phase
-    post_optimization_time = None
     if parameters.post_optimization:
         if time_recorder:
             with time_recorder.measure("fsm_post_optimization"):
-                post_start = time.time()
                 solution = improve_solution(
                     solution,
                     configurations_df,
                     customers_df,
                     parameters
                 )
-                post_end = time.time()
-                post_optimization_time = post_end - post_start
         else:
-            post_start = time.time()
             solution = improve_solution(
                 solution,
                 configurations_df,
                 customers_df,
                 parameters
             )
-            post_end = time.time()
-            post_optimization_time = post_end - post_start
-
-    # Record post-optimization runtime
-    solution.post_optimization_runtime_sec = post_optimization_time
 
     return solution
 

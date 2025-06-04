@@ -1,30 +1,21 @@
-# Minimal test configuration
-
 vehicles:
   Tiny:
     capacity: 10
     fixed_cost: 50
-
-# Cost Parameters
+    avg_speed: 30.0
+    service_time: 25.0
+    max_route_time: 10.0
 variable_cost_per_hour: 20.0
-
-# Time Parameters
 avg_speed: 30
 max_route_time: 8
 service_time: 10
-
-# Location
 depot:
   latitude: 0.0
   longitude: 0.0
-
-# Product Types
 goods:
-  - Dry
-  - Chilled
-  - Frozen
-
-# Clustering Parameters
+- Dry
+- Chilled
+- Frozen
 clustering:
   max_depth: 1
   method: minibatch_kmeans
@@ -32,20 +23,12 @@ clustering:
   geo_weight: 1.0
   demand_weight: 0.0
   route_time_estimation: Legacy
-
-# Data Files
 demand_file: test_demand.csv
-
-# Math model Parameters
 light_load_penalty: 0
 light_load_threshold: 0.0
 compartment_setup_cost: 0
-
-# Post-optimization
 post_optimization: false
 small_cluster_size: 2
 nearest_merge_candidates: 5
 max_improvement_iterations: 1
-
-# Output format
-format: excel 
+format: excel

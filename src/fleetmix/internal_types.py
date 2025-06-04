@@ -152,6 +152,9 @@ class FleetmixSolution:
 class VehicleSpec:
     capacity: int
     fixed_cost: float
+    avg_speed: float
+    service_time: float
+    max_route_time: float
     compartments: Dict[str, bool] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
 

@@ -12,7 +12,7 @@ from pyvrp.stop import MaxIterations
 
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.registry import register_route_time_estimator, ROUTE_TIME_ESTIMATOR_REGISTRY
-from fleetmix.core_types import RouteTimeContext, DepotLocation
+from fleetmix.internal_types import RouteTimeContext, DepotLocation
 
 logger = FleetmixLogger.get_logger(__name__)
 

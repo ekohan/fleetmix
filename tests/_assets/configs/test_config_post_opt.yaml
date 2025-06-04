@@ -1,35 +1,33 @@
-# Test configuration with post-optimization enabled
 vehicles:
   Small:
     capacity: 50
     fixed_cost: 100
+    avg_speed: 30.0
+    service_time: 25.0
+    max_route_time: 10.0
   Medium:
     capacity: 75
     fixed_cost: 125
+    avg_speed: 30.0
+    service_time: 25.0
+    max_route_time: 10.0
   Large:
     capacity: 100
     fixed_cost: 150
-
-# Cost Parameters
+    avg_speed: 30.0
+    service_time: 25.0
+    max_route_time: 10.0
 variable_cost_per_hour: 20.0
-
-# Time Parameters
 avg_speed: 30
 max_route_time: 8
 service_time: 10
-
-# Location
 depot:
   latitude: 0.0
   longitude: 0.0
-
-# Product Types
 goods:
-  - Dry
-  - Chilled
-  - Frozen
-
-# Clustering Parameters
+- Dry
+- Chilled
+- Frozen
 clustering:
   max_depth: 2
   method: minibatch_kmeans
@@ -37,20 +35,12 @@ clustering:
   geo_weight: 0.7
   demand_weight: 0.3
   route_time_estimation: BHH
-
-# Data Files
 demand_file: test_demand.csv
-
-# Math model Parameters
 light_load_penalty: 5
 light_load_threshold: 0.6
 compartment_setup_cost: 10
-
-# Post-optimization - ENABLED
 post_optimization: true
 small_cluster_size: 5
 nearest_merge_candidates: 10
 max_improvement_iterations: 5
-
-# Output format
-format: excel 
+format: excel

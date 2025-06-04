@@ -16,8 +16,19 @@ from fleetmix.api import optimize as api_optimize
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
-from fleetmix.utils.logging import LogLevel, setup_logging, log_progress, log_success, log_error
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.utils.logging import (
+    FleetmixLogger, 
+    log_detail, 
+    log_error, 
+    log_warning, 
+    log_success,
+    log_progress,
+    log_debug,
+    setup_logging,
+    LogLevel
+)
+from fleetmix.utils.time_measurement import TimeRecorder
+from fleetmix import FleetmixSolution  # Use public type
 from fleetmix.config.parameters import Parameters
 
 app = typer.Typer(

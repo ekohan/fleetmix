@@ -1,5 +1,5 @@
 import pytest
-from fleetmix.core_types import BenchmarkType
+from fleetmix.internal_types import BenchmarkType
 
 @pytest.mark.parametrize("enum_member,expected_value", [
     (BenchmarkType.SINGLE_COMPARTMENT, "single_compartment"),

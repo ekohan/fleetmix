@@ -14,7 +14,8 @@ import itertools
 from dataclasses import replace
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation
+from fleetmix.internal_types import Cluster, ClusteringContext, DepotLocation
+from fleetmix.types import ClusterAssignment
 from .heuristics import (
     get_feasible_customers_subset,
     create_initial_clusters,
@@ -33,9 +34,46 @@ def generate_feasible_clusters(
     customers: pd.DataFrame,
     configurations_df: pd.DataFrame,
     params: Parameters,
+) -> List[ClusterAssignment]:
+    """
+    Generate clusters for each vehicle configuration.
+    
+    Public API that returns a list of ClusterAssignment objects.
+    
+    Args:
+        customers: DataFrame containing customer data
+        configurations_df: DataFrame containing vehicle configurations
+        params: Parameters object containing vehicle configuration parameters
+    
+    Returns:
+        List of ClusterAssignment objects
+    """
+    # Get DataFrame result from internal function
+    clusters_df = _generate_feasible_clusters_df(customers, configurations_df, params)
+    
+    # Convert to list of ClusterAssignment objects
+    clusters = []
+    for _, row in clusters_df.iterrows():
+        cluster = ClusterAssignment(
+            cluster_id=int(row['Cluster_ID']),
+            config_id=int(row['Config_ID']),
+            customer_ids=list(row['Customers']),
+            route_time=float(row['Route_Time']),
+            total_demand=dict(row['Total_Demand']),
+            centroid=(float(row['Centroid_Latitude']), float(row['Centroid_Longitude']))
+        )
+        clusters.append(cluster)
+    
+    return clusters
+
+
+def _generate_feasible_clusters_df(
+    customers: pd.DataFrame,
+    configurations_df: pd.DataFrame,
+    params: Parameters,
 ) -> pd.DataFrame:
     """
-    Generate clusters for each vehicle configuration in parallel.
+    Internal function that generates clusters and returns a DataFrame.
     
     Args:
         customers: DataFrame containing customer data
@@ -75,9 +113,13 @@ def generate_feasible_clusters(
         tsp_needed = any(clustering_context.route_time_estimation == 'TSP' for clustering_context, _ in context_and_methods)
         if tsp_needed:
             logger.info("TSP route estimation detected. Precomputing global distance/duration matrices...")
+            # Calculate average speed from all vehicle configurations
+            avg_speeds = configurations_df['avg_speed'].values
+            avg_speed = avg_speeds.mean() if len(avg_speeds) > 0 else 30.0
+            logger.debug(f"Using average speed of {avg_speed:.1f} km/h for matrix precomputation")
             # Call the function from route_time module to build and cache matrices
             from fleetmix.utils.route_time import build_distance_duration_matrices
-            build_distance_duration_matrices(customers, params.depot, params.avg_speed)
+            build_distance_duration_matrices(customers, params.depot, avg_speed)
         else:
             logger.info("TSP route estimation not used. Skipping global matrix precomputation.")
 
@@ -155,6 +197,13 @@ def process_configuration(
     method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process a single vehicle configuration to generate feasible clusters."""
+    # Override operational parameters per vehicle
+    context = replace(
+        context,
+        avg_speed=config['avg_speed'],
+        service_time=config['service_time'],
+        max_route_time=config['max_route_time']
+    )
     # 1. Get customers that can be served by the configuration
     customers_subset = get_feasible_customers_subset(customers, feasible_customers, config['Config_ID'])
     if customers_subset.empty:
@@ -239,13 +288,13 @@ def _get_clustering_context_list(params: Parameters) -> List[Tuple[ClusteringCon
     # Convert depot dict to DepotLocation
     depot_location = DepotLocation(latitude=params.depot['latitude'], longitude=params.depot['longitude'])
 
-    # Create base context object with common parameters
+    # Create base context object with placeholder operational parameters; per-vehicle values are applied later
     base_context = ClusteringContext(
-        goods=params.goods,
         depot=depot_location,
-        avg_speed=params.avg_speed,
-        service_time=params.service_time,
-        max_route_time=params.max_route_time,
+        avg_speed=0.0,
+        service_time=0.0,
+        max_route_time=0.0,
+        goods=params.goods,
         max_depth=params.clustering['max_depth'],
         route_time_estimation=params.clustering['route_time_estimation'],
         geo_weight=params.clustering['geo_weight'],

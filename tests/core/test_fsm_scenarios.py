@@ -40,6 +40,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         # parameter overrides
@@ -74,6 +77,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
             {
                 "Config_ID": 2,
@@ -83,6 +89,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
         ],
         {"variable_cost_per_hour": 1},
@@ -115,6 +124,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
             {
                 "Config_ID": 2,
@@ -124,6 +136,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
         ],
         {"variable_cost_per_hour": 1},
@@ -156,6 +171,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         {
@@ -192,6 +210,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 1,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         {
@@ -227,6 +248,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             }
         ],
         {"variable_cost_per_hour": 1},
@@ -265,6 +289,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
             {
                 "Config_ID": 2,
@@ -274,6 +301,9 @@ SCENARIOS = [
                 "Dry": 1,
                 "Chilled": 0,
                 "Frozen": 0,
+                "avg_speed": 30.0,
+                "service_time": 25.0,
+                "max_route_time": 10.0,
             },
         ],
         {"variable_cost_per_hour": 1},

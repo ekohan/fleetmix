@@ -42,7 +42,10 @@ def simple_configs_df():
         'Fixed_Cost': [100, 200],
         'Dry': [1, 1],
         'Chilled': [0, 1],
-        'Frozen': [0, 1]
+        'Frozen': [0, 1],
+        'avg_speed': [30.0, 30.0],
+        'service_time': [25.0, 25.0],
+        'max_route_time': [10.0, 10.0]
     })
 
 
@@ -109,10 +112,6 @@ def test_optimize_fleet_selection_with_post_optimization(simple_clusters_df, sim
         verbose=False
     )
     
-    # Check that post-optimization runtime is recorded
-    assert result.post_optimization_runtime_sec is not None
-
-
 def test_create_model(simple_clusters_df, simple_configs_df, simple_params):
     """Test model creation."""
     model, y_vars, x_vars, c_vk = _create_model(
@@ -213,7 +212,10 @@ def test_solve_with_infeasible_clusters():
         'Fixed_Cost': [100],
         'Dry': [1],
         'Chilled': [0],
-        'Frozen': [0]
+        'Frozen': [0],
+        'avg_speed': [30.0],
+        'service_time': [25.0],
+        'max_route_time': [10.0]
     })
     
     customers_df = pd.DataFrame({

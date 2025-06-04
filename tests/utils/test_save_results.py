@@ -17,7 +17,7 @@ from fleetmix.utils.save_results import (
     _write_to_json
 )
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution, VehicleSpec, DepotLocation
+from fleetmix.internal_types import BenchmarkType, VRPSolution, FleetmixSolution, VehicleSpec, DepotLocation
 
 
 class TestSaveOptimizationResults(unittest.TestCase):
@@ -79,8 +79,8 @@ class TestSaveOptimizationResults(unittest.TestCase):
         self.parameters.light_load_threshold = 0.5
         self.parameters.compartment_setup_cost = 5
         self.parameters.vehicles = {
-            'Type1': VehicleSpec(capacity=1000, fixed_cost=100, compartments={'Dry':True, 'Chilled':True, 'Frozen':False}, extra={}),
-            'Type2': VehicleSpec(capacity=2000, fixed_cost=200, compartments={'Dry':True, 'Frozen':True, 'Chilled':False}, extra={})
+            'Type1': VehicleSpec(capacity=1000, fixed_cost=100, compartments={'Dry':True, 'Chilled':True, 'Frozen':False}, extra={}, avg_speed=30.0, service_time=25.0, max_route_time=10.0),
+            'Type2': VehicleSpec(capacity=2000, fixed_cost=200, compartments={'Dry':True, 'Frozen':True, 'Chilled':False}, extra={}, avg_speed=30.0, service_time=25.0, max_route_time=10.0)
         }
         self.parameters.goods = ['Dry', 'Chilled', 'Frozen']
         self.parameters.depot = DepotLocation(latitude=4.5, longitude=-74.0)
@@ -390,8 +390,8 @@ class TestSaveBenchmarkResults(unittest.TestCase):
         self.parameters = MagicMock(spec=Parameters)
         self.parameters.results_dir = Path(tempfile.gettempdir())
         self.parameters.vehicles = {
-            'Type1': VehicleSpec(capacity=1000, fixed_cost=100, compartments={'Dry':True}, extra={}),
-            'Type2': VehicleSpec(capacity=2000, fixed_cost=200, compartments={'Chilled':True}, extra={})
+            'Type1': VehicleSpec(capacity=1000, fixed_cost=100, compartments={'Dry':True}, extra={}, avg_speed=30.0, service_time=25.0, max_route_time=10.0),
+            'Type2': VehicleSpec(capacity=2000, fixed_cost=200, compartments={'Chilled':True}, extra={}, avg_speed=30.0, service_time=25.0, max_route_time=10.0)
         }
         self.parameters.goods = ['Dry', 'Chilled', 'Frozen']
     

@@ -23,7 +23,7 @@ from fleetmix.utils.logging import (
     log_error, Colors, Symbols
 )
 from fleetmix.utils.route_time import estimate_route_time
-from fleetmix.core_types import BenchmarkType, VRPSolution
+from fleetmix.internal_types import BenchmarkType, VRPSolution
 logger = FleetmixLogger.get_logger(__name__)
 
 class VRPSolver:
@@ -47,6 +47,12 @@ class VRPSolver:
         """Prepare PyVRP model from customer data."""
         expanded_clients = []
         
+        # Get operational parameters from the first vehicle
+        first_vehicle = list(self.params.vehicles.values())[0]
+        service_time = first_vehicle.service_time
+        avg_speed = first_vehicle.avg_speed
+        max_route_time = first_vehicle.max_route_time
+        
         if self.benchmark_type == BenchmarkType.SINGLE_COMPARTMENT:
             # For single product solving, create a client for each product demand
             for _, row in self.customers.iterrows():
@@ -57,7 +63,7 @@ class VRPSolver:
                             x=int(row['Latitude'] * 10000),
                             y=int(row['Longitude'] * 10000),
                             delivery=[int(demand)],
-                            service_duration=self.params.service_time * 60
+                            service_duration=service_time * 60
                         ))
         else:
             # For multi-compartment, use total demand
@@ -68,23 +74,23 @@ class VRPSolver:
                         x=int(row['Latitude'] * 10000),
                         y=int(row['Longitude'] * 10000),
                         delivery=[int(total_demand)],
-                        service_duration=self.params.service_time * 60
+                        service_duration=service_time * 60
                     ))
 
         # Create vehicle types with proper capacities
         vehicle_types = [
             VehicleType(
                 num_available=len(expanded_clients),
-                capacity=[vt_info['capacity']],
-                fixed_cost=vt_info['fixed_cost'],
-                max_duration=self.params.max_route_time * 3600
+                capacity=[vt_info.capacity],
+                fixed_cost=vt_info.fixed_cost,
+                max_duration=vt_info.max_route_time * 3600
             )
             for vt_name, vt_info in self.params.vehicles.items()
         ]
 
         # Calculate base distance matrix
         base_distance_matrix = self._calculate_distance_matrix(len(expanded_clients))
-        duration_matrix = (base_distance_matrix / self.params.avg_speed) * 3600
+        duration_matrix = (base_distance_matrix / avg_speed) * 3600
 
         # Create problem data
         self.data = ProblemData(
@@ -181,6 +187,12 @@ class VRPSolver:
     
     def solve_scv(self, verbose: bool = False) -> VRPSolution:
         """Solve the VRP instance."""
+        # Get operational parameters from the first vehicle
+        first_vehicle = list(self.params.vehicles.values())[0]
+        service_time = first_vehicle.service_time
+        avg_speed = first_vehicle.avg_speed
+        max_route_time = first_vehicle.max_route_time
+        
         # Create genetic algorithm parameters with balanced values
         ga_params = GeneticAlgorithmParams(
             repair_probability=0.9,
@@ -253,22 +265,22 @@ class VRPSolver:
             route_time, _ = estimate_route_time(
                 cluster_customers=route_customers,
                 depot=self.params.depot,
-                service_time=self.params.service_time,
-                avg_speed=self.params.avg_speed,
+                service_time=service_time,
+                avg_speed=avg_speed,
                 method='BHH',
-                max_route_time=self.params.max_route_time,
+                max_route_time=max_route_time,
                 prune_tsp=self.params.prune_tsp
             )
             
             # Check if route is feasible (but include it anyway)
-            is_feasible = (utilization <= 100 and route_time <= self.params.max_route_time)
+            is_feasible = (utilization <= 100 and route_time <= max_route_time)
             
             # Log route status
             if not is_feasible:
                 if utilization > 100:
                     logger.warning(f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}")
-                if route_time > self.params.max_route_time:
-                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {self.params.max_route_time}){Colors.RESET}")
+                if route_time > max_route_time:
+                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {max_route_time}){Colors.RESET}")
             elif verbose:
                 logger.info(f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}")
             

@@ -23,7 +23,7 @@ from pathlib import Path
 import pandas as pd
 import fleetmix.clustering as clustering_module
 import fleetmix.optimization as optimization_module
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 @contextlib.contextmanager
 def stub_data_processing(monkeypatch):
@@ -81,7 +81,6 @@ def stub_solver(monkeypatch):
             solver_status="Optimal",
             total_vehicles=0, # Ensure all fields have a default
             solver_runtime_sec=0.0,
-            post_optimization_runtime_sec=None,
             time_measurements=None
         )
 

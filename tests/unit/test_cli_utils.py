@@ -9,9 +9,6 @@ from fleetmix.config.parameters import Parameters
 def test_get_parameter_overrides_filters_none_and_keys():
     args = Namespace(
         config=None,
-        avg_speed=50.0,
-        max_route_time=None,
-        service_time=None,
         demand_file=None,
         light_load_penalty=None,
         light_load_threshold=None,
@@ -27,7 +24,7 @@ def test_get_parameter_overrides_filters_none_and_keys():
     )
     overrides = get_parameter_overrides(args)
     # Only include non-None and parameter keys
-    assert overrides == {'avg_speed': 50.0, 'demand_weight': 0.3}
+    assert overrides == {'demand_weight': 0.3}
 
 
 def test_parse_args_invalid_choice():
@@ -38,11 +35,16 @@ def test_parse_args_invalid_choice():
 
 def write_minimal_yaml(path):
     cfg = {
-        'vehicles': {'A': {'capacity': 10, 'fixed_cost': 5}},
+        'vehicles': {
+            'A': {
+                'capacity': 10, 
+                'fixed_cost': 5,
+                'avg_speed': 20.0,
+                'service_time': 10.0,
+                'max_route_time': 5.0
+            }
+        },
         'variable_cost_per_hour': 1,
-        'avg_speed': 20,
-        'max_route_time': 5,
-        'service_time': 10,
         'depot': {'latitude': 0.0, 'longitude': 0.0},
         'goods': ['Dry'],
         'clustering': {
@@ -71,9 +73,10 @@ def test_load_parameters_default(tmp_path):
     args = parser.parse_args(['--config', str(yaml_path)])
     params = load_parameters(args)
     assert isinstance(params, Parameters)
-    # Values from YAML
-    assert params.avg_speed == 20
-    assert params.service_time == 10
+    # Values from YAML - now check per-vehicle parameters
+    assert params.vehicles['A'].avg_speed == 20.0
+    assert params.vehicles['A'].service_time == 10.0
+    assert params.vehicles['A'].max_route_time == 5.0
     assert params.demand_file == 'file.csv'
     assert params.clustering['method'] == 'minibatch_kmeans'
 

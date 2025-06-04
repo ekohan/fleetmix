@@ -11,7 +11,7 @@ from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.optimization import optimize_fleet_selection
 from fleetmix.utils.logging import log_progress, log_success, log_detail
 from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 class VRPType(Enum):
     CVRP = 'cvrp'
@@ -41,10 +41,12 @@ def run_optimization(
     with time_recorder.measure("global"):
         # Generate vehicle configurations and clusters
         with time_recorder.measure("vehicle_configuration"):
-            configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
+            from fleetmix.utils.vehicle_configurations import _generate_vehicle_configurations_df
+            configs_df = _generate_vehicle_configurations_df(params.vehicles, params.goods)
         
         with time_recorder.measure("clustering"):
-            clusters_df = generate_feasible_clusters(
+            from fleetmix.clustering.generator import _generate_feasible_clusters_df
+            clusters_df = _generate_feasible_clusters_df(
                 customers=customers_df,
                 configurations_df=configs_df,
                 params=params

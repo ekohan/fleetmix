@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import VehicleSpec, DepotLocation
+from fleetmix.internal_types import VehicleSpec, DepotLocation
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 import fleetmix.benchmarking.parsers.cvrp as cvrp_parser
 from fleetmix.utils.logging import log_detail, log_debug, log_progress
@@ -99,6 +99,9 @@ def _convert_normal(instance) -> tuple:
         'CVRP': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=10.0,
             compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
         )
     }
@@ -135,6 +138,9 @@ def _convert_split(instance, split_ratios: Dict[str, float]) -> tuple:
         'CVRP_Multi': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=10.0,
             compartments={good: True for good in split_ratios}
         )
     }
@@ -163,6 +169,9 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
         'CVRP_Scaled': VehicleSpec(
             capacity=instance.capacity * num_goods,
             fixed_cost=1000,
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=10.0,
             compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
         )
     }
@@ -194,6 +203,9 @@ def _convert_combined(instances: List) -> tuple:
         f'CVRP_{idx+1}': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=10.0,
             compartments={g: (g == good_outer) for g in goods}
         )
         for idx, (instance, good_outer) in enumerate(zip(instances, goods))
@@ -237,8 +249,6 @@ def _create_base_params(instance) -> Parameters:
         longitude=depot_coords[1]
     )
 
-    params.max_route_time = float('inf')
-    
     return params 
 
 # Expose CVRPParser alias for test monkeypatching on converter module

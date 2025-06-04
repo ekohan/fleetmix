@@ -1,35 +1,35 @@
 # fleetmix package 
 
-# Export API function
-from .api import optimize
-
-# Export canonical VRP interface functions
-from .pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
-
-# Export canonical clustering function
-from .clustering import generate_feasible_clusters
-
 # Version
 __version__ = "0.1.0b1"
 
-# Export core modules
-from . import optimization
-from . import clustering
-from . import post_optimization
-from . import config
-from . import utils 
+# Main entry point
+from .api import optimize
+
+# Matheuristic stages
+from .utils.vehicle_configurations import generate_vehicle_configurations
+from .clustering import generate_feasible_clusters
+from .optimization import optimize_fleet_selection
+from .post_optimization import improve_solution
+
+# Core public types
+from .types import (
+    VehicleConfiguration,
+    ClusterAssignment,
+    FleetmixSolution,
+)
+from .config.parameters import Parameters
 
 # Public API
 __all__ = [
     "optimize",
-    "VRPType", 
-    "convert_to_fsm",
-    "run_optimization", 
+    "generate_vehicle_configurations",
     "generate_feasible_clusters",
-    "optimization", 
-    "clustering",
-    "post_optimization",
-    "config",
-    "utils",
-    "__version__"
+    "optimize_fleet_selection",
+    "improve_solution",
+    "VehicleConfiguration",
+    "ClusterAssignment",
+    "FleetmixSolution",
+    "Parameters",
+    "__version__",
 ] 

@@ -14,9 +14,90 @@ from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.optimization import optimize_fleet_selection
 from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution as _InternalSolution
+from fleetmix.types import (
+    FleetmixSolution,
+    ClusterAssignment,
+    VehicleConfiguration,
+)
 
 logger = FleetmixLogger.get_logger('fleetmix.api')
+
+
+def _to_public_solution(sol: _InternalSolution, params: Parameters) -> FleetmixSolution:
+    """Convert internal solution to public API solution."""
+    # Extract unique configurations used
+    config_ids = sol.selected_clusters['Config_ID'].unique()
+    configs_df = sol.selected_clusters[['Config_ID', 'Vehicle_Type', 'Capacity', 'Fixed_Cost']].drop_duplicates()
+    
+    # Build configuration objects
+    configurations = []
+    for _, row in configs_df.iterrows():
+        # Get compartments from the selected clusters for this config
+        config_clusters = sol.selected_clusters[sol.selected_clusters['Config_ID'] == row['Config_ID']]
+        first_cluster = config_clusters.iloc[0]
+        
+        compartments = {g: bool(first_cluster.get(g, 0)) for g in params.goods}
+        
+        # Get the vehicle spec from params to get operational parameters
+        vehicle_type = row['Vehicle_Type']
+        vehicle_spec = None
+        for vname, vspec in params.vehicles.items():
+            if vname == vehicle_type:
+                vehicle_spec = vspec
+                break
+        
+        if vehicle_spec is None:
+            # Fallback to defaults if vehicle not found
+            avg_speed = 30.0
+            service_time = 25.0
+            max_route_time = 10.0
+        else:
+            avg_speed = vehicle_spec.avg_speed
+            service_time = vehicle_spec.service_time
+            max_route_time = vehicle_spec.max_route_time
+        
+        configurations.append(
+            VehicleConfiguration(
+                config_id=int(row['Config_ID']),
+                vehicle_type=row['Vehicle_Type'],
+                compartments=compartments,
+                capacity=int(row['Capacity']),
+                fixed_cost=float(row['Fixed_Cost']),
+                avg_speed=avg_speed,
+                service_time=service_time,
+                max_route_time=max_route_time,
+            )
+        )
+    
+    # Build cluster assignments
+    clusters = []
+    for _, row in sol.selected_clusters.iterrows():
+        clusters.append(
+            ClusterAssignment(
+                cluster_id=int(row['Cluster_ID']),
+                config_id=int(row['Config_ID']),
+                customer_ids=list(row['Customers']),
+                route_time=float(row['Route_Time']),
+                total_demand=dict(row['Total_Demand']),
+                centroid=(float(row['Centroid_Latitude']), float(row['Centroid_Longitude'])),
+            )
+        )
+    
+    return FleetmixSolution(
+        selected_clusters=clusters,
+        configurations_used=configurations,
+        total_cost=float(sol.total_cost),
+        total_vehicles=int(sol.total_vehicles),
+        missing_customers=set(sol.missing_customers),
+        solver_status=str(sol.solver_status),
+        solver_runtime_sec=float(sol.solver_runtime_sec),
+        # Additional fields
+        total_fixed_cost=float(sol.total_fixed_cost),
+        total_variable_cost=float(sol.total_variable_cost),
+        total_penalties=float(sol.total_penalties),
+        vehicles_used=dict(sol.vehicles_used) if sol.vehicles_used else None,
+    )
 
 
 def optimize(
@@ -37,16 +118,14 @@ def optimize(
         verbose: Enable verbose output (default: False)
         
     Returns:
-        Dictionary containing the optimization solution with keys:
-        - total_fixed_cost: Total fixed cost of selected vehicles
-        - total_variable_cost: Total variable/routing cost
-        - total_penalties: Total penalties (light load + compartment)
-        - vehicles_used: List of vehicles used in the solution
-        - selected_clusters: DataFrame of selected clusters
-        - missing_customers: List of customers not served
+        FleetmixSolution: The optimization solution containing:
+        - selected_clusters: List of ClusterAssignment objects
+        - configurations_used: List of VehicleConfiguration objects used
+        - total_cost: Total cost of the solution
+        - total_vehicles: Number of vehicles used
+        - missing_customers: Set of customer IDs not served
         - solver_status: Status of the optimization solver
         - solver_runtime_sec: Time taken by solver
-        - post_optimization_runtime_sec: Time for post-optimization
         
     Raises:
         FileNotFoundError: If demand or config file not found
@@ -131,7 +210,8 @@ def optimize(
             # Step 3: Generate vehicle configurations
             try:
                 with time_recorder.measure("vehicle_configuration"):
-                    configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
+                    from fleetmix.utils.vehicle_configurations import _generate_vehicle_configurations_df
+                    configs_df = _generate_vehicle_configurations_df(params.vehicles, params.goods)
             except Exception as e:
                 raise ValueError(
                     f"Error generating vehicle configurations:\n{str(e)}\n"
@@ -141,7 +221,8 @@ def optimize(
             # Step 4: Generate clusters
             try:
                 with time_recorder.measure("clustering"):
-                    clusters_df = generate_feasible_clusters(
+                    from fleetmix.clustering.generator import _generate_feasible_clusters_df
+                    clusters_df = _generate_feasible_clusters_df(
                         customers=customers,
                         configurations_df=configs_df,
                         params=params
@@ -232,7 +313,8 @@ def optimize(
                     log_warning(f"Failed to save results: {str(e)}")
                     # Don't fail the entire operation if saving fails
                     
-            return solution
+            # Convert to public API solution before returning
+            return _to_public_solution(solution, params)
         
     except (FileNotFoundError, ValueError):
         raise

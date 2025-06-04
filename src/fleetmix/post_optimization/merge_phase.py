@@ -42,7 +42,7 @@ import numpy as np
 from haversine import haversine_vector, Unit
 from dataclasses import replace
 
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
 from fleetmix.config.parameters import Parameters
 
@@ -55,7 +55,10 @@ _merged_route_time_cache: Dict[Tuple[str, ...], Tuple[float, list | None]] = {}
 
 def _get_merged_route_time(
     customers: pd.DataFrame,
-    params: Parameters
+    params: Parameters,
+    avg_speed: float,
+    service_time: float,
+    max_route_time: float
 ) -> Tuple[float, list | None]:
     """
     Estimate (and cache) the route time and sequence for a merged cluster of customers.
@@ -68,10 +71,10 @@ def _get_merged_route_time(
     time, sequence = estimate_route_time(
         cluster_customers=customers,
         depot=params.depot,
-        service_time=params.service_time,
-        avg_speed=params.avg_speed,
+        service_time=service_time,
+        avg_speed=avg_speed,
         method=params.clustering['route_time_estimation'],
-        max_route_time=params.max_route_time,
+        max_route_time=max_route_time,
         prune_tsp=params.prune_tsp
     )
     _merged_route_time_cache[key] = (time, sequence)
@@ -202,6 +205,11 @@ def generate_merge_phase_clusters(
     # Start from selected_clusters (which already has goods columns) and add capacity
     cluster_meta = selected_clusters.copy()
     cluster_meta['Capacity'] = cluster_meta['Config_ID'].map(configs_indexed['Capacity'])
+    # Add vehicle operational parameters
+    cluster_meta['avg_speed'] = cluster_meta['Config_ID'].map(configs_indexed['avg_speed'])
+    cluster_meta['service_time'] = cluster_meta['Config_ID'].map(configs_indexed['service_time'])
+    cluster_meta['max_route_time'] = cluster_meta['Config_ID'].map(configs_indexed['max_route_time'])
+    
     small_meta = cluster_meta[
         cluster_meta['Customers'].apply(len) <= params.small_cluster_size
     ]
@@ -247,23 +255,28 @@ def generate_merge_phase_clusters(
             target = target_meta.iloc[idx]
             rt_target = target['Route_Time']
             rt_small  = small['Route_Time']
+            
+            # Get vehicle parameters from target configuration
+            target_service_time = target['service_time']
+            target_max_route_time = target['max_route_time']
 
             # Compute service time for the cluster not contributing the max route_time (avoid double count)
             if rt_small > rt_target:
-                svc_time_other = calculate_total_service_time_hours(len(target['Customers']), params.service_time)
+                svc_time_other = calculate_total_service_time_hours(len(target['Customers']), target_service_time)
             else:
-                svc_time_other = calculate_total_service_time_hours(len(small['Customers']), params.service_time)
+                svc_time_other = calculate_total_service_time_hours(len(small['Customers']), target_service_time)
 
             # Quick lower-bound time prune before costly route-time estimation (no proximity term)
             lb = max(rt_target, rt_small) + svc_time_other
-            if lb > params.max_route_time:
+            if lb > target_max_route_time:
                 stats['invalid_time'] = stats.get('invalid_time', 0) + 1
-                logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={params.max_route_time:.2f}")
+                logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={target_max_route_time:.2f}")
                 continue
             stats['attempted'] += 1
             target_config = configs_indexed.loc[target['Config_ID']]
             is_valid, route_time, demands, tsp_sequence = validate_merged_cluster(
-                small, target, target_config, customers_indexed, params
+                small, target, target_config, customers_indexed, params,
+                target['avg_speed'], target_service_time, target_max_route_time
             )
             if not is_valid:
                 # Assuming validate_merged_cluster now logs reasons for invalidity if needed
@@ -286,8 +299,7 @@ def generate_merge_phase_clusters(
                 'Customers': merged_customer_ids,
                 'Route_Time': route_time,
                 'Total_Demand': demands,
-                'Method': f"merged_{target['Method']}"
-            ,
+                'Method': f"merged_{target['Method']}",
                 'Centroid_Latitude': centroid_lat,
                 'Centroid_Longitude': centroid_lon
             }
@@ -324,7 +336,10 @@ def validate_merged_cluster(
     cluster2: pd.Series,
     config: pd.Series,
     customers_df: pd.DataFrame,
-    params: Parameters
+    params: Parameters,
+    avg_speed: float,
+    service_time: float,
+    max_route_time: float
 ) -> Tuple[bool, float, Dict, list | None]:
     """Validate if two clusters can be merged."""
     # Index customers for fast lookup
@@ -372,9 +387,9 @@ def validate_merged_cluster(
         return False, 0, {}, None
 
     # Estimate (and cache) new route time using the general estimator
-    new_route_time, new_sequence = _get_merged_route_time(merged_customers, params)
+    new_route_time, new_sequence = _get_merged_route_time(merged_customers, params, avg_speed, service_time, max_route_time)
 
-    if new_route_time > params.max_route_time:
+    if new_route_time > max_route_time:
         return False, 0, {}, None
 
     return True, new_route_time, merged_goods, new_sequence 

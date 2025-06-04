@@ -17,7 +17,7 @@ from fleetmix.clustering.heuristics import (
 )
 from fleetmix.optimization.core import optimize_fleet_selection
 from fleetmix.post_optimization.merge_phase import improve_solution
-from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
+from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations, _generate_vehicle_configurations_df
 from fleetmix.utils.route_time import (
     estimate_route_time,
     calculate_total_service_time_hours
@@ -86,8 +86,10 @@ class TestCoreAlgorithms:
             'vehicles': {
                 'Small Van': {
                     'fixed_cost': 100,
-                    # 'variable_cost_per_km': 0.5, # Not a direct Parameters field, store in extra
                     'capacity': 400,
+                    'avg_speed': 30.0,
+                    'service_time': 5.0,
+                    'max_route_time': 4.0,
                     'extra': {
                         'variable_cost_per_km': 0.5,
                         'compartments': [
@@ -98,6 +100,9 @@ class TestCoreAlgorithms:
                 'Medium Truck': {
                     'fixed_cost': 150,
                     'capacity': 800,
+                    'avg_speed': 25.0,
+                    'service_time': 8.0,
+                    'max_route_time': 6.0,
                     'extra': {
                         'variable_cost_per_km': 0.7,
                         'compartments': [
@@ -110,6 +115,9 @@ class TestCoreAlgorithms:
                 'Large Truck': {
                     'fixed_cost': 200,
                     'capacity': 1200,
+                    'avg_speed': 20.0,
+                    'service_time': 10.0,
+                    'max_route_time': 8.0,
                     'extra': {
                         'variable_cost_per_km': 0.9,
                         'compartments': [
@@ -121,9 +129,6 @@ class TestCoreAlgorithms:
                 }
             },
             'variable_cost_per_hour': 20.0,
-            'avg_speed': 40.0,
-            'max_route_time': 8.0,
-            'service_time': 15.0,
             'depot': {'latitude': 40.7831, 'longitude': -73.9712},
             'clustering': {
                 # 'max_clusters_per_vehicle': 100, # Not a direct Parameters field
@@ -156,10 +161,7 @@ class TestCoreAlgorithms:
 
     def test_vehicle_configuration_generation(self, realistic_config):
         """Test vehicle configuration generation with multiple vehicle types."""
-        configs_df = generate_vehicle_configurations(
-            realistic_config.vehicles, 
-            realistic_config.goods
-        )
+        configs_df = _generate_vehicle_configurations_df(realistic_config.vehicles, realistic_config.goods)
         
         # Should generate configs for all vehicles
         assert len(configs_df) >= 3  # At least 3 vehicle types
@@ -174,13 +176,16 @@ class TestCoreAlgorithms:
         assert all(configs_df['Fixed_Cost'] >= 0)
 
     def test_cluster_generation_process(self, realistic_customers, realistic_config):
-        """Test the complete cluster generation process."""
-        configs_df = generate_vehicle_configurations(
+        """Test cluster generation with realistic data."""
+        # Generate configurations
+        configs_df = _generate_vehicle_configurations_df(
             realistic_config.vehicles, 
             realistic_config.goods
         )
         
-        clusters_df = generate_feasible_clusters(
+        # Generate clusters
+        from fleetmix.clustering.generator import _generate_feasible_clusters_df
+        clusters_df = _generate_feasible_clusters_df(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config
@@ -235,7 +240,7 @@ class TestCoreAlgorithms:
             # Coordinate conversion might not work properly in test environment
             pytest.skip(f"Coordinate conversion test failed: {str(e)}")
 
-    def test_route_time_calculations(self, realistic_customers):
+    def test_route_time_calculations(self, realistic_customers, realistic_config):
         """Test route time estimation algorithms."""
         # Create a simple route with first 5 customers
         route_customers = realistic_customers.head(5)
@@ -251,34 +256,21 @@ class TestCoreAlgorithms:
             assert total_distance > 0
         
         # Test route time estimation using available function
-        service_time = 15  # minutes
-        # Create a simple Parameters object for the function
-        params = Parameters(
-            goods=[],
-            vehicles={},
-            variable_cost_per_hour=20.0,
-            avg_speed=40.0,
-            max_route_time=8.0,
-            service_time=service_time,
-            depot={'latitude': 40.7831, 'longitude': -73.9712},
-            clustering={'route_time_estimation': 'Legacy', 'geo_weight': 0.7, 'demand_weight': 0.3},
-            demand_file='test.csv',
-            light_load_penalty=10.0,
-            light_load_threshold=0.5,
-            compartment_setup_cost=100.0,
-            format='json',
-            prune_tsp=False
-        )
+        # Get operational parameters from the first vehicle in realistic_config
+        first_vehicle = list(realistic_config.vehicles.values())[0]
+        service_time = first_vehicle.service_time
+        avg_speed = first_vehicle.avg_speed
+        max_route_time = first_vehicle.max_route_time
         
         try:
             route_time, sequence = estimate_route_time(
                 cluster_customers=route_customers,
-                depot=params.depot,
-                service_time=params.service_time,
-                avg_speed=params.avg_speed,
-                method=params.clustering['route_time_estimation'],
-                max_route_time=params.max_route_time,
-                prune_tsp=params.prune_tsp
+                depot=realistic_config.depot,
+                service_time=service_time,
+                avg_speed=avg_speed,
+                method=realistic_config.clustering['route_time_estimation'],
+                max_route_time=max_route_time,
+                prune_tsp=realistic_config.prune_tsp
             )
             assert route_time > service_time * len(route_customers) / 60  # Should include travel time
         except Exception:
@@ -289,73 +281,32 @@ class TestCoreAlgorithms:
         # Test individual route segment estimation
         segment_time = estimate_route_time(
             route_customers.iloc[0:2], 
-            params.depot,
-            params.service_time,
-            params.avg_speed,
+            realistic_config.depot,
+            service_time,
+            avg_speed,
             method='Legacy',
-            max_route_time=params.max_route_time,
+            max_route_time=max_route_time,
             prune_tsp=False
         )[0]
         assert segment_time > 0
 
-    def test_optimization_solver(self, realistic_customers, realistic_config, temp_results_dir):
-        """Test the core MILP optimization solver."""
-        # Generate configurations and clusters
-        configs_df = generate_vehicle_configurations(
+    def test_optimization_solver(self, realistic_customers, realistic_config):
+        """Test the optimization solver with realistic data."""
+        # Generate configurations
+        configs_df = _generate_vehicle_configurations_df(
             realistic_config.vehicles, 
             realistic_config.goods
         )
         
-        clusters_df = generate_feasible_clusters(
+        # Generate clusters
+        from fleetmix.clustering.generator import _generate_feasible_clusters_df
+        clusters_df = _generate_feasible_clusters_df(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config
         )
-        
-        if len(clusters_df) == 0:
-            pytest.skip("No feasible clusters generated for optimization test")
-        
-        # Set results directory for testing
-        realistic_config.results_dir = temp_results_dir
         
         # Run optimization
-        solution = optimize_fleet_selection(
-            clusters_df=clusters_df,
-            configurations_df=configs_df,
-            customers_df=realistic_customers,
-            parameters=realistic_config,
-            verbose=True
-        )
-        
-        # Verify solution structure
-        assert solution.solver_status is not None
-        assert solution.total_fixed_cost is not None
-        assert solution.total_variable_cost is not None
-        assert solution.vehicles_used is not None
-        
-        # Costs should be non-negative
-        assert solution.total_fixed_cost >= 0
-        assert solution.total_variable_cost >= 0
-
-    def test_post_optimization_merge_phase(self, realistic_customers, realistic_config, temp_results_dir):
-        """Test post-optimization merge phase algorithm."""
-        # Generate a solution first
-        configs_df = generate_vehicle_configurations(
-            realistic_config.vehicles, 
-            realistic_config.goods
-        )
-        
-        clusters_df = generate_feasible_clusters(
-            customers=realistic_customers,
-            configurations_df=configs_df,
-            params=realistic_config
-        )
-        
-        if len(clusters_df) == 0:
-            pytest.skip("No feasible clusters for merge phase test")
-        
-        realistic_config.results_dir = temp_results_dir
-        
         solution = optimize_fleet_selection(
             clusters_df=clusters_df,
             configurations_df=configs_df,
@@ -364,144 +315,168 @@ class TestCoreAlgorithms:
             verbose=False
         )
         
-        if solution.solver_status == 'Infeasible':
-            pytest.skip("Base solution infeasible, cannot test merge phase")
+        # Validate solution
+        assert solution is not None
+        assert solution.total_cost >= 0
+        assert solution.total_vehicles >= 0
+        assert isinstance(solution.selected_clusters, pd.DataFrame)
         
-        # Test merge phase if enabled and we have a solution
-        if (realistic_config.post_optimization and 
-            not solution.selected_clusters.empty):
-            
-            try:
-                improved_solution = improve_solution(
-                    initial_solution=solution,
-                    configurations_df=configs_df,
-                    customers_df=realistic_customers,
-                    params=realistic_config
-                )
-                
-                # Merge phase should return a solution structure
-                assert improved_solution.total_fixed_cost is not None
-                assert improved_solution.total_variable_cost is not None
-                
-                # Total cost should be <= original (merge phase should not worsen)
-                original_cost = (solution.total_fixed_cost + 
-                               solution.total_variable_cost + 
-                               solution.total_penalties)
-                improved_cost = (improved_solution.total_fixed_cost + 
-                               improved_solution.total_variable_cost + 
-                               improved_solution.total_penalties)
-                
-                # Allow for small numerical differences
-                assert improved_cost <= original_cost + 1e-6
-                
-            except Exception as e:
-                # Merge phase might fail for various reasons in test scenarios
-                pytest.skip(f"Merge phase failed: {str(e)}")
+        # Check that all served customers are unique
+        served_customers = set()
+        for customers in solution.selected_clusters['Customers']:
+            for cid in customers:
+                assert cid not in served_customers, f"Customer {cid} assigned to multiple clusters"
+                served_customers.add(cid)
 
-    def test_large_scale_clustering(self, realistic_config):
-        """Test clustering with larger customer set."""
-        # Generate a larger customer dataset
-        np.random.seed(42)  # For reproducibility
-        n_customers = 50
-        
-        large_customers = pd.DataFrame({
-            'Customer_ID': range(1, n_customers + 1),
-            'Customer_Name': [f'Customer_{i}' for i in range(1, n_customers + 1)],
-            'Latitude': np.random.uniform(40.7, 40.8, n_customers),
-            'Longitude': np.random.uniform(-74.0, -73.9, n_customers),
-            'Dry_Demand': np.random.randint(50, 200, n_customers),
-            'Chilled_Demand': np.random.randint(20, 100, n_customers),
-            'Frozen_Demand': np.random.randint(10, 50, n_customers)
-        })
-        
-        configs_df = generate_vehicle_configurations(
+    def test_post_optimization_merge_phase(self, realistic_customers, realistic_config):
+        """Test the post-optimization merge phase."""
+        # Generate configurations
+        configs_df = _generate_vehicle_configurations_df(
             realistic_config.vehicles, 
             realistic_config.goods
         )
         
-        # Reduce time limits for testing
-        realistic_config.clustering['time_limit_minutes'] = 2
+        # Generate clusters
+        from fleetmix.clustering.generator import _generate_feasible_clusters_df
+        clusters_df = _generate_feasible_clusters_df(
+            customers=realistic_customers,
+            configurations_df=configs_df,
+            params=realistic_config
+        )
         
-        clusters_df = generate_feasible_clusters(
+        # Get initial solution
+        initial_solution = optimize_fleet_selection(
+            clusters_df=clusters_df,
+            configurations_df=configs_df,
+            customers_df=realistic_customers,
+            parameters=realistic_config,
+            verbose=False
+        )
+        
+        # Apply merge phase
+        improved_solution = improve_solution(
+            initial_solution,
+            configs_df,
+            realistic_customers,
+            realistic_config
+        )
+        
+        # Improved solution should not be worse
+        assert improved_solution.total_cost <= initial_solution.total_cost
+        assert improved_solution.total_vehicles <= initial_solution.total_vehicles
+
+    def test_large_scale_clustering(self, realistic_config):
+        """Test clustering with a larger number of customers."""
+        # Create 100 customers
+        np.random.seed(42)
+        large_customers = pd.DataFrame({
+            'Customer_ID': [f'C{i:03d}' for i in range(100)],
+            'Customer_Name': [f'Customer {i}' for i in range(100)],
+            'Latitude': np.random.uniform(40.5, 41.0, 100),
+            'Longitude': np.random.uniform(-74.5, -73.5, 100),
+            'Dry_Demand': np.random.randint(0, 50, 100),
+            'Chilled_Demand': np.random.randint(0, 30, 100),
+            'Frozen_Demand': np.random.randint(0, 20, 100)
+        })
+        
+        # Generate configurations
+        configs_df = _generate_vehicle_configurations_df(
+            realistic_config.vehicles, 
+            realistic_config.goods
+        )
+        
+        # Generate clusters
+        from fleetmix.clustering.generator import _generate_feasible_clusters_df
+        clusters_df = _generate_feasible_clusters_df(
             customers=large_customers,
             configurations_df=configs_df,
             params=realistic_config
         )
         
-        # Should handle larger datasets
-        if len(clusters_df) > 0:
-            # Verify no customer is assigned to multiple clusters in same config
-            config_customer_sets = {}
-            for _, cluster in clusters_df.iterrows():
-                config_id = cluster['Config_ID']
-                customers_list = cluster['Customers']
-                
-                if config_id not in config_customer_sets:
-                    config_customer_sets[config_id] = set()
-                
-                for cid in customers_list:
-                    if cid in config_customer_sets[config_id]:
-                        # This is actually OK - customers can be in multiple clusters
-                        # for the same config as long as only one is selected
-                        pass
-                    config_customer_sets[config_id].add(cid)
+        # Should generate clusters
+        assert len(clusters_df) > 0
+        
+        # Each cluster should be feasible
+        for _, cluster in clusters_df.iterrows():
+            assert len(cluster['Customers']) > 0
+            assert cluster['Route_Time'] > 0
 
     def test_edge_case_single_customer(self, realistic_config):
-        """Test algorithms with edge case of single customer."""
+        """Test with a single customer."""
         single_customer = pd.DataFrame({
-            'Customer_ID': [1],
-            'Customer_Name': ['Only Store'],
-            'Latitude': [40.7589],
-            'Longitude': [-73.9851],
-            'Dry_Demand': [100],
-            'Chilled_Demand': [50],
-            'Frozen_Demand': [25]
+            'Customer_ID': ['C001'],
+            'Customer_Name': ['Single Customer'],
+            'Latitude': [40.7128],
+            'Longitude': [-74.0060],
+            'Dry_Demand': [10],
+            'Chilled_Demand': [5],
+            'Frozen_Demand': [0]
         })
         
-        configs_df = generate_vehicle_configurations(
+        # Generate configurations
+        configs_df = _generate_vehicle_configurations_df(
             realistic_config.vehicles, 
             realistic_config.goods
         )
         
-        clusters_df = generate_feasible_clusters(
+        # Generate clusters
+        from fleetmix.clustering.generator import _generate_feasible_clusters_df
+        clusters_df = _generate_feasible_clusters_df(
             customers=single_customer,
             configurations_df=configs_df,
             params=realistic_config
         )
         
-        # Should handle single customer gracefully
-        assert len(clusters_df) >= 0  # May be 0 if no feasible vehicle
+        # Should generate at least one cluster
+        assert len(clusters_df) > 0
         
-        if len(clusters_df) > 0:
-            # If cluster created, should contain the single customer
-            cluster = clusters_df.iloc[0]
-            customers_list = cluster['Customers']
-            assert 1 in customers_list
+        # Run optimization
+        solution = optimize_fleet_selection(
+            clusters_df=clusters_df,
+            configurations_df=configs_df,
+            customers_df=single_customer,
+            parameters=realistic_config,
+            verbose=False
+        )
+        
+        # Should find a solution
+        assert solution.total_vehicles >= 1
 
     def test_algorithm_performance_bounds(self, realistic_customers, realistic_config):
-        """Test that algorithms complete within reasonable time bounds."""
-        import time
-        
-        # Set tight time limits to test performance
-        realistic_config.clustering['time_limit_minutes'] = 1
-        # Note: optimization parameters are not directly accessible as a dict attribute
-        
-        configs_df = generate_vehicle_configurations(
+        """Test that algorithm respects performance bounds."""
+        # Generate configurations
+        configs_df = _generate_vehicle_configurations_df(
             realistic_config.vehicles, 
             realistic_config.goods
         )
         
-        # Time the clustering phase
+        # Generate clusters with time limit
+        import time
         start_time = time.time()
-        clusters_df = generate_feasible_clusters(
+        
+        from fleetmix.clustering.generator import _generate_feasible_clusters_df
+        clusters_df = _generate_feasible_clusters_df(
             customers=realistic_customers,
             configurations_df=configs_df,
             params=realistic_config
         )
+        
         clustering_time = time.time() - start_time
         
-        # Should complete within reasonable time (allowing overhead)
-        assert clustering_time < 300  # 5 minutes max for test
+        # Clustering should complete in reasonable time (< 30 seconds for 20 customers)
+        assert clustering_time < 30.0
         
-        # Verify clustering produced some result
-        assert isinstance(clusters_df, pd.DataFrame) 
+        # Run optimization with time limit
+        start_time = time.time()
+        solution = optimize_fleet_selection(
+            clusters_df=clusters_df,
+            configurations_df=configs_df,
+            customers_df=realistic_customers,
+            parameters=realistic_config,
+            verbose=False
+        )
+        
+        optimization_time = time.time() - start_time
+        
+        # Optimization should complete in reasonable time (< 60 seconds)
+        assert optimization_time < 60.0 

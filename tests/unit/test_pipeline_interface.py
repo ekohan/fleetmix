@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.internal_types import FleetmixSolution
 
 class DummyParams:
     def __init__(self):

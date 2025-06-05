@@ -275,12 +275,25 @@ def test_get_merged_route_time_caching(simple_params):
         'Longitude': [0.1, 0.2]
     })
     
+    # Create a vehicle configuration for the function
+    from fleetmix.core_types import VehicleConfiguration
+    config = VehicleConfiguration(
+        config_id=1,
+        vehicle_type="Test",
+        capacity=100,
+        fixed_cost=50,
+        compartments={'Dry': True},
+        avg_speed=30.0,
+        service_time=25.0,
+        max_route_time=10.0
+    )
+    
     # First call should compute
-    time1, seq1 = _get_merged_route_time(customers, simple_params)
+    time1, seq1 = _get_merged_route_time(customers, config, simple_params)
     assert len(_merged_route_time_cache) == 1
     
     # Second call should use cache
-    time2, seq2 = _get_merged_route_time(customers, simple_params)
+    time2, seq2 = _get_merged_route_time(customers, config, simple_params)
     assert time1 == time2
     assert seq1 == seq2
     assert len(_merged_route_time_cache) == 1  # Still only one entry 

@@ -12,26 +12,12 @@ def print_parameter_help():
 {Colors.CYAN}════════════════════════════════════════{Colors.RESET}
 
 {Colors.YELLOW}Core Parameters:{Colors.RESET}
-  --avg-speed FLOAT        Average vehicle speed in km/h
-                           Default: Defined in config file
-                           Example: --avg-speed 45
-
-  --max-route-time FLOAT   Maximum route time in hours
-                           Default: Defined in config file
-                           Example: --max-route-time 12
-
-  --service-time FLOAT     Service time per customer in minutes
-                           Default: Defined in config file
-                           Example: --service-time 15
-
   --route-time-estimation STR
                            Method to estimate route times
                            Options: 
                              - Legacy (simple service time based)
-                             - Clarke-Wright (savings algorithm)
                              - BHH (Beardwood-Halton-Hammersley)
-                             - CA (continuous approximation)
-                             - VRPSolver (detailed solver-based)
+                             - TSP (exact TSP solver)
                            Default: BHH
                            Example: --route-time-estimation BHH
 
@@ -103,13 +89,17 @@ def print_parameter_help():
   python src/main.py --config my_config.yaml
 
   # Override specific parameters
-  python src/main.py --avg-speed 45 --max-route-time 12 --service-time 15
+  python src/main.py --light-load-penalty 500 --compartment-setup-cost 75
 
   # Change clustering method and distance metric
   python src/main.py --clustering-method agglomerative --clustering-distance composite
 
   # Use different demand file with verbose output
   python src/main.py --demand-file sales_2023_high_demand_day.csv --verbose
+
+{Colors.YELLOW}Note:{Colors.RESET}
+  Vehicle-specific parameters (avg_speed, service_time, max_route_time) are now
+  configured per vehicle type in the config file and cannot be overridden globally.
 """
     print(help_text)
     sys.exit(0)
@@ -130,9 +120,6 @@ def parse_args() -> ArgumentParser:
     
     # Add arguments for each parameter that can be overridden
     parser.add_argument('--config', type=str, help='Path to custom config file')
-    parser.add_argument('--avg-speed', type=float, help='Average vehicle speed in km/h')
-    parser.add_argument('--max-route-time', type=float, help='Maximum route time in hours')
-    parser.add_argument('--service-time', type=float, help='Service time per customer in minutes')
     parser.add_argument('--demand-file', type=str, help='Name of the demand file to use')
     parser.add_argument('--light-load-penalty', type=float, help='Penalty for light loads')
     parser.add_argument('--light-load-threshold', type=float, help='Threshold for light load penalty')
@@ -179,6 +166,10 @@ def get_parameter_overrides(args) -> Dict[str, Any]:
     
     # Remove non-parameter arguments
     for key in ['config', 'verbose', 'help_params']:
+        overrides.pop(key, None)
+    
+    # Remove old timing parameters that are now vehicle-specific
+    for key in ['avg_speed', 'service_time', 'max_route_time']:
         overrides.pop(key, None)
         
     # Convert dashed args to underscores

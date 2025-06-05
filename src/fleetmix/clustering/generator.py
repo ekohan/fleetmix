@@ -74,12 +74,15 @@ def generate_clusters_for_configurations(
         # 3. Precompute distance/duration matrices if TSP route estimation is used
         tsp_needed = any(clustering_context.route_time_estimation == 'TSP' for clustering_context, _ in context_and_methods)
         if tsp_needed:
-            logger.info("TSP route estimation detected. Precomputing global distance/duration matrices...")
-            # Call the function from route_time module to build and cache matrices
+            logger.info("TSP route estimation detected. Building distance/duration matrices per vehicle configuration...")
+            # Build matrices for each unique avg_speed value across configurations
             from fleetmix.utils.route_time import build_distance_duration_matrices
-            build_distance_duration_matrices(customers, params.depot, params.avg_speed)
+            unique_speeds = set(config.avg_speed for config in configurations)
+            for speed in unique_speeds:
+                build_distance_duration_matrices(customers, params.depot, speed)
+                logger.debug(f"Built matrices for avg_speed={speed} km/h")
         else:
-            logger.info("TSP route estimation not used. Skipping global matrix precomputation.")
+            logger.info("TSP route estimation not used. Skipping matrix precomputation.")
 
         cluster_id_generator = itertools.count()
 
@@ -243,9 +246,6 @@ def _get_clustering_context_list(params: Parameters) -> List[Tuple[ClusteringCon
     base_context = ClusteringContext(
         goods=params.goods,
         depot=depot_location,
-        avg_speed=params.avg_speed,
-        service_time=params.service_time,
-        max_route_time=params.max_route_time,
         max_depth=params.clustering['max_depth'],
         route_time_estimation=params.clustering['route_time_estimation'],
         geo_weight=params.clustering['geo_weight'],

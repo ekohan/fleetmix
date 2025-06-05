@@ -58,9 +58,6 @@ def empty_list_factory():
 class VehicleOperationContext:
     """Base context for vehicle operations - shared operational parameters."""
     depot: 'DepotLocation'
-    avg_speed: float  # km/h
-    service_time: float  # minutes per customer
-    max_route_time: float  # hours
 
 
 @dataclass
@@ -76,6 +73,9 @@ class ClusteringContext(VehicleOperationContext):
 @dataclass
 class RouteTimeContext(VehicleOperationContext):
     """Context for route time estimation algorithms."""
+    avg_speed: float  # km/h
+    service_time: float  # minutes per customer
+    max_route_time: float  # hours
     prune_tsp: bool = False
     
     def __post_init__(self):
@@ -153,6 +153,9 @@ class VehicleSpec:
     capacity: int
     fixed_cost: float
     compartments: Dict[str, bool] = field(default_factory=dict)
+    avg_speed: float = 30.0  # km/h - default value
+    service_time: float = 25.0  # minutes per customer - default value
+    max_route_time: float = 10.0  # hours - default value
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def __getitem__(self, item: str) -> Any:
@@ -165,7 +168,14 @@ class VehicleSpec:
         raise KeyError(f"'{item}' not found in VehicleSpec or its extra fields")
 
     def to_dict(self) -> Dict[str, Any]:
-        data = {"capacity": self.capacity, "fixed_cost": self.fixed_cost, "compartments": self.compartments}
+        data = {
+            "capacity": self.capacity, 
+            "fixed_cost": self.fixed_cost, 
+            "compartments": self.compartments,
+            "avg_speed": self.avg_speed,
+            "service_time": self.service_time,
+            "max_route_time": self.max_route_time
+        }
         data.update(self.extra)
         return data
 
@@ -177,6 +187,9 @@ class VehicleConfiguration:
     capacity: int
     fixed_cost: float
     compartments: Dict[str, bool]
+    avg_speed: float = 30.0  # km/h - default value
+    service_time: float = 25.0  # minutes per customer - default value
+    max_route_time: float = 10.0  # hours - default value
 
     def __getitem__(self, key: str) -> Any:
         """Support bracket notation access for backward compatibility."""
@@ -199,7 +212,10 @@ class VehicleConfiguration:
             'Config_ID': self.config_id,
             'Vehicle_Type': self.vehicle_type,
             'Capacity': self.capacity,
-            'Fixed_Cost': self.fixed_cost
+            'Fixed_Cost': self.fixed_cost,
+            'avg_speed': self.avg_speed,
+            'service_time': self.service_time,
+            'max_route_time': self.max_route_time
         }
         # Add compartment flags
         for good, has_compartment in self.compartments.items():

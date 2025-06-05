@@ -170,9 +170,6 @@ def collect_parameters_from_ui() -> Parameters:
         'demand_file': params.demand_file,
         'clustering': params.clustering,
         'variable_cost_per_hour': params.variable_cost_per_hour,
-        'avg_speed': params.avg_speed,
-        'max_route_time': params.max_route_time,
-        'service_time': params.service_time,
         'light_load_penalty': params.light_load_penalty,
         'light_load_threshold': params.light_load_threshold,
         'compartment_setup_cost': params.compartment_setup_cost,
@@ -208,7 +205,10 @@ def collect_parameters_from_ui() -> Parameters:
                     capacity=vdata['capacity'],
                     fixed_cost=vdata['fixed_cost'],
                     compartments=vdata.get('compartments', {}),
-                    extra={k: v for k, v in vdata.items() if k not in ['capacity', 'fixed_cost', 'compartments']}
+                    avg_speed=vdata.get('avg_speed', 30.0),
+                    service_time=vdata.get('service_time', 25.0),
+                    max_route_time=vdata.get('max_route_time', 10.0),
+                    extra={k: v for k, v in vdata.items() if k not in ['capacity', 'fixed_cost', 'compartments', 'avg_speed', 'service_time', 'max_route_time']}
                 )
             else:
                 # Already a VehicleSpec object
@@ -363,7 +363,7 @@ def main():
                         f"Capacity",
                         min_value=100,
                         max_value=10000,
-                        value=int(vehicle_data['capacity']),
+                        value=int(vehicle_data.capacity if hasattr(vehicle_data, 'capacity') else vehicle_data['capacity']),
                         step=100,
                         key=f"vehicle_{vehicle_type}_capacity"
                     )
@@ -372,33 +372,53 @@ def main():
                         f"Fixed Cost",
                         min_value=0,
                         max_value=1000000,
-                        value=int(vehicle_data['fixed_cost']),
+                        value=int(vehicle_data.fixed_cost if hasattr(vehicle_data, 'fixed_cost') else vehicle_data['fixed_cost']),
                         step=25,
                         key=f"vehicle_{vehicle_type}_fixed_cost"
                     )
-                vehicles[vehicle_type] = {'capacity': capacity, 'fixed_cost': fixed_cost}
+                
+                # Add timing parameters
+                col1_t, col2_t, col3_t = st.columns(3)
+                with col1_t:
+                    avg_speed = st.number_input(
+                        f"Avg Speed (km/h)",
+                        min_value=10,
+                        max_value=100,
+                        value=int(vehicle_data.avg_speed if hasattr(vehicle_data, 'avg_speed') else 30),
+                        step=5,
+                        key=f"vehicle_{vehicle_type}_avg_speed"
+                    )
+                with col2_t:
+                    service_time = st.number_input(
+                        f"Service Time (min)",
+                        min_value=5,
+                        max_value=120,
+                        value=int(vehicle_data.service_time if hasattr(vehicle_data, 'service_time') else 25),
+                        step=5,
+                        key=f"vehicle_{vehicle_type}_service_time"
+                    )
+                with col3_t:
+                    max_route_time = st.number_input(
+                        f"Max Route Time (h)",
+                        min_value=4,
+                        max_value=24,
+                        value=int(vehicle_data.max_route_time if hasattr(vehicle_data, 'max_route_time') else 10),
+                        step=1,
+                        key=f"vehicle_{vehicle_type}_max_route_time"
+                    )
+                
+                vehicles[vehicle_type] = {
+                    'capacity': capacity, 
+                    'fixed_cost': fixed_cost,
+                    'avg_speed': avg_speed,
+                    'service_time': service_time,
+                    'max_route_time': max_route_time
+                }
             st.session_state['param_vehicles'] = vehicles
         
         # Operations parameters
         with st.expander("⚙️ Operations", expanded=False):
-            st.number_input( # Direct update to session state via key
-                "Average Speed (km/h)",
-                min_value=10, max_value=1000,
-                value=int(st.session_state.parameters.avg_speed),
-                key='param_avg_speed'
-            )
-            st.number_input(
-                "Service Time (minutes)",
-                min_value=5, max_value=120,
-                value=int(st.session_state.parameters.service_time),
-                key='param_service_time'
-            )
-            st.number_input(
-                "Max Route Time (hours)",
-                min_value=4, max_value=24*7,
-                value=int(st.session_state.parameters.max_route_time),
-                key='param_max_route_time'
-            )
+            st.markdown("**Note:** Vehicle-specific parameters (speed, service time, route time) are now configured per vehicle type in the config file.")
             st.number_input(
                 "Variable Cost per Hour ($)",
                 min_value=0.0, max_value=10000.0,

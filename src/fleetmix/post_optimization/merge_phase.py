@@ -43,8 +43,9 @@ from haversine import haversine_vector, Unit
 from dataclasses import replace
 
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
-from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
+from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours, make_rt_context
 from fleetmix.config.parameters import Parameters
+from fleetmix.registry import ROUTE_TIME_ESTIMATOR_REGISTRY
 
 from fleetmix.utils.logging import FleetmixLogger, Symbols
 
@@ -71,25 +72,28 @@ def _configs_to_dataframe(configurations: List[VehicleConfiguration]) -> pd.Data
 
 def _get_merged_route_time(
     customers: pd.DataFrame,
+    config: VehicleConfiguration,
     params: Parameters
 ) -> Tuple[float, list | None]:
     """
     Estimate (and cache) the route time and sequence for a merged cluster of customers.
-    Always uses the same method & max_route_time from params.
+    Uses the vehicle configuration's timing parameters.
     """
     key: Tuple[str, ...] = tuple(sorted(customers['Customer_ID']))
     if key in _merged_route_time_cache:
         return _merged_route_time_cache[key]
     
-    time, sequence = estimate_route_time(
-        cluster_customers=customers,
-        depot=params.depot,
-        service_time=params.service_time,
-        avg_speed=params.avg_speed,
-        method=params.clustering['route_time_estimation'],
-        max_route_time=params.max_route_time,
-        prune_tsp=params.prune_tsp
-    )
+    # Create RouteTimeContext using the factory
+    rt_context = make_rt_context(config, params.depot, params.prune_tsp)
+    
+    # Use the new interface with RouteTimeContext
+    estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(params.clustering['route_time_estimation'])
+    if estimator_class is None:
+        raise ValueError(f"Unknown route time estimation method: {params.clustering['route_time_estimation']}")
+    
+    estimator = estimator_class()
+    time, sequence = estimator.estimate_route_time(customers, rt_context)
+    
     _merged_route_time_cache[key] = (time, sequence)
     return time, sequence
 
@@ -264,21 +268,23 @@ def generate_merge_phase_clusters(
             target = target_meta.iloc[idx]
             rt_target = target['Route_Time']
             rt_small  = small['Route_Time']
+            
+            # Get the target configuration to access its service_time
+            target_config = _find_config_by_id(configurations, target['Config_ID'])
 
             # Compute service time for the cluster not contributing the max route_time (avoid double count)
             if rt_small > rt_target:
-                svc_time_other = calculate_total_service_time_hours(len(target['Customers']), params.service_time)
+                svc_time_other = calculate_total_service_time_hours(len(target['Customers']), target_config.service_time)
             else:
-                svc_time_other = calculate_total_service_time_hours(len(small['Customers']), params.service_time)
+                svc_time_other = calculate_total_service_time_hours(len(small['Customers']), target_config.service_time)
 
             # Quick lower-bound time prune before costly route-time estimation (no proximity term)
             lb = max(rt_target, rt_small) + svc_time_other
-            if lb > params.max_route_time:
+            if lb > target_config.max_route_time:
                 stats['invalid_time'] = stats.get('invalid_time', 0) + 1
-                logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={params.max_route_time:.2f}")
+                logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={target_config.max_route_time:.2f}")
                 continue
             stats['attempted'] += 1
-            target_config = _find_config_by_id(configurations, target['Config_ID'])
             is_valid, route_time, demands, tsp_sequence = validate_merged_cluster(
                 small, target, target_config, customers_indexed, params
             )
@@ -389,9 +395,9 @@ def validate_merged_cluster(
         return False, 0, {}, None
 
     # Estimate (and cache) new route time using the general estimator
-    new_route_time, new_sequence = _get_merged_route_time(merged_customers, params)
+    new_route_time, new_sequence = _get_merged_route_time(merged_customers, config, params)
 
-    if new_route_time > params.max_route_time:
+    if new_route_time > config.max_route_time:
         return False, 0, {}, None
 
     return True, new_route_time, merged_goods, new_sequence 

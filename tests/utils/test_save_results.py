@@ -64,9 +64,6 @@ class TestSaveOptimizationResults(unittest.TestCase):
         self.parameters.results_dir = Path(tempfile.gettempdir())
         self.parameters.demand_file = "test_demand.csv"
         self.parameters.variable_cost_per_hour = 50
-        self.parameters.avg_speed = 30
-        self.parameters.max_route_time = 8
-        self.parameters.service_time = 30
         self.parameters.clustering = {
             'max_depth': 3,
             'method': 'kmeans',

@@ -250,15 +250,11 @@ class TestCoreAlgorithms:
             assert total_distance > 0
         
         # Test route time estimation using available function
-        service_time = 15  # minutes
-        # Create a simple Parameters object for the function
+        # Create a simple Parameters object for the function (without timing parameters)
         params = Parameters(
             goods=[],
             vehicles={},
             variable_cost_per_hour=20.0,
-            avg_speed=40.0,
-            max_route_time=8.0,
-            service_time=service_time,
             depot={'latitude': 40.7831, 'longitude': -73.9712},
             clustering={'route_time_estimation': 'Legacy', 'geo_weight': 0.7, 'demand_weight': 0.3},
             demand_file='test.csv',
@@ -269,30 +265,54 @@ class TestCoreAlgorithms:
             prune_tsp=False
         )
         
+        # Create a vehicle configuration with timing parameters
+        from fleetmix.core_types import VehicleConfiguration, VehicleSpec
+        
+        vehicle_spec = VehicleSpec(
+            capacity=1000,
+            fixed_cost=100,
+            compartments={'Dry': True},
+            extra={},
+            avg_speed=40.0,
+            service_time=15.0,
+            max_route_time=8.0
+        )
+        
+        vehicle_config = VehicleConfiguration(
+            config_id=1,
+            vehicle_type="Test Vehicle",
+            capacity=1000,
+            fixed_cost=100,
+            compartments={'Dry': True},
+            avg_speed=40.0,
+            service_time=15.0,
+            max_route_time=8.0
+        )
+        
         try:
             route_time, sequence = estimate_route_time(
                 cluster_customers=route_customers,
                 depot=params.depot,
-                service_time=params.service_time,
-                avg_speed=params.avg_speed,
+                service_time=vehicle_config.service_time,
+                avg_speed=vehicle_config.avg_speed,
                 method=params.clustering['route_time_estimation'],
-                max_route_time=params.max_route_time,
+                max_route_time=vehicle_config.max_route_time,
                 prune_tsp=params.prune_tsp
             )
-            assert route_time > service_time * len(route_customers) / 60  # Should include travel time
+            assert route_time > vehicle_config.service_time * len(route_customers) / 60  # Should include travel time
         except Exception:
             # If route time estimation fails (missing dependencies), just test service time calculation
-            total_service_time = calculate_total_service_time_hours(len(route_customers), service_time)
+            total_service_time = calculate_total_service_time_hours(len(route_customers), vehicle_config.service_time)
             assert total_service_time > 0
         
         # Test individual route segment estimation
         segment_time = estimate_route_time(
             route_customers.iloc[0:2], 
             params.depot,
-            params.service_time,
-            params.avg_speed,
+            vehicle_config.service_time,
+            vehicle_config.avg_speed,
             method='Legacy',
-            max_route_time=params.max_route_time,
+            max_route_time=vehicle_config.max_route_time,
             prune_tsp=False
         )[0]
         assert segment_time > 0

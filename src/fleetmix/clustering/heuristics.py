@@ -15,7 +15,8 @@ from kmedoids import KMedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
-from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY
+from fleetmix.utils.route_time import make_rt_context
+from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY, ROUTE_TIME_ESTIMATOR_REGISTRY
 
 from fleetmix.core_types import Cluster, ClusteringContext, VehicleConfiguration
 from fleetmix.utils.logging import FleetmixLogger
@@ -168,6 +169,7 @@ def get_cached_demand(
 
 def get_cached_route_time(
     customers: pd.DataFrame,
+    config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     route_time_cache: Dict,
     main_params: Parameters
@@ -178,15 +180,16 @@ def get_cached_route_time(
     if result is not None:
         return result
     
-    route_time, route_sequence = estimate_route_time(
-        cluster_customers=customers,
-        depot=clustering_context.depot,
-        service_time=clustering_context.service_time,
-        avg_speed=clustering_context.avg_speed,
-        method=clustering_context.route_time_estimation,
-        max_route_time=clustering_context.max_route_time,
-        prune_tsp=main_params.prune_tsp
-    )
+    # Create RouteTimeContext using the factory
+    rt_context = make_rt_context(config, clustering_context.depot, main_params.prune_tsp)
+    
+    # Use the new interface with RouteTimeContext
+    estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(clustering_context.route_time_estimation)
+    if estimator_class is None:
+        raise ValueError(f"Unknown route time estimation method: {clustering_context.route_time_estimation}")
+    
+    estimator = estimator_class()
+    route_time, route_sequence = estimator.estimate_route_time(customers, rt_context)
     
     route_time_cache[key] = (route_time, route_sequence)
     return route_time, route_sequence
@@ -296,13 +299,14 @@ def check_constraints(
     # Get route time from cache (ignore sequence for constraint check)
     route_time, _ = get_cached_route_time(
         cluster_customers,
+        config,
         clustering_context,
         route_time_cache,
         main_params
     )
     
     capacity_violated = cluster_demand > config.capacity
-    time_violated = route_time > clustering_context.max_route_time
+    time_violated = route_time > config.max_route_time
     
     return capacity_violated, time_violated
 
@@ -388,6 +392,7 @@ def create_cluster(
     # Get route time and sequence from cache
     route_time, tsp_sequence = get_cached_route_time(
         cluster_customers,
+        config,
         clustering_context,
         route_time_cache,
         main_params
@@ -515,21 +520,22 @@ def estimate_num_initial_clusters(
     # Ensure sample size doesn't exceed population size and is at least 1 if possible
     sample_size = max(1, min(int(avg_customers_per_cluster), len(customers)))
     avg_cluster = customers.sample(n=sample_size)
-    # Unpack the tuple returned by estimate_route_time
-    avg_route_time, _ = estimate_route_time(
-        cluster_customers=avg_cluster,
-        depot=clustering_context.depot,
-        service_time=clustering_context.service_time, # in minutes
-        avg_speed=clustering_context.avg_speed,
-        method=clustering_context.route_time_estimation, # Use the specific method for estimation
-        max_route_time=clustering_context.max_route_time, # Pass max_route_time
-        prune_tsp=prune_tsp_val # Use params.prune_tsp or default False
-    )
+    
+    # Create RouteTimeContext using the factory
+    rt_context = make_rt_context(config, clustering_context.depot, prune_tsp_val)
+    
+    # Use the new interface with RouteTimeContext
+    estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(clustering_context.route_time_estimation)
+    if estimator_class is None:
+        raise ValueError(f"Unknown route time estimation method: {clustering_context.route_time_estimation}")
+    
+    estimator = estimator_class()
+    avg_route_time, _ = estimator.estimate_route_time(avg_cluster, rt_context)
 
     # Estimate clusters needed based on time
     clusters_by_time = np.ceil(
         avg_route_time * len(customers) / 
-        (clustering_context.max_route_time * avg_customers_per_cluster)
+        (config.max_route_time * avg_customers_per_cluster)
     )
 
     # Take the maximum of the two estimates

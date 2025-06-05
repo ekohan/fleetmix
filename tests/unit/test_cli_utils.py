@@ -26,8 +26,8 @@ def test_get_parameter_overrides_filters_none_and_keys():
         help_params=False
     )
     overrides = get_parameter_overrides(args)
-    # Only include non-None and parameter keys
-    assert overrides == {'avg_speed': 50.0, 'demand_weight': 0.3}
+    # Only include non-None and parameter keys - avg_speed is no longer a global parameter
+    assert overrides == {'demand_weight': 0.3}
 
 
 def test_parse_args_invalid_choice():
@@ -38,11 +38,16 @@ def test_parse_args_invalid_choice():
 
 def write_minimal_yaml(path):
     cfg = {
-        'vehicles': {'A': {'capacity': 10, 'fixed_cost': 5}},
+        'vehicles': {
+            'A': {
+                'capacity': 10, 
+                'fixed_cost': 5,
+                'avg_speed': 20,
+                'service_time': 10,
+                'max_route_time': 5
+            }
+        },
         'variable_cost_per_hour': 1,
-        'avg_speed': 20,
-        'max_route_time': 5,
-        'service_time': 10,
         'depot': {'latitude': 0.0, 'longitude': 0.0},
         'goods': ['Dry'],
         'clustering': {
@@ -71,11 +76,15 @@ def test_load_parameters_default(tmp_path):
     args = parser.parse_args(['--config', str(yaml_path)])
     params = load_parameters(args)
     assert isinstance(params, Parameters)
-    # Values from YAML
-    assert params.avg_speed == 20
-    assert params.service_time == 10
+    # Values from YAML - timing parameters are now in vehicle specs
     assert params.demand_file == 'file.csv'
     assert params.clustering['method'] == 'minibatch_kmeans'
+    assert params.variable_cost_per_hour == 1
+    # Check that vehicle specs have timing parameters
+    vehicle_a = params.vehicles['A']
+    assert vehicle_a.avg_speed == 20
+    assert vehicle_a.service_time == 10
+    assert vehicle_a.max_route_time == 5
 
 
 def test_load_parameters_with_clustering_overrides(tmp_path):

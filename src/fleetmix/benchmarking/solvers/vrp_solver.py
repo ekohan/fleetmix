@@ -44,11 +44,17 @@ class VRPSolver:
         self.model = self._prepare_model()
     
     def _prepare_model(self) -> Model:
-        """Prepare PyVRP model from customer data."""
+        """Prepare PyVRP model with clients, depots, and vehicle types."""
         expanded_clients = []
+
+        # Get vehicle specs to determine timing parameters
+        vehicle_specs = list(self.params.vehicles.values())
+        if not vehicle_specs:
+            raise ValueError("No vehicle specifications found in parameters")
         
         if self.benchmark_type == BenchmarkType.SINGLE_COMPARTMENT:
             # For single product solving, create a client for each product demand
+            # Note: We'll use vehicle-specific service times later when processing routes
             for _, row in self.customers.iterrows():
                 for good in self.params.goods:
                     demand = row[f'{good}_Demand']
@@ -57,7 +63,7 @@ class VRPSolver:
                             x=int(row['Latitude'] * 10000),
                             y=int(row['Longitude'] * 10000),
                             delivery=[int(demand)],
-                            service_duration=self.params.service_time * 60
+                            service_duration=0  # Will be handled per vehicle type
                         ))
         else:
             # For multi-compartment, use total demand
@@ -68,23 +74,27 @@ class VRPSolver:
                         x=int(row['Latitude'] * 10000),
                         y=int(row['Longitude'] * 10000),
                         delivery=[int(total_demand)],
-                        service_duration=self.params.service_time * 60
+                        service_duration=0  # Will be handled per vehicle type
                     ))
 
-        # Create vehicle types with proper capacities
-        vehicle_types = [
-            VehicleType(
+        # Create vehicle types with proper capacities and vehicle-specific timing parameters
+        vehicle_types = []
+        for vt_name, vt_spec in self.params.vehicles.items():
+            vehicle_types.append(VehicleType(
                 num_available=len(expanded_clients),
-                capacity=[vt_info['capacity']],
-                fixed_cost=vt_info['fixed_cost'],
-                max_duration=self.params.max_route_time * 3600
-            )
-            for vt_name, vt_info in self.params.vehicles.items()
-        ]
+                capacity=[vt_spec.capacity],
+                fixed_cost=vt_spec.fixed_cost,
+                max_duration=vt_spec.max_route_time * 3600
+            ))
 
         # Calculate base distance matrix
         base_distance_matrix = self._calculate_distance_matrix(len(expanded_clients))
-        duration_matrix = (base_distance_matrix / self.params.avg_speed) * 3600
+        
+        # Create duration matrices for each vehicle type based on their specific avg_speed
+        duration_matrices = []
+        for vt_spec in self.params.vehicles.values():
+            duration_matrix = (base_distance_matrix / vt_spec.avg_speed) * 3600
+            duration_matrices.append(duration_matrix)
 
         # Create problem data
         self.data = ProblemData(
@@ -94,8 +104,8 @@ class VRPSolver:
                 y=int(self.params.depot['longitude'] * 10000)
             )],
             vehicle_types=vehicle_types,
-            distance_matrices=[base_distance_matrix],
-            duration_matrices=[duration_matrix]
+            distance_matrices=[base_distance_matrix] * len(vehicle_types),  # Same distance matrix for all
+            duration_matrices=duration_matrices  # Vehicle-specific duration matrices
         )
 
         return Model.from_data(self.data)
@@ -236,6 +246,9 @@ class VRPSolver:
             vehicle_type = self.data.vehicle_types()[vehicle_type_idx]
             vehicle_capacity = vehicle_type.capacity[0]
             
+            # Get the actual vehicle spec from params to access timing parameters
+            vehicle_spec = list(self.params.vehicles.values())[vehicle_type_idx]
+            
             # Calculate utilization percentage
             utilization = (total_demand / vehicle_capacity) * 100
             
@@ -249,26 +262,26 @@ class VRPSolver:
                 if (client := route[i]) > 0
             ])
             
-            # Calculate route time
+            # Calculate route time using vehicle-specific parameters
             route_time, _ = estimate_route_time(
                 cluster_customers=route_customers,
                 depot=self.params.depot,
-                service_time=self.params.service_time,
-                avg_speed=self.params.avg_speed,
+                service_time=vehicle_spec.service_time,
+                avg_speed=vehicle_spec.avg_speed,
                 method='BHH',
-                max_route_time=self.params.max_route_time,
+                max_route_time=vehicle_spec.max_route_time,
                 prune_tsp=self.params.prune_tsp
             )
             
             # Check if route is feasible (but include it anyway)
-            is_feasible = (utilization <= 100 and route_time <= self.params.max_route_time)
+            is_feasible = (utilization <= 100 and route_time <= vehicle_spec.max_route_time)
             
             # Log route status
             if not is_feasible:
                 if utilization > 100:
                     logger.warning(f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}")
-                if route_time > self.params.max_route_time:
-                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {self.params.max_route_time}){Colors.RESET}")
+                if route_time > vehicle_spec.max_route_time:
+                    logger.warning(f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {vehicle_spec.max_route_time}){Colors.RESET}")
             elif verbose:
                 logger.info(f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}")
             

@@ -16,6 +16,28 @@ from fleetmix.core_types import RouteTimeContext, DepotLocation
 
 logger = FleetmixLogger.get_logger(__name__)
 
+def make_rt_context(config: 'VehicleConfiguration',
+                    depot: DepotLocation,
+                    prune_tsp: bool) -> RouteTimeContext:
+    """
+    Factory function to create RouteTimeContext from VehicleConfiguration.
+    
+    Args:
+        config: VehicleConfiguration containing timing parameters
+        depot: DepotLocation object
+        prune_tsp: Whether to prune TSP calculations
+        
+    Returns:
+        RouteTimeContext with timing parameters from the vehicle configuration
+    """
+    return RouteTimeContext(
+        depot=depot,
+        avg_speed=config.avg_speed,
+        service_time=config.service_time,
+        max_route_time=config.max_route_time,
+        prune_tsp=prune_tsp,
+    )
+
 def calculate_total_service_time_hours(num_customers: int, service_time_per_customer_minutes: float) -> float:
     """
     Calculates the total service time in hours for a given number of customers
@@ -37,12 +59,8 @@ def calculate_total_service_time_hours(num_customers: int, service_time_per_cust
     return (num_customers * service_time_per_customer_minutes) / 60.0
 
 # Global cache for distance and duration matrices (populated if TSP method is used)
-_matrix_cache = {
-    'distance_matrix': None,
-    'duration_matrix': None,
-    'customer_id_to_idx': None,
-    'depot_idx': 0  # Depot is always at index 0
-}
+# Now keyed by avg_speed to support different vehicle configurations
+_matrix_cache = {}
 
 def build_distance_duration_matrices(
     customers_df: pd.DataFrame,
@@ -51,7 +69,7 @@ def build_distance_duration_matrices(
 ) -> None:
     """
     Build global distance and duration matrices for all customers plus the depot
-    and store them in the module-level cache `_matrix_cache`.
+    and store them in the module-level cache `_matrix_cache` keyed by avg_speed.
 
     Args:
         customers_df: DataFrame containing ALL customer data.
@@ -62,7 +80,12 @@ def build_distance_duration_matrices(
         logger.warning("Cannot build matrices: Customer DataFrame is empty.")
         return
 
-    logger.info(f"Building global distance/duration matrices for {len(customers_df)} customers...")
+    # Check if matrices for this speed already exist
+    if avg_speed in _matrix_cache:
+        logger.debug(f"Matrices for avg_speed={avg_speed} km/h already cached.")
+        return
+
+    logger.info(f"Building distance/duration matrices for {len(customers_df)} customers at {avg_speed} km/h...")
     # Create mapping from Customer_ID to matrix index (Depot is 0)
     customer_ids = customers_df['Customer_ID'].tolist()
     # Ensure unique IDs before creating map
@@ -103,11 +126,14 @@ def build_distance_duration_matrices(
             duration_seconds = (dist_km / avg_speed_kps) if avg_speed_kps > 0 else np.inf # Use infinity if speed is 0
             duration_matrix[i, j] = duration_matrix[j, i] = int(duration_seconds)
 
-    # Update cache
-    _matrix_cache['distance_matrix'] = distance_matrix
-    _matrix_cache['duration_matrix'] = duration_matrix
-    _matrix_cache['customer_id_to_idx'] = customer_id_to_idx
-    logger.info(f"Successfully built and cached global matrices ({n_locations}x{n_locations}).")
+    # Update cache with speed-specific entry
+    _matrix_cache[avg_speed] = {
+        'distance_matrix': distance_matrix,
+        'duration_matrix': duration_matrix,
+        'customer_id_to_idx': customer_id_to_idx,
+        'depot_idx': 0  # Depot is always at index 0
+    }
+    logger.info(f"Successfully built and cached matrices ({n_locations}x{n_locations}) for avg_speed={avg_speed} km/h.")
 
 
 def estimate_route_time(
@@ -352,20 +378,17 @@ class TSPEstimator:
         distance_matrix = None
         duration_matrix = None
 
-        # Check if cache is populated
-        cache_ready = (
-            _matrix_cache['distance_matrix'] is not None and
-            _matrix_cache['duration_matrix'] is not None and
-            _matrix_cache['customer_id_to_idx'] is not None
-        )
-
+        # Check if cache is populated for this specific speed
+        cache_ready = context.avg_speed in _matrix_cache
+        
         if cache_ready:
-            logger.debug(f"Using cached global matrices for cluster TSP (Size: {num_customers})")
-            # Get the global distance and duration matrices and mapping
-            global_distance_matrix = _matrix_cache['distance_matrix']
-            global_duration_matrix = _matrix_cache['duration_matrix']
-            customer_id_to_idx = _matrix_cache['customer_id_to_idx']
-            depot_idx = _matrix_cache['depot_idx'] # Should be 0
+            logger.debug(f"Using cached matrices for cluster TSP (Size: {num_customers}, Speed: {context.avg_speed} km/h)")
+            # Get the speed-specific distance and duration matrices and mapping
+            speed_cache = _matrix_cache[context.avg_speed]
+            global_distance_matrix = speed_cache['distance_matrix']
+            global_duration_matrix = speed_cache['duration_matrix']
+            customer_id_to_idx = speed_cache['customer_id_to_idx']
+            depot_idx = speed_cache['depot_idx'] # Should be 0
 
             # Get indices for this specific cluster (Depot + Cluster Customers)
             cluster_indices = [depot_idx]

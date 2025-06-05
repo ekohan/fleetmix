@@ -3,20 +3,24 @@ vehicles:
   A:
     capacity: 2700
     fixed_cost: 100
+    avg_speed: 30  # km/h
+    service_time: 25  # minutes per customer
+    max_route_time: 10  # hours
   B:
     capacity: 3300
     fixed_cost: 175
+    avg_speed: 30  # km/h
+    service_time: 25  # minutes per customer
+    max_route_time: 10  # hours
   C:
     capacity: 4500
     fixed_cost: 225
+    avg_speed: 30  # km/h
+    service_time: 25  # minutes per customer
+    max_route_time: 10  # hours
 
 # Cost Parameters
 variable_cost_per_hour: 10.00
-
-# Time Parameters
-avg_speed: 30  # km/h
-max_route_time: 10  # hours
-service_time: 25  # minutes per customer
 
 # Location
 depot:
@@ -57,9 +61,9 @@ compartment_setup_cost: 0  # Cost per additional compartment beyond the first on
 
 # Post-optimization
 post_optimization: true         # Enable iterative improvement phase
-small_cluster_size: 100         # ≤ customers per "small" cluster
-nearest_merge_candidates: 100   # max neighbour clusters to probe
-max_improvement_iterations: 10  # max iterations for iterative post-optimization
+small_cluster_size: 1000         # ≤ customers per "small" cluster
+nearest_merge_candidates: 1000   # max neighbour clusters to probe
+max_improvement_iterations: 20  # max iterations for iterative post-optimization
 
 # Output format
 format: 'excel'  # Output format (excel or json)

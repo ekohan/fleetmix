@@ -20,13 +20,16 @@ def generate_vehicle_configurations(vehicle_types: Dict[str, VehicleSpec], goods
             # Create compartments dictionary
             compartments = {good: bool(option[i]) for i, good in enumerate(goods)}
             
-            # Create VehicleConfiguration object
+            # Create VehicleConfiguration object with timing attributes from VehicleSpec
             config = VehicleConfiguration(
                 config_id=config_id,
                 vehicle_type=vt_name,
                 capacity=vt_info.capacity,
                 fixed_cost=vt_info.fixed_cost,
-                compartments=compartments
+                compartments=compartments,
+                avg_speed=vt_info.avg_speed,
+                service_time=vt_info.service_time,
+                max_route_time=vt_info.max_route_time
             )
             configurations.append(config)
             config_id += 1

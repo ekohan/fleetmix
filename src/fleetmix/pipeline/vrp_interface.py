@@ -12,6 +12,7 @@ from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.logging import log_progress, log_success, log_detail
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
+from fleetmix.preprocess.demand import maybe_explode
 
 class VRPType(Enum):
     CVRP = 'cvrp'
@@ -43,6 +44,10 @@ def run_optimization(
     time_recorder = TimeRecorder()
     
     with time_recorder.measure("global"):
+        # Apply split-stop preprocessing if enabled
+        allow_split = getattr(params, 'allow_split_stops', False)
+        customers_df = maybe_explode(customers_df, allow_split)
+
         # Convert customers DataFrame to list of Customer objects
         customers = Customer.from_dataframe(customers_df)
         

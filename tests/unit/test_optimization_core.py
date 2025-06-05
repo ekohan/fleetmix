@@ -183,7 +183,7 @@ def test_extract_solution(simple_clusters_df):
     assert selected_clusters.iloc[0]['Cluster_ID'] == 'C1'
 
 
-def test_validate_solution(simple_customers_df, simple_configs_df):
+def test_validate_solution(simple_customers_df, simple_configs_df, simple_params):
     """Test solution validation."""
     # Create selected clusters that miss one customer
     selected_clusters = pd.DataFrame({
@@ -195,7 +195,8 @@ def test_validate_solution(simple_customers_df, simple_configs_df):
     missing_customers = _validate_solution(
         selected_clusters,
         simple_customers_df,
-        simple_configs_df
+        simple_configs_df,
+        simple_params
     )
     
     # Check that missing customer is detected

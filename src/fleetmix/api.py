@@ -15,6 +15,7 @@ from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
+from fleetmix.preprocess.demand import maybe_explode
 
 logger = FleetmixLogger.get_logger('fleetmix.api')
 
@@ -29,7 +30,8 @@ def optimize(
     config: Optional[Union[str, Path, Parameters]] = None,
     output_dir: str = "results",
     format: str = "excel",
-    verbose: bool = False
+    verbose: bool = False,
+    allow_split_stops: bool = False
 ) -> FleetmixSolution:
     """
     Optimize fleet size and mix for given demand and configuration.
@@ -45,6 +47,7 @@ def optimize(
         output_dir: Directory to save results (default: "results")
         format: Output format - "excel" or "json" (default: "excel")  
         verbose: Enable verbose logging (default: False)
+        allow_split_stops: Allow customers to be served by multiple vehicles (default: False)
     
     Returns:
         FleetmixSolution: Optimization results
@@ -127,6 +130,13 @@ def optimize(
                     f"Error loading configuration from {config_path}:\n{str(e)}\n"
                     f"Please check the YAML syntax and required fields."
                 )
+        
+        # Override allow_split_stops if provided via API
+        if allow_split_stops != params.allow_split_stops:
+            params.allow_split_stops = allow_split_stops
+        
+        # Apply split-stop preprocessing if enabled
+        customers_df = maybe_explode(customers_df, params.allow_split_stops)
         
         # Validate demand DataFrame has required columns
         required_columns = ['Customer_ID', 'Latitude', 'Longitude']

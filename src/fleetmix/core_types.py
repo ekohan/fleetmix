@@ -85,6 +85,21 @@ class Customer:
         return pd.DataFrame(data)
 
 
+@dataclass
+class PseudoCustomer:
+    """Represents a pseudo-customer for split-stop capability.
+    
+    A pseudo-customer represents a subset of goods that a physical customer needs,
+    allowing the physical customer to be served by multiple vehicles.
+    """
+    customer_id: str  # Format: "original_id::good1-good2-..."
+    origin_id: str    # Original physical customer ID
+    subset: Tuple[str, ...]  # Tuple of goods this pseudo-customer represents
+    demands: Dict[str, float]  # Demand vector (only for goods in subset)
+    location: Tuple[float, float]  # Same location as original customer
+    service_time: float = 25.0  # Service time in minutes
+
+
 def empty_dataframe_factory():
     """Ensures a new empty DataFrame is created for default."""
     return pd.DataFrame()

@@ -362,7 +362,7 @@ def main():
                     capacity = st.number_input(
                         f"Capacity",
                         min_value=100,
-                        max_value=10000,
+                        max_value=1000000,
                         value=int(vehicle_data.capacity if hasattr(vehicle_data, 'capacity') else vehicle_data['capacity']),
                         step=100,
                         key=f"vehicle_{vehicle_type}_capacity"
@@ -392,7 +392,7 @@ def main():
                     service_time = st.number_input(
                         f"Service Time (min)",
                         min_value=5,
-                        max_value=120,
+                        max_value=12000,
                         value=int(vehicle_data.service_time if hasattr(vehicle_data, 'service_time') else 25),
                         step=5,
                         key=f"vehicle_{vehicle_type}_service_time"
@@ -401,7 +401,7 @@ def main():
                     max_route_time = st.number_input(
                         f"Max Route Time (h)",
                         min_value=4,
-                        max_value=24,
+                        max_value=240,
                         value=int(vehicle_data.max_route_time if hasattr(vehicle_data, 'max_route_time') else 10),
                         step=1,
                         key=f"vehicle_{vehicle_type}_max_route_time"
@@ -483,17 +483,17 @@ def main():
             )
             if post_opt_enabled:
                 st.number_input(
-                    "Small Cluster Size", min_value=1, max_value=100,
+                    "Small Cluster Size", min_value=1, max_value=1000000,
                     value=int(st.session_state.parameters.small_cluster_size),
                     key='param_small_cluster_size'
                 )
                 st.number_input(
-                    "Nearest Merge Candidates", min_value=1, max_value=1000,
+                    "Nearest Merge Candidates", min_value=1, max_value=1000000,
                     value=int(st.session_state.parameters.nearest_merge_candidates),
                     key='param_nearest_merge_candidates'
                 )
                 st.number_input(
-                    "Max Improvement Iterations", min_value=0, max_value=100,
+                    "Max Improvement Iterations", min_value=0, max_value=1000000,
                     value=int(st.session_state.parameters.max_improvement_iterations),
                     key='param_max_improvement_iterations'
                 )

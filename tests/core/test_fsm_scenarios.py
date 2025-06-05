@@ -459,7 +459,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         )
         selected = _extract_solution(clusters_df, y_vars, x_vars)
         missing = _validate_solution(
-            selected, customers_df, configurations
+            selected, customers_df, configurations, params
         )
         assert missing == exp["missing_customers"]
     else:

@@ -54,6 +54,7 @@ from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Cluster, Customer
+from fleetmix.preprocess.demand import is_pseudo_customer, get_origin_id, get_subset_from_id
 logger = FleetmixLogger.get_logger(__name__)
 
 # Helper functions for working with List[VehicleConfiguration]
@@ -200,9 +201,10 @@ def _solve_internal(
     # Extract and validate solution
     selected_clusters = _extract_solution(clusters_df, y_vars, x_vars)
     missing_customers = _validate_solution(
-        selected_clusters, 
+        selected_clusters,
         customers_df,
-        configurations
+        configurations,
+        parameters
     )
     
     # Add goods columns from configurations before calculating statistics
@@ -362,14 +364,43 @@ def _create_model(
 
     # Constraints
 
-    # 1. Customer Allocation Constraint (Exact Assignment)
-    for i in N:
-        model += pulp.lpSum(
-            x_vars[v, k]
-            for k in K_i[i]
-            for v in V_k[k]
-            if v != 'NoVehicle'
-        ) == 1, f"Customer_Coverage_{i}"
+    # 1. Customer Allocation Constraint (Exact Assignment or Split-Stop Exclusivity)
+    if parameters.allow_split_stops:
+        # Build mapping tables for split-stop constraints
+        origin_id = {customer_id: get_origin_id(customer_id) for customer_id in N}
+        subset = {customer_id: get_subset_from_id(customer_id) for customer_id in N}
+        
+        # Get all physical customers and their goods
+        physical_customers = set(origin_id.values())
+        goods_by_physical = {}
+        for physical_customer in physical_customers:
+            goods_by_physical[physical_customer] = set()
+            for customer_id in N:
+                if origin_id[customer_id] == physical_customer:
+                    goods_by_physical[physical_customer].update(subset[customer_id])
+        
+        # Exclusivity constraints: each physical customer's each good must be served exactly once
+        for physical_customer in physical_customers:
+            for good in goods_by_physical[physical_customer]:
+                model += pulp.lpSum(
+                    x_vars[v, k]
+                    for customer_id in N
+                    if origin_id[customer_id] == physical_customer and good in subset[customer_id]
+                    for k in K_i[customer_id]
+                    for v in V_k[k]
+                    if v != 'NoVehicle'
+                ) == 1, f"Cover_{physical_customer}_{good}"
+                
+        logger.info(f"Added split-stop exclusivity constraints for {len(physical_customers)} physical customers")
+    else:
+        # Standard customer coverage constraint: each customer served exactly once
+        for i in N:
+            model += pulp.lpSum(
+                x_vars[v, k]
+                for k in K_i[i]
+                for v in V_k[k]
+                if v != 'NoVehicle'
+            ) == 1, f"Customer_Coverage_{i}"
 
     # 2. Vehicle Configuration Assignment Constraint
     for k in K:
@@ -414,12 +445,15 @@ def _extract_solution(
 def _validate_solution(
     selected_clusters: pd.DataFrame,
     customers_df: pd.DataFrame,
-    configurations: List[VehicleConfiguration]
+    configurations: List[VehicleConfiguration],
+    parameters: Parameters
 ) -> Set:
     """
     Validate that all customers are served in the solution.
     """
-
+    # In split-stop mode, MILP ensures per-good coverage; skip validation of pseudo-customers
+    if parameters.allow_split_stops:
+        return set()
     all_customers_set = set(customers_df['Customer_ID'])
     served_customers = set()
     for _, cluster in selected_clusters.iterrows():

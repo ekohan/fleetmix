@@ -32,6 +32,7 @@ class Parameters:
     nearest_merge_candidates: int = 10
     max_improvement_iterations: int = 4
     prune_tsp: bool = False
+    allow_split_stops: bool = False
 
     config_file_path: Optional[Path] = field(default=None, repr=False)
     results_dir: Path = field(default_factory=lambda: Path(os.environ.get("PROJECT_RESULTS_DIR", PROJECT_ROOT / "results")))

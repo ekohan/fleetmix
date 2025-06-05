@@ -94,5 +94,5 @@ def test_extract_and_validate_solution(toy_fsm_edge_data):
         {'Customer_ID': 'C1', 'Dry_Demand': 0, 'Chilled_Demand': 0, 'Frozen_Demand': 0},
         {'Customer_ID': 'C2', 'Dry_Demand': 0, 'Chilled_Demand': 0, 'Frozen_Demand': 0}
     ])
-    missing = _validate_solution(selected, customers_df, configurations)
+    missing = _validate_solution(selected, customers_df, configurations, params)
     assert missing == set() 

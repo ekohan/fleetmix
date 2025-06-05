@@ -30,9 +30,13 @@ else
   exit 1
 fi
 
-# Install requirements
-echo "Installing requirements..."
-pip install -r requirements.txt
+# Ensure pip is up-to-date
+echo "Upgrading pip..."
+pip install --upgrade pip
+
+# Install dependencies from pyproject.toml
+echo "Installing dependencies from pyproject.toml..."
+pip install .[dev]  # Assumes dev dependencies are specified in pyproject.toml
 
 # Install the fleetmix package in editable mode
 echo "Installing fleetmix package in editable mode..."

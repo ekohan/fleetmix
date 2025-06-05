@@ -38,7 +38,7 @@ Typical usage
 >>> from fleetmix.optimization import solve_fsm_problem
 >>> clusters = generate_clusters_for_configurations(customers, configs, params)
 >>> solution = solve_fsm_problem(clusters, configs, customers, params)
->>> print(solution['total_cost'])
+>>> print(solution.total_cost)
 """
 
 import time
@@ -53,7 +53,7 @@ from fleetmix.post_optimization import improve_solution
 from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Cluster, Customer
 logger = FleetmixLogger.get_logger(__name__)
 
 # Helper functions for working with List[VehicleConfiguration]
@@ -73,9 +73,9 @@ def _configs_to_dataframe(configurations: List[VehicleConfiguration]) -> pd.Data
     return pd.DataFrame([config.to_dict() for config in configurations])
 
 def solve_fsm_problem(
-    clusters_df: pd.DataFrame,
+    clusters: List[Cluster],
     configurations: List[VehicleConfiguration],
-    customers_df: pd.DataFrame,
+    customers: List[Customer],
     parameters: Parameters,
     solver=None,
     verbose: bool = False,
@@ -89,12 +89,10 @@ def solve_fsm_problem(
     which cluster each vehicle will serve.
 
     Args:
-        clusters_df: Output of the clustering stage. Must contain at least the
-            columns ``['Cluster_ID', 'Customers', 'Config_ID', 'Total_Demand',
-            'Route_Time']``.
+        clusters: List of Cluster objects from the clustering stage.
         configurations: List of vehicle configurations, each containing
             capacity, fixed cost, and compartment information.
-        customers_df: Original customer data used for validation—ensures every
+        customers: List of Customer objects used for validation—ensures every
             customer is covered in the final solution.
         parameters: Fully populated :class:`fleetmix.config.parameters.Parameters`
             object with cost coefficients, penalty thresholds, etc.
@@ -105,14 +103,14 @@ def solve_fsm_problem(
         time_recorder: Optional TimeRecorder instance to measure post-optimization time.
 
     Returns:
-        Dict: A dictionary with keys
+        FleetmixSolution: A solution object with
             ``total_cost``, ``total_fixed_cost``, ``total_variable_cost``,
             ``total_penalties``, ``selected_clusters`` (DataFrame),
             ``vehicles_used`` (dict), and solver metadata.
 
     Example:
         >>> sol = solve_fsm_problem(clusters, configs, customers, params)
-        >>> sol['total_cost']
+        >>> sol.total_cost
         10543.75
 
     Note:
@@ -120,6 +118,23 @@ def solve_fsm_problem(
         refined by :func:`fleetmix.post_optimization.improve_solution` before being
         returned.
     """
+    # Convert to DataFrames for internal processing
+    clusters_df = Cluster.to_dataframe(clusters)
+    customers_df = Customer.to_dataframe(customers)
+    
+    # Call internal implementation
+    return _solve_internal(clusters_df, configurations, customers_df, parameters, solver, verbose, time_recorder)
+
+def _solve_internal(
+    clusters_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
+    customers_df: pd.DataFrame,
+    parameters: Parameters,
+    solver=None,
+    verbose: bool = False,
+    time_recorder=None
+) -> FleetmixSolution:
+    """Internal implementation that processes DataFrames."""
     # Create optimization model
     model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, parameters)
     
@@ -216,13 +231,16 @@ def solve_fsm_problem(
     # Improvement phase
     post_optimization_time = None
     if parameters.post_optimization:
+        # Convert customers_df back to list of Customer objects for post-optimization
+        customers_list = Customer.from_dataframe(customers_df)
+        
         if time_recorder:
             with time_recorder.measure("fsm_post_optimization"):
                 post_start = time.time()
                 solution = improve_solution(
                     solution,
                     configurations,
-                    customers_df,
+                    customers_list,
                     parameters
                 )
                 post_end = time.time()
@@ -232,7 +250,7 @@ def solve_fsm_problem(
             solution = improve_solution(
                 solution,
                 configurations,
-                customers_df,
+                customers_list,
                 parameters
             )
             post_end = time.time()

@@ -90,7 +90,7 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     
     # Use pytest's raises to catch the expected sys.exit(1) call
     with pytest.raises(SystemExit) as excinfo:
-        optimization.solve_fsm_problem(clusters_df, configurations, customers_df, params)
+        optimization._solve_internal(clusters_df, configurations, customers_df, params)
     
     # Verify that the exit code is 1 as expected
     assert excinfo.value.code == 1

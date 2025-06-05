@@ -36,6 +36,54 @@ class Customer:
     demands: Dict[str, float]  # e.g., {'dry': 10, 'chilled': 5}
     location: Tuple[float, float]  # (latitude, longitude)
 
+    @staticmethod
+    def from_dataframe(df: pd.DataFrame) -> List['Customer']:
+        """Convert DataFrame to list of Customer objects."""
+        customers = []
+        for _, row in df.iterrows():
+            # Extract demands from columns ending with '_Demand'
+            demand_cols = [col for col in df.columns if col.endswith('_Demand')]
+            demands = {}
+            for col in demand_cols:
+                good_name = col.replace('_Demand', '').lower()
+                demands[good_name] = row[col]
+            
+            customer = Customer(
+                customer_id=row['Customer_ID'],
+                demands=demands,
+                location=(row.get('Latitude', 0.0), row.get('Longitude', 0.0))  # Handle missing location
+            )
+            customers.append(customer)
+        return customers
+
+    @staticmethod
+    def to_dataframe(customers: List['Customer']) -> pd.DataFrame:
+        """Convert list of Customer objects to DataFrame."""
+        if len(customers) == 0:
+            # Return DataFrame with proper schema
+            return pd.DataFrame(columns=['Customer_ID', 'Latitude', 'Longitude'])
+        
+        # Determine all goods from all customers
+        all_goods = set()
+        for customer in customers:
+            all_goods.update(customer.demands.keys())
+        all_goods = sorted(all_goods)
+        
+        data = []
+        for customer in customers:
+            row = {
+                'Customer_ID': customer.customer_id,
+                'Latitude': customer.location[0],
+                'Longitude': customer.location[1]
+            }
+            # Add demand columns
+            for good in all_goods:
+                col_name = f'{good.title()}_Demand'
+                row[col_name] = customer.demands.get(good, 0.0)
+            data.append(row)
+        
+        return pd.DataFrame(data)
+
 
 def empty_dataframe_factory():
     """Ensures a new empty DataFrame is created for default."""
@@ -98,6 +146,64 @@ class Cluster:
     method: str = ''
     tsp_sequence: List[str] = field(default_factory=empty_list_factory)
 
+    @staticmethod
+    def from_dataframe(df: pd.DataFrame) -> List['Cluster']:
+        """Convert DataFrame to list of Cluster objects."""
+        clusters = []
+        for _, row in df.iterrows():
+            # Handle TSP_Sequence column if it exists
+            tsp_sequence = []
+            if 'TSP_Sequence' in df.columns and row['TSP_Sequence'] is not None:
+                tsp_sequence = row['TSP_Sequence'] if isinstance(row['TSP_Sequence'], list) else []
+            
+            # Extract goods_in_config if available, otherwise derive from Total_Demand
+            goods_in_config = []
+            if 'Goods_In_Config' in df.columns and row['Goods_In_Config'] is not None:
+                goods_in_config = row['Goods_In_Config'] if isinstance(row['Goods_In_Config'], list) else []
+            elif 'Total_Demand' in df.columns and isinstance(row['Total_Demand'], dict):
+                goods_in_config = [good for good, demand in row['Total_Demand'].items() if demand > 0]
+            
+            cluster = Cluster(
+                cluster_id=row['Cluster_ID'],
+                config_id=row.get('Config_ID', 'unassigned'),  # Handle missing Config_ID
+                customers=row['Customers'] if isinstance(row['Customers'], list) else [],
+                total_demand=row['Total_Demand'] if isinstance(row['Total_Demand'], dict) else {},
+                centroid_latitude=row.get('Centroid_Latitude', 0.0),  # Handle missing centroids
+                centroid_longitude=row.get('Centroid_Longitude', 0.0),  # Handle missing centroids
+                goods_in_config=goods_in_config,
+                route_time=row['Route_Time'],
+                method=row.get('Method', ''),
+                tsp_sequence=tsp_sequence
+            )
+            clusters.append(cluster)
+        return clusters
+
+    @staticmethod
+    def to_dataframe(clusters: List['Cluster']) -> pd.DataFrame:
+        """Convert list of Cluster objects to DataFrame."""
+        if len(clusters) == 0:
+            return pd.DataFrame()
+        
+        data = []
+        for cluster in clusters:
+            row = {
+                'Cluster_ID': cluster.cluster_id,
+                'Config_ID': cluster.config_id,
+                'Customers': cluster.customers,
+                'Total_Demand': cluster.total_demand,
+                'Centroid_Latitude': cluster.centroid_latitude,
+                'Centroid_Longitude': cluster.centroid_longitude,
+                'Goods_In_Config': cluster.goods_in_config,
+                'Route_Time': cluster.route_time,
+                'Method': cluster.method
+            }
+            # Only add TSP_Sequence if it exists and is not empty
+            if cluster.tsp_sequence:
+                row['TSP_Sequence'] = cluster.tsp_sequence
+            data.append(row)
+        
+        return pd.DataFrame(data)
+
     def to_dict(self) -> Dict:
         """Convert cluster to dictionary format."""
         data = {
@@ -115,7 +221,6 @@ class Cluster:
         if self.tsp_sequence:
             data['TSP_Sequence'] = self.tsp_sequence
         return data
-
 
 @dataclass
 class FleetmixSolution:

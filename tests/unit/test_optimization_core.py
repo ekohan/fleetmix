@@ -100,10 +100,15 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
 def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
     """Test basic FSM problem solving."""
     configurations = dataframe_to_configurations(simple_configs_df)
+    # Convert DataFrames to lists for new API
+    from fleetmix.core_types import Cluster, Customer
+    clusters_list = Cluster.from_dataframe(simple_clusters_df)
+    customers_list = Customer.from_dataframe(simple_customers_df)
+    
     result = solve_fsm_problem(
-        clusters_df=simple_clusters_df,
+        clusters=clusters_list,
         configurations=configurations,
-        customers_df=simple_customers_df,
+        customers=customers_list,
         parameters=simple_params,
         verbose=False
     )
@@ -123,10 +128,15 @@ def test_solve_fsm_problem_basic(simple_clusters_df, simple_configs_df, simple_c
 def test_solve_fsm_problem_with_post_optimization(simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt):
     """Test FSM problem solving with post-optimization enabled."""
     configurations = dataframe_to_configurations(simple_configs_df)
+    # Convert DataFrames to lists for new API
+    from fleetmix.core_types import Cluster, Customer
+    clusters_list = Cluster.from_dataframe(simple_clusters_df)
+    customers_list = Customer.from_dataframe(simple_customers_df)
+    
     result = solve_fsm_problem(
-        clusters_df=simple_clusters_df,
+        clusters=clusters_list,
         configurations=configurations,
-        customers_df=simple_customers_df,
+        customers=customers_list,
         parameters=params_with_post_opt,
         verbose=False
     )
@@ -253,11 +263,16 @@ def test_solve_with_infeasible_clusters():
     configurations = dataframe_to_configurations(configs_df)
 
     # This should exit with an error
+    # Convert DataFrames to lists for new API
+    from fleetmix.core_types import Cluster, Customer
+    clusters_list = Cluster.from_dataframe(clusters_df)
+    customers_list = Customer.from_dataframe(customers_df)
+    
     with pytest.raises(SystemExit):
         solve_fsm_problem(
-            clusters_df=clusters_df,
+            clusters=clusters_list,
             configurations=configurations,
-            customers_df=customers_df,
+            customers=customers_list,
             parameters=params,
             verbose=False
         )

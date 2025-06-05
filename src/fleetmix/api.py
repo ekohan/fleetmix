@@ -14,7 +14,7 @@ from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
 
 logger = FleetmixLogger.get_logger('fleetmix.api')
 
@@ -141,6 +141,9 @@ def optimize(
                 f"Available columns are: {list(customers_df.columns)}"
             )
         
+        # Convert customers DataFrame to list of Customer objects
+        customers = Customer.from_dataframe(customers_df)
+        
         # Step 3: Generate vehicle configurations
         try:
             with time_recorder.measure("vehicle_configuration"):
@@ -154,8 +157,8 @@ def optimize(
         # Step 4: Generate clusters
         try:
             with time_recorder.measure("clustering"):
-                clusters_df = generate_clusters_for_configurations(
-                    customers=customers_df,
+                clusters = generate_clusters_for_configurations(
+                    customers=customers,
                     configurations=configs,
                     params=params
                 )
@@ -167,7 +170,7 @@ def optimize(
             )
         
         # Check if clustering generated any valid clusters
-        if clusters_df.empty:
+        if not clusters:
             raise ValueError(
                 "No feasible clusters could be generated!\n"
                 "Possible causes:\n"
@@ -181,9 +184,9 @@ def optimize(
         try:
             with time_recorder.measure("fsm_initial"):
                 solution = solve_fsm_problem(
-                    clusters_df=clusters_df,
+                    clusters=clusters,
                     configurations=configs,
-                    customers_df=customers_df,
+                    customers=customers,
                     parameters=params,
                     verbose=verbose,
                     time_recorder=time_recorder

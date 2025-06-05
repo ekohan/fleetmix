@@ -14,7 +14,7 @@ import itertools
 from dataclasses import replace
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation, VehicleConfiguration
+from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation, VehicleConfiguration, Customer
 from .heuristics import (
     get_feasible_customers_subset,
     create_initial_clusters,
@@ -30,12 +30,37 @@ class Symbols:
     CROSS = "✗"
 
 def generate_clusters_for_configurations(
+    customers: List[Customer],
+    configurations: List[VehicleConfiguration],
+    params: Parameters,
+) -> List[Cluster]:
+    """
+    Generate clusters for each vehicle configuration in parallel.
+    
+    Args:
+        customers: List of Customer objects containing customer data
+        configurations: List of vehicle configurations
+        params: Parameters object containing vehicle configuration parameters
+    
+    Returns:
+        List of Cluster objects containing all generated clusters
+    """
+    # Convert to DataFrame for internal processing
+    customers_df = Customer.to_dataframe(customers)
+    
+    # Call internal implementation
+    clusters_df = _generate_clusters(customers_df, configurations, params)
+    
+    # Convert back to list of Cluster objects
+    return Cluster.from_dataframe(clusters_df)
+
+def _generate_clusters(
     customers: pd.DataFrame,
     configurations: List[VehicleConfiguration],
     params: Parameters,
 ) -> pd.DataFrame:
     """
-    Generate clusters for each vehicle configuration in parallel.
+    Internal implementation - generate clusters for each vehicle configuration in parallel.
     
     Args:
         customers: DataFrame containing customer data

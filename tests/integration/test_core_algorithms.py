@@ -11,6 +11,7 @@ import shutil
 import yaml
 
 from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.core_types import Customer
 from fleetmix.clustering.heuristics import (
     get_feasible_customers_subset, 
     create_initial_clusters
@@ -179,24 +180,24 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
-            customers=realistic_customers,
+        # Convert DataFrame to list of Customer objects for new API
+        customers_list = Customer.from_dataframe(realistic_customers)
+        
+        clusters = generate_clusters_for_configurations(
+            customers=customers_list,
             configurations=configs,
             params=realistic_config
         )
         
         # Should generate some clusters
-        assert len(clusters_df) > 0
+        assert len(clusters) > 0
         
-        # Verify cluster structure
-        expected_cols = ['Cluster_ID', 'Config_ID', 'Customers']
-        for col in expected_cols:
-            assert col in clusters_df.columns
-        
-        # Verify clusters have customers assigned
-        for _, cluster in clusters_df.iterrows():
-            customers_list = cluster['Customers']
-            assert len(customers_list) > 0
+        # Verify cluster structure (now list of Cluster objects)
+        for cluster in clusters:
+            assert hasattr(cluster, 'cluster_id')
+            assert hasattr(cluster, 'config_id')
+            assert hasattr(cluster, 'customers')
+            assert len(cluster.customers) > 0
 
     def test_coordinate_conversions(self, realistic_customers):
         """Test coordinate conversion and distance calculations."""
@@ -325,17 +326,20 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
-            customers=realistic_customers,
+        # Convert DataFrame to list of Customer objects for new API
+        customers_list = Customer.from_dataframe(realistic_customers)
+        
+        clusters = generate_clusters_for_configurations(
+            customers=customers_list,
             configurations=configs,
             params=realistic_config
         )
         
         # Solve the FSM problem using the new API
         solution = solve_fsm_problem(
-            clusters_df=clusters_df,
+            clusters=clusters,
             configurations=configs,
-            customers_df=realistic_customers,
+            customers=customers_list,
             parameters=realistic_config,
             verbose=True
         )
@@ -354,16 +358,19 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
-            customers=realistic_customers,
+        # Convert DataFrame to list of Customer objects for new API
+        customers_list = Customer.from_dataframe(realistic_customers)
+        
+        clusters = generate_clusters_for_configurations(
+            customers=customers_list,
             configurations=configs,
             params=realistic_config
         )
         
         solution = solve_fsm_problem(
-            clusters_df=clusters_df,
+            clusters=clusters,
             configurations=configs,
-            customers_df=realistic_customers,
+            customers=customers_list,
             parameters=realistic_config,
             verbose=False
         )
@@ -374,7 +381,7 @@ class TestCoreAlgorithms:
                 improved_solution = improve_solution(
                     initial_solution=solution,
                     configurations=configs,
-                    customers_df=realistic_customers,
+                    customers=customers_list,
                     params=realistic_config
                 )
                 
@@ -385,7 +392,8 @@ class TestCoreAlgorithms:
             except Exception as e:
                 # Post-optimization might fail due to time limits or other issues
                 # This is acceptable in testing
-                logger.warning(f"Post-optimization failed: {e}")
+                import warnings
+                warnings.warn(f"Post-optimization failed: {e}")
                 pass
 
     def test_large_scale_clustering(self, realistic_config):
@@ -412,19 +420,22 @@ class TestCoreAlgorithms:
         # Reduce time limits for testing
         realistic_config.clustering['time_limit_minutes'] = 2
         
-        clusters_df = generate_clusters_for_configurations(
-            customers=large_customers,
+        # Convert DataFrame to list of Customer objects for new API
+        customers_list = Customer.from_dataframe(large_customers)
+        
+        clusters = generate_clusters_for_configurations(
+            customers=customers_list,
             configurations=configs,
             params=realistic_config
         )
         
         # Should handle larger datasets
-        if len(clusters_df) > 0:
+        if len(clusters) > 0:
             # Verify no customer is assigned to multiple clusters in same config
             config_customer_sets = {}
-            for _, cluster in clusters_df.iterrows():
-                config_id = cluster['Config_ID']
-                customers_list = cluster['Customers']
+            for cluster in clusters:
+                config_id = cluster.config_id
+                customers_list = cluster.customers
                 
                 if config_id not in config_customer_sets:
                     config_customer_sets[config_id] = set()
@@ -453,19 +464,22 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
-        clusters_df = generate_clusters_for_configurations(
-            customers=single_customer,
+        # Convert DataFrame to list of Customer objects for new API
+        customers_list = Customer.from_dataframe(single_customer)
+        
+        clusters = generate_clusters_for_configurations(
+            customers=customers_list,
             configurations=configs,
             params=realistic_config
         )
         
         # Should handle single customer gracefully
-        assert len(clusters_df) >= 0  # May be 0 if no feasible vehicle
+        assert len(clusters) >= 0  # May be 0 if no feasible vehicle
         
-        if len(clusters_df) > 0:
+        if len(clusters) > 0:
             # If cluster created, should contain the single customer
-            cluster = clusters_df.iloc[0]
-            customers_list = cluster['Customers']
+            cluster = clusters[0]
+            customers_list = cluster.customers
             assert 1 in customers_list
 
     def test_algorithm_performance_bounds(self, realistic_customers, realistic_config):
@@ -481,10 +495,13 @@ class TestCoreAlgorithms:
             realistic_config.goods
         )
         
+        # Convert DataFrame to list of Customer objects for new API
+        customers_list = Customer.from_dataframe(realistic_customers)
+        
         # Time the clustering phase
         start_time = time.time()
-        clusters_df = generate_clusters_for_configurations(
-            customers=realistic_customers,
+        clusters = generate_clusters_for_configurations(
+            customers=customers_list,
             configurations=configs,
             params=realistic_config
         )
@@ -494,7 +511,7 @@ class TestCoreAlgorithms:
         assert clustering_time < 300  # 5 minutes max for test
         
         # Verify clustering produced some result
-        assert isinstance(clusters_df, pd.DataFrame)
+        assert isinstance(clusters, list)
 
 def vehicle_configs_to_dataframe(configs):
     """Helper function to convert configs to DataFrame for tests that need it."""

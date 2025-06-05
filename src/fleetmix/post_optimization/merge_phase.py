@@ -42,7 +42,7 @@ import numpy as np
 from haversine import haversine_vector, Unit
 from dataclasses import replace
 
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
 from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours, make_rt_context
 from fleetmix.config.parameters import Parameters
 from fleetmix.registry import ROUTE_TIME_ESTIMATOR_REGISTRY
@@ -100,7 +100,7 @@ def _get_merged_route_time(
 def improve_solution(
     initial_solution: FleetmixSolution,
     configurations: List[VehicleConfiguration],
-    customers_df: pd.DataFrame,
+    customers: List[Customer],
     params: Parameters
 ) -> FleetmixSolution:
     """Iteratively merge small clusters to lower total cost.
@@ -111,24 +111,37 @@ def improve_solution(
     configuration and whose merge reduces the overall objective value.
 
     Args:
-        initial_solution: Solution dictionary returned by
+        initial_solution: Solution object returned by
             :func:`fleetmix.optimization.solve_fsm_problem`.
         configurations: List of vehicle configurations, each containing
             capacity, fixed cost, and compartment information.
-        customers_df: Original customer dataframe; required for route-time
+        customers: List of Customer objects; required for route-time
             recalculation and centroid updates when evaluating merges.
         params: Parameter object controlling thresholds such as
             ``small_cluster_size``, ``max_improvement_iterations``, etc.
 
     Returns:
-        Dict: Improved solution dictionary (same schema as *initial_solution*).
-        If no improving merge is found the original dictionary is returned.
+        FleetmixSolution: Improved solution object (same schema as *initial_solution*).
+        If no improving merge is found the original object is returned.
 
     Example:
         >>> improved = improve_solution(sol, configs, customers, params)
-        >>> improved['total_cost'] <= sol['total_cost']
+        >>> improved.total_cost <= sol.total_cost
         True
     """
+    # Convert to DataFrame for internal processing
+    customers_df = Customer.to_dataframe(customers)
+    
+    # Call internal implementation
+    return _improve_internal(initial_solution, configurations, customers_df, params)
+
+def _improve_internal(
+    initial_solution: FleetmixSolution,
+    configurations: List[VehicleConfiguration],
+    customers_df: pd.DataFrame,
+    params: Parameters
+) -> FleetmixSolution:
+    """Internal implementation that processes DataFrames."""
     from fleetmix.optimization import solve_fsm_problem
 
     best_solution = initial_solution
@@ -165,7 +178,10 @@ def improve_solution(
         combined_clusters = pd.concat([selected_clusters, merged_clusters], ignore_index=True)
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
-        trial_solution = solve_fsm_problem(
+        
+        # Use the internal solver that accepts DataFrames
+        from fleetmix.optimization.core import _solve_internal
+        trial_solution = _solve_internal(
             combined_clusters,
             configurations,
             customers_df,

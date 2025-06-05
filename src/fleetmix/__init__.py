@@ -9,6 +9,9 @@ from .pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 # Export canonical clustering function
 from .clustering import generate_clusters_for_configurations
 
+# Export domain objects
+from .core_types import Customer, Cluster
+
 # Version
 __version__ = "0.1.0b1"
 
@@ -26,6 +29,8 @@ __all__ = [
     "convert_to_fsm",
     "run_optimization", 
     "generate_clusters_for_configurations",
+    "Customer",
+    "Cluster",
     "optimization", 
     "clustering",
     "post_optimization",

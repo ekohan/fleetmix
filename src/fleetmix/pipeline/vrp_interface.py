@@ -11,7 +11,7 @@ from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.logging import log_progress, log_success, log_detail
 from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
 
 class VRPType(Enum):
     CVRP = 'cvrp'
@@ -37,28 +37,31 @@ def run_optimization(
 ) -> tuple[FleetmixSolution, pd.DataFrame]:
     """
     Run the common FSM optimization pipeline.
-    Returns the solution dictionary and the configurations DataFrame.
+    Returns the solution object and the configurations DataFrame.
     """
     # Initialize TimeRecorder
     time_recorder = TimeRecorder()
     
     with time_recorder.measure("global"):
+        # Convert customers DataFrame to list of Customer objects
+        customers = Customer.from_dataframe(customers_df)
+        
         # Generate vehicle configurations and clusters
         with time_recorder.measure("vehicle_configuration"):
             configs = generate_vehicle_configurations(params.vehicles, params.goods)
         
         with time_recorder.measure("clustering"):
-            clusters_df = generate_clusters_for_configurations(
-                customers=customers_df,
+            clusters = generate_clusters_for_configurations(
+                customers=customers,
                 configurations=configs,
                 params=params
             )
 
         with time_recorder.measure("fsm_initial"):
             solution = solve_fsm_problem(
-                clusters_df=clusters_df,
+                clusters=clusters,
                 configurations=configs,
-                customers_df=customers_df,
+                customers=customers,
                 parameters=params,
                 verbose=verbose,
                 time_recorder=time_recorder

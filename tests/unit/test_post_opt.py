@@ -67,16 +67,20 @@ def test_no_merges(monkeypatch):
     original_gen = fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters
     monkeypatch.setattr(fleetmix.post_optimization.merge_phase, "generate_merge_phase_clusters", fake_gen)
     
-    # Patch the imported solve_fsm_problem
-    original_solve = fleetmix.optimization.solve_fsm_problem
-    monkeypatch.setattr(fleetmix.optimization, "solve_fsm_problem", fake_solve)
+    # Patch the internal solver that merge phase actually calls
+    import fleetmix.optimization.core
+    original_solve = fleetmix.optimization.core._solve_internal
+    monkeypatch.setattr(fleetmix.optimization.core, "_solve_internal", fake_solve)
     
     try:
         initial_clusters = make_cluster_df('c')
         initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
 
-        result = merge_phase.improve_solution(initial_solution, make_configs(), pd.DataFrame(), params)
+        # Convert empty DataFrame to empty list for new API
+        from fleetmix.core_types import Customer
+        customers_list = Customer.from_dataframe(pd.DataFrame())
+        result = merge_phase.improve_solution(initial_solution, make_configs(), customers_list, params)
         assert result.total_cost == initial_solution.total_cost
         assert result.selected_clusters.equals(initial_solution.selected_clusters)
         assert calls['gen'] == 1
@@ -84,7 +88,7 @@ def test_no_merges(monkeypatch):
     finally:
         # Restore the original functions to avoid affecting other tests
         fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters = original_gen
-        fleetmix.optimization.solve_fsm_problem = original_solve
+        fleetmix.optimization.core._solve_internal = original_solve
 
 
 def test_single_merge_then_no_more(monkeypatch):
@@ -106,23 +110,27 @@ def test_single_merge_then_no_more(monkeypatch):
     original_gen = fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters
     monkeypatch.setattr(fleetmix.post_optimization.merge_phase, "generate_merge_phase_clusters", fake_gen)
     
-    # Patch the imported solve_fsm_problem
-    original_solve = fleetmix.optimization.solve_fsm_problem
-    monkeypatch.setattr(fleetmix.optimization, "solve_fsm_problem", fake_solve)
+    # Patch the internal solver that merge phase actually calls
+    import fleetmix.optimization.core
+    original_solve = fleetmix.optimization.core._solve_internal
+    monkeypatch.setattr(fleetmix.optimization.core, "_solve_internal", fake_solve)
     
     try:
         initial_clusters = make_cluster_df('c1')
         initial_solution = FleetmixSolution(selected_clusters=initial_clusters, total_cost=100)
         params = Parameters.from_yaml()
 
-        result = merge_phase.improve_solution(initial_solution, make_configs(), pd.DataFrame(), params)
+        # Convert empty DataFrame to empty list for new API
+        from fleetmix.core_types import Customer
+        customers_list = Customer.from_dataframe(pd.DataFrame())
+        result = merge_phase.improve_solution(initial_solution, make_configs(), customers_list, params)
         assert result.total_cost == 90
         assert calls['gen'] == 2
         assert calls['solve'] == 1
     finally:
         # Restore the original functions to avoid affecting other tests
         fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters = original_gen
-        fleetmix.optimization.solve_fsm_problem = original_solve
+        fleetmix.optimization.core._solve_internal = original_solve
 
 
 def test_iteration_cap(monkeypatch):
@@ -146,9 +154,10 @@ def test_iteration_cap(monkeypatch):
     original_gen = fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters
     monkeypatch.setattr(fleetmix.post_optimization.merge_phase, "generate_merge_phase_clusters", fake_gen)
     
-    # Patch the imported solve_fsm_problem
-    original_solve = fleetmix.optimization.solve_fsm_problem
-    monkeypatch.setattr(fleetmix.optimization, "solve_fsm_problem", fake_solve)
+    # Patch the internal solver that merge phase actually calls
+    import fleetmix.optimization.core
+    original_solve = fleetmix.optimization.core._solve_internal
+    monkeypatch.setattr(fleetmix.optimization.core, "_solve_internal", fake_solve)
     
     try:
         initial_clusters = make_cluster_df('c0')
@@ -156,10 +165,13 @@ def test_iteration_cap(monkeypatch):
         params = Parameters.from_yaml()
         params.max_improvement_iterations = 3
 
-        result = merge_phase.improve_solution(initial_solution, make_configs(), pd.DataFrame(), params)
+        # Convert empty DataFrame to empty list for new API
+        from fleetmix.core_types import Customer
+        customers_list = Customer.from_dataframe(pd.DataFrame())
+        result = merge_phase.improve_solution(initial_solution, make_configs(), customers_list, params)
         assert calls['solve'] == 3
         assert result.total_cost == 100 - 3
     finally:
         # Restore the original functions to avoid affecting other tests
         fleetmix.post_optimization.merge_phase.generate_merge_phase_clusters = original_gen
-        fleetmix.optimization.solve_fsm_problem = original_solve 
+        fleetmix.optimization.core._solve_internal = original_solve 

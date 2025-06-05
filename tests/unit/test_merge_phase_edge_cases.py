@@ -65,7 +65,10 @@ def test_improve_solution_no_clusters(simple_params):
     customers_df = pd.DataFrame()
     
     # Should return the initial solution unchanged
-    result = improve_solution(initial_solution_obj, configs, customers_df, simple_params)
+    # Convert DataFrame to list for new API
+    from fleetmix.core_types import Customer
+    customers_list = Customer.from_dataframe(customers_df)
+    result = improve_solution(initial_solution_obj, configs, customers_list, simple_params)
     assert result.total_cost == initial_solution_obj.total_cost
     assert result.selected_clusters.empty
 
@@ -107,7 +110,10 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
     })
     
     # This should handle missing goods columns
-    result = improve_solution(initial_solution_obj, configurations, customers_df, params_with_post_opt)
+    # Convert DataFrame to list for new API
+    from fleetmix.core_types import Customer
+    customers_list = Customer.from_dataframe(customers_df)
+    result = improve_solution(initial_solution_obj, configurations, customers_list, params_with_post_opt)
     assert not result.selected_clusters.empty
 
 

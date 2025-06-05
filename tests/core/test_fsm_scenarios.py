@@ -463,8 +463,13 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         )
         assert missing == exp["missing_customers"]
     else:
+        # Convert DataFrames to lists for new API
+        from fleetmix.core_types import Cluster, Customer
+        clusters_list = Cluster.from_dataframe(clusters_df)
+        customers_list = Customer.from_dataframe(customers_df)
+        
         result = solve_fsm_problem(
-            clusters_df, configurations, customers_df, params, verbose=False
+            clusters_list, configurations, customers_list, params, verbose=False
         )
         # Compare expected
         assert result.missing_customers == exp["missing_customers"]

@@ -30,6 +30,7 @@ src/*.egg-info/
 *.xml
 *.egg-info/
 *.txt
+.cursor/
 
 # TODO: do add the paper
 paper_wip.txt

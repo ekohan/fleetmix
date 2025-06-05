@@ -56,27 +56,26 @@ class TestMatrixBuilding(unittest.TestCase):
     
     def tearDown(self):
         """Clean up matrix cache."""
-        _matrix_cache['distance_matrix'] = None
-        _matrix_cache['duration_matrix'] = None
-        _matrix_cache['customer_id_to_idx'] = None
+        _matrix_cache.clear()
     
     def test_build_matrices_normal(self):
         """Test building matrices with normal data."""
         build_distance_duration_matrices(self.customers_df, self.depot, self.avg_speed)
         
-        # Check cache is populated
-        self.assertIsNotNone(_matrix_cache['distance_matrix'])
-        self.assertIsNotNone(_matrix_cache['duration_matrix'])
-        self.assertIsNotNone(_matrix_cache['customer_id_to_idx'])
+        # Check cache is populated for this speed
+        self.assertIn(self.avg_speed, _matrix_cache)
+        self.assertIsNotNone(_matrix_cache[self.avg_speed]['distance_matrix'])
+        self.assertIsNotNone(_matrix_cache[self.avg_speed]['duration_matrix'])
+        self.assertIsNotNone(_matrix_cache[self.avg_speed]['customer_id_to_idx'])
         
         # Check matrix dimensions (depot + 3 customers = 4x4)
-        self.assertEqual(_matrix_cache['distance_matrix'].shape, (4, 4))
-        self.assertEqual(_matrix_cache['duration_matrix'].shape, (4, 4))
+        self.assertEqual(_matrix_cache[self.avg_speed]['distance_matrix'].shape, (4, 4))
+        self.assertEqual(_matrix_cache[self.avg_speed]['duration_matrix'].shape, (4, 4))
         
         # Check customer mapping
-        self.assertEqual(_matrix_cache['customer_id_to_idx']['C1'], 1)
-        self.assertEqual(_matrix_cache['customer_id_to_idx']['C2'], 2)
-        self.assertEqual(_matrix_cache['customer_id_to_idx']['C3'], 3)
+        self.assertEqual(_matrix_cache[self.avg_speed]['customer_id_to_idx']['C1'], 1)
+        self.assertEqual(_matrix_cache[self.avg_speed]['customer_id_to_idx']['C2'], 2)
+        self.assertEqual(_matrix_cache[self.avg_speed]['customer_id_to_idx']['C3'], 3)
     
     def test_build_matrices_empty_dataframe(self):
         """Test building matrices with empty customer data."""
@@ -94,7 +93,10 @@ class TestMatrixBuilding(unittest.TestCase):
         
         with patch('fleetmix.utils.route_time.logger') as mock_logger:
             build_distance_duration_matrices(df_with_duplicates, self.depot, self.avg_speed)
-            mock_logger.warning.assert_called_with("Duplicate Customer IDs found. Matrix mapping might be incorrect.")
+            # Check that warning was called about duplicates
+            warning_calls = [call for call in mock_logger.warning.call_args_list 
+                           if "Duplicate Customer IDs" in str(call)]
+            self.assertTrue(len(warning_calls) > 0, "Expected warning about duplicate IDs")
     
     def test_build_matrices_missing_columns(self):
         """Test building matrices with missing coordinate columns."""
@@ -114,12 +116,13 @@ class TestMatrixBuilding(unittest.TestCase):
         try:
             build_distance_duration_matrices(self.customers_df, self.depot, 0)
             # If it succeeds, check that duration matrix has large values
-            duration_matrix = _matrix_cache['duration_matrix']
-            # Off-diagonal elements should be very large (representing infinity)
-            off_diagonal = duration_matrix[duration_matrix > 0]
-            if len(off_diagonal) > 0:
-                # Check that values are very large (representing infinity)
-                self.assertTrue(np.all(off_diagonal > 1e6))
+            if 0 in _matrix_cache:
+                duration_matrix = _matrix_cache[0]['duration_matrix']
+                # Off-diagonal elements should be very large (representing infinity)
+                off_diagonal = duration_matrix[duration_matrix > 0]
+                if len(off_diagonal) > 0:
+                    # Check that values are very large (representing infinity)
+                    self.assertTrue(np.all(off_diagonal > 1e6))
         except OverflowError:
             # This is also acceptable - the function tried to convert infinity to int
             pass
@@ -174,9 +177,7 @@ class TestRouteTimeEstimation(unittest.TestCase):
     def test_estimate_route_time_tsp(self):
         """Test TSP estimation method returns reasonable values."""
         # Clear cache to ensure fresh computation
-        _matrix_cache['distance_matrix'] = None
-        _matrix_cache['duration_matrix'] = None
-        _matrix_cache['customer_id_to_idx'] = None
+        _matrix_cache.clear()
         
         time, sequence = estimate_route_time(
             self.cluster_customers, self.depot, self.service_time,
@@ -301,9 +302,7 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
         self.avg_speed = 30  # km/h
         
         # Clear matrix cache
-        _matrix_cache['distance_matrix'] = None
-        _matrix_cache['duration_matrix'] = None
-        _matrix_cache['customer_id_to_idx'] = None
+        _matrix_cache.clear()
     
     def test_tsp_estimation_empty_cluster(self):
         """Test TSP estimation with empty cluster."""
@@ -335,18 +334,21 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
     @patch('fleetmix.utils.route_time.Model')
     def test_tsp_estimation_with_cached_matrices(self, mock_model):
         """Test TSP estimation using cached matrices."""
-        # Set up cache
-        _matrix_cache['distance_matrix'] = np.array([
-            [0, 1000, 2000],
-            [1000, 0, 1500],
-            [2000, 1500, 0]
-        ])
-        _matrix_cache['duration_matrix'] = np.array([
-            [0, 120, 240],
-            [120, 0, 180],
-            [240, 180, 0]
-        ])
-        _matrix_cache['customer_id_to_idx'] = {'C1': 1, 'C2': 2}
+        # Set up cache for the specific speed
+        _matrix_cache[self.avg_speed] = {
+            'distance_matrix': np.array([
+                [0, 1000, 2000],
+                [1000, 0, 1500],
+                [2000, 1500, 0]
+            ]),
+            'duration_matrix': np.array([
+                [0, 120, 240],
+                [120, 0, 180],
+                [240, 180, 0]
+            ]),
+            'customer_id_to_idx': {'C1': 1, 'C2': 2},
+            'depot_idx': 0
+        }
         
         cluster = pd.DataFrame({
             'Customer_ID': ['C1'],
@@ -400,10 +402,13 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
     
     def test_tsp_estimation_missing_customer_in_cache(self):
         """Test TSP estimation when customer is missing from cache."""
-        # Set up incomplete cache
-        _matrix_cache['distance_matrix'] = np.array([[0, 1000], [1000, 0]])
-        _matrix_cache['duration_matrix'] = np.array([[0, 120], [120, 0]])
-        _matrix_cache['customer_id_to_idx'] = {'C1': 1}  # C2 is missing
+        # Set up incomplete cache for the specific speed
+        _matrix_cache[self.avg_speed] = {
+            'distance_matrix': np.array([[0, 1000], [1000, 0]]),
+            'duration_matrix': np.array([[0, 120], [120, 0]]),
+            'customer_id_to_idx': {'C1': 1},  # C2 is missing
+            'depot_idx': 0
+        }
         
         cluster = pd.DataFrame({
             'Customer_ID': ['C1', 'C2'],
@@ -416,9 +421,12 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
             time, sequence = estimate_route_time(
                 cluster, self.depot, self.service_time, self.avg_speed, method='TSP'
             )
+            
+            # Should log warning about missing IDs
+            warning_calls = [call for call in mock_logger.warning.call_args_list 
+                           if "not found in global matrix cache" in str(call)]
+            self.assertTrue(len(warning_calls) > 0, "Expected warning about missing customer IDs")
         
-        # Should log warning about missing IDs
-        mock_logger.warning.assert_called()
         # Should still return a result (using on-the-fly computation)
         self.assertIsInstance(time, float)
         self.assertIsInstance(sequence, list)

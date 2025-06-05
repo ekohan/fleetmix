@@ -34,9 +34,7 @@ def test_calculate_total_service_time_hours():
 def test_build_distance_duration_matrices():
     """Test building distance and duration matrices."""
     # Clear cache first
-    _matrix_cache['distance_matrix'] = None
-    _matrix_cache['duration_matrix'] = None
-    _matrix_cache['customer_id_to_idx'] = None
+    _matrix_cache.clear()
     
     # Create test data
     customers_df = pd.DataFrame({
@@ -51,36 +49,38 @@ def test_build_distance_duration_matrices():
     # Build matrices
     build_distance_duration_matrices(customers_df, depot, avg_speed)
     
-    # Check cache is populated
-    assert _matrix_cache['distance_matrix'] is not None
-    assert _matrix_cache['duration_matrix'] is not None
-    assert _matrix_cache['customer_id_to_idx'] is not None
+    # Check cache is populated for this speed
+    assert avg_speed in _matrix_cache
+    assert _matrix_cache[avg_speed]['distance_matrix'] is not None
+    assert _matrix_cache[avg_speed]['duration_matrix'] is not None
+    assert _matrix_cache[avg_speed]['customer_id_to_idx'] is not None
     
     # Check dimensions (3x3 for depot + 2 customers)
-    assert _matrix_cache['distance_matrix'].shape == (3, 3)
-    assert _matrix_cache['duration_matrix'].shape == (3, 3)
+    assert _matrix_cache[avg_speed]['distance_matrix'].shape == (3, 3)
+    assert _matrix_cache[avg_speed]['duration_matrix'].shape == (3, 3)
     
     # Check customer mapping
-    assert _matrix_cache['customer_id_to_idx'] == {'C1': 1, 'C2': 2}
+    assert _matrix_cache[avg_speed]['customer_id_to_idx'] == {'C1': 1, 'C2': 2}
     
     # Check diagonal is zero
-    assert np.diag(_matrix_cache['distance_matrix']).sum() == 0
-    assert np.diag(_matrix_cache['duration_matrix']).sum() == 0
+    assert np.diag(_matrix_cache[avg_speed]['distance_matrix']).sum() == 0
+    assert np.diag(_matrix_cache[avg_speed]['duration_matrix']).sum() == 0
 
 
 def test_build_distance_duration_matrices_empty():
     """Test building matrices with empty customer data."""
     # Clear cache
-    _matrix_cache['distance_matrix'] = None
+    _matrix_cache.clear()
     
     customers_df = pd.DataFrame()
     depot = {'latitude': 0.0, 'longitude': 0.0}
+    avg_speed = 30
     
     # Should log warning and return
-    build_distance_duration_matrices(customers_df, depot, 30)
+    build_distance_duration_matrices(customers_df, depot, avg_speed)
     
-    # Cache should remain None
-    assert _matrix_cache['distance_matrix'] is None
+    # Cache should not have entry for this speed
+    assert avg_speed not in _matrix_cache
 
 
 def test_build_distance_duration_matrices_missing_columns():
@@ -266,6 +266,9 @@ def test_tsp_estimation_infeasible(mock_model):
 
 def test_estimate_route_time_tsp_with_pruning():
     """Test TSP estimation with pruning enabled."""
+    # Clear cache first
+    _matrix_cache.clear()
+    
     customers_df = pd.DataFrame({
         'Customer_ID': [f'C{i}' for i in range(20)],  # Many customers
         'Latitude': [0.1 * i for i in range(20)],

@@ -32,6 +32,9 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
 
 def test_create_model_constraints(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
+    # Explicitly disable split-stops to ensure consistent constraint naming
+    params.allow_split_stops = False
+    
     configurations = dataframe_to_configurations(config_df)
     model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
     # Each customer coverage constraint exists
@@ -44,6 +47,9 @@ def test_create_model_constraints(toy_fsm_edge_data):
 
 def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
+    # Explicitly disable split-stops to ensure consistent behavior
+    params.allow_split_stops = False
+    
     configurations = dataframe_to_configurations(config_df)
     # small cluster demand -> light-load penalty applies
     params.light_load_penalty = 100
@@ -58,6 +64,9 @@ def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
 
 def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
     clusters_df, config_df, params = toy_fsm_edge_data
+    # Explicitly disable split-stops to ensure consistent behavior
+    params.allow_split_stops = False
+    
     configurations = dataframe_to_configurations(config_df)
     # Make demand exceed capacity
     clusters_df.at[0, 'Total_Demand'] = {'Dry': 100, 'Chilled': 0, 'Frozen': 0}
@@ -79,6 +88,9 @@ def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
 
 def test_extract_and_validate_solution(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
+    # Explicitly disable split-stops to ensure consistent behavior
+    params.allow_split_stops = False
+    
     configurations = dataframe_to_configurations(config_df)
     # Build y_vars: cluster 1 selected
     y = pulp.LpVariable('y_1', cat='Binary'); y.varValue = 1

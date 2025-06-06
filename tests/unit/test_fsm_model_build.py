@@ -32,6 +32,8 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
 def test_create_model_basic(toy_fsm_model_build_data):
     # Use shared toy data fixture for model build tests
     clusters_df, configurations_df, params = toy_fsm_model_build_data
+    # Explicitly disable split-stops to ensure consistent constraint naming
+    params.allow_split_stops = False
     
     # Convert DataFrame to List[VehicleConfiguration]
     configurations = dataframe_to_configurations(configurations_df)

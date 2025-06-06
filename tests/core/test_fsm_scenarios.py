@@ -448,6 +448,8 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
 
     # Load & override params
     params = Parameters.from_yaml()
+    # Explicitly set split-stops to False to ensure consistent test behavior
+    params.allow_split_stops = False
     for k,v in upd.items():
         setattr(params, k, v)
     # Solve or validate infeasible

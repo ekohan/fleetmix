@@ -82,7 +82,7 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
             extra={},
             avg_speed=30.0,
             service_time=25.0,
-            max_route_time=float('inf')  # No time limit for benchmarking
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     # Expected vehicles from instance

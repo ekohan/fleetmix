@@ -103,7 +103,7 @@ def _convert_normal(instance) -> tuple:
             extra={},
             avg_speed=30.0,
             service_time=25.0,
-            max_route_time=float('inf')  # No time limit
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     
@@ -143,7 +143,7 @@ def _convert_split(instance, split_ratios: Dict[str, float]) -> tuple:
             extra={},
             avg_speed=30.0,
             service_time=25.0,
-            max_route_time=float('inf')  # No time limit for benchmarking
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     
@@ -175,7 +175,7 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
             extra={},
             avg_speed=30.0,
             service_time=25.0,
-            max_route_time=float('inf')  # No time limit for benchmarking
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     
@@ -210,7 +210,7 @@ def _convert_combined(instances: List) -> tuple:
             extra={},
             avg_speed=30.0,
             service_time=25.0,
-            max_route_time=float('inf')  # No time limit for benchmarking
+            max_route_time=24*7  # 1 week ~ no time limit
         )
         for idx, (instance, good_outer) in enumerate(zip(instances, goods))
     }

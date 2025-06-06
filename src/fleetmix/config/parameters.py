@@ -76,25 +76,12 @@ class Parameters:
         for v_name, v_details in raw_vehicles_data.items():
             spec_kwargs = {
                 'capacity': v_details.pop('capacity'),
-                'fixed_cost': v_details.pop('fixed_cost')
+                'fixed_cost': v_details.pop('fixed_cost'),
+                'avg_speed': v_details.pop('avg_speed'),
+                'service_time': v_details.pop('service_time'),
+                'max_route_time': v_details.pop('max_route_time'),
             }
-            
-            # Handle timing parameters - expect them to be vehicle-specific
-            if 'avg_speed' in v_details:
-                spec_kwargs['avg_speed'] = v_details.pop('avg_speed')
-            
-            if 'service_time' in v_details:
-                spec_kwargs['service_time'] = v_details.pop('service_time')
-            
-            if 'max_route_time' in v_details:
-                spec_kwargs['max_route_time'] = v_details.pop('max_route_time')
-            
-            # Handle compartments: should be Dict[str, bool]
-            # If compartments is defined in YAML, use it directly. Otherwise, VehicleSpec defaults to empty dict.
-            if 'compartments' in v_details:
-                spec_kwargs['compartments'] = v_details.pop('compartments') 
-            # Else, VehicleSpec will use its default_factory for compartments
-            
+                      
             # Remaining items go into extra
             spec_kwargs['extra'] = v_details 
             parsed_vehicles[v_name] = VehicleSpec(**spec_kwargs)

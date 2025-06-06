@@ -36,15 +36,16 @@ Returns the *best* improved solution dictionary, identical in structure to the o
 ``fleetmix.optimization.solve_fsm_problem`` but with potentially lower total cost.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 import pandas as pd
 import numpy as np
 from haversine import haversine_vector, Unit
 from dataclasses import replace
 
-from fleetmix.core_types import FleetmixSolution
-from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
+from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours, make_rt_context
 from fleetmix.config.parameters import Parameters
+from fleetmix.registry import ROUTE_TIME_ESTIMATOR_REGISTRY
 
 from fleetmix.utils.logging import FleetmixLogger, Symbols
 
@@ -53,34 +54,53 @@ logger = FleetmixLogger.get_logger(__name__)
 # Cache for merged cluster route times
 _merged_route_time_cache: Dict[Tuple[str, ...], Tuple[float, list | None]] = {}
 
+# Helper functions for working with List[VehicleConfiguration]
+def _find_config_by_id(configurations: List[VehicleConfiguration], config_id: str) -> VehicleConfiguration:
+    """Find configuration by ID from list."""
+    for config in configurations:
+        if str(config.config_id) == str(config_id):
+            return config
+    raise KeyError(f"Configuration {config_id} not found")
+
+def _create_config_lookup(configurations: List[VehicleConfiguration]) -> Dict[str, VehicleConfiguration]:
+    """Create a dictionary lookup for configurations."""
+    return {str(config.config_id): config for config in configurations}
+
+def _configs_to_dataframe(configurations: List[VehicleConfiguration]) -> pd.DataFrame:
+    """Convert configurations to DataFrame when pandas operations are needed."""
+    return pd.DataFrame([config.to_dict() for config in configurations])
+
 def _get_merged_route_time(
     customers: pd.DataFrame,
+    config: VehicleConfiguration,
     params: Parameters
 ) -> Tuple[float, list | None]:
     """
     Estimate (and cache) the route time and sequence for a merged cluster of customers.
-    Always uses the same method & max_route_time from params.
+    Uses the vehicle configuration's timing parameters.
     """
     key: Tuple[str, ...] = tuple(sorted(customers['Customer_ID']))
     if key in _merged_route_time_cache:
         return _merged_route_time_cache[key]
     
-    time, sequence = estimate_route_time(
-        cluster_customers=customers,
-        depot=params.depot,
-        service_time=params.service_time,
-        avg_speed=params.avg_speed,
-        method=params.clustering['route_time_estimation'],
-        max_route_time=params.max_route_time,
-        prune_tsp=params.prune_tsp
-    )
+    # Create RouteTimeContext using the factory
+    rt_context = make_rt_context(config, params.depot, params.prune_tsp)
+    
+    # Use the new interface with RouteTimeContext
+    estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(params.clustering['route_time_estimation'])
+    if estimator_class is None:
+        raise ValueError(f"Unknown route time estimation method: {params.clustering['route_time_estimation']}")
+    
+    estimator = estimator_class()
+    time, sequence = estimator.estimate_route_time(customers, rt_context)
+    
     _merged_route_time_cache[key] = (time, sequence)
     return time, sequence
 
 def improve_solution(
     initial_solution: FleetmixSolution,
-    configurations_df: pd.DataFrame,
-    customers_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
+    customers: List[Customer],
     params: Parameters
 ) -> FleetmixSolution:
     """Iteratively merge small clusters to lower total cost.
@@ -91,24 +111,37 @@ def improve_solution(
     configuration and whose merge reduces the overall objective value.
 
     Args:
-        initial_solution: Solution dictionary returned by
+        initial_solution: Solution object returned by
             :func:`fleetmix.optimization.solve_fsm_problem`.
-        configurations_df: Vehicle configuration catalogue (same as used in the
-            optimisation step).
-        customers_df: Original customer dataframe; required for route-time
+        configurations: List of vehicle configurations, each containing
+            capacity, fixed cost, and compartment information.
+        customers: List of Customer objects; required for route-time
             recalculation and centroid updates when evaluating merges.
         params: Parameter object controlling thresholds such as
             ``small_cluster_size``, ``max_improvement_iterations``, etc.
 
     Returns:
-        Dict: Improved solution dictionary (same schema as *initial_solution*).
-        If no improving merge is found the original dictionary is returned.
+        FleetmixSolution: Improved solution object (same schema as *initial_solution*).
+        If no improving merge is found the original object is returned.
 
     Example:
         >>> improved = improve_solution(sol, configs, customers, params)
-        >>> improved['total_cost'] <= sol['total_cost']
+        >>> improved.total_cost <= sol.total_cost
         True
     """
+    # Convert to DataFrame for internal processing
+    customers_df = Customer.to_dataframe(customers)
+    
+    # Call internal implementation
+    return _improve_internal(initial_solution, configurations, customers_df, params)
+
+def _improve_internal(
+    initial_solution: FleetmixSolution,
+    configurations: List[VehicleConfiguration],
+    customers_df: pd.DataFrame,
+    params: Parameters
+) -> FleetmixSolution:
+    """Internal implementation that processes DataFrames."""
     from fleetmix.optimization import solve_fsm_problem
 
     best_solution = initial_solution
@@ -124,14 +157,15 @@ def improve_solution(
             break
 
         # Ensure goods columns exist
+        config_lookup = _create_config_lookup(configurations)
         for good in params.goods:
             if good not in selected_clusters.columns:
                 selected_clusters[good] = selected_clusters['Config_ID'].map(
-                    lambda x: configurations_df[configurations_df['Config_ID'] == x].iloc[0][good]
+                    lambda x: config_lookup[str(x)][good]
                 )
         merged_clusters = generate_merge_phase_clusters(
             selected_clusters,
-            configurations_df,
+            configurations,
             customers_df,
             params
         )
@@ -144,9 +178,12 @@ def improve_solution(
         combined_clusters = pd.concat([selected_clusters, merged_clusters], ignore_index=True)
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
-        trial_solution = solve_fsm_problem(
+        
+        # Use the internal solver that accepts DataFrames
+        from fleetmix.optimization.core import _solve_internal
+        trial_solution = _solve_internal(
             combined_clusters,
-            configurations_df,
+            configurations,
             customers_df,
             internal_params
         )
@@ -180,7 +217,7 @@ def improve_solution(
 
 def generate_merge_phase_clusters(
     selected_clusters: pd.DataFrame,
-    configurations_df: pd.DataFrame,
+    configurations: List[VehicleConfiguration],
     customers_df: pd.DataFrame,
     params: Parameters
 ) -> pd.DataFrame:
@@ -195,7 +232,7 @@ def generate_merge_phase_clusters(
     }
     
     # Create an indexed DataFrame for efficient configuration lookups
-    configs_indexed = configurations_df.set_index('Config_ID')
+    configs_indexed = _configs_to_dataframe(configurations).set_index('Config_ID')
     # Index customers for fast lookup
     customers_indexed = customers_df.set_index('Customer_ID')
     
@@ -247,21 +284,23 @@ def generate_merge_phase_clusters(
             target = target_meta.iloc[idx]
             rt_target = target['Route_Time']
             rt_small  = small['Route_Time']
+            
+            # Get the target configuration to access its service_time
+            target_config = _find_config_by_id(configurations, target['Config_ID'])
 
             # Compute service time for the cluster not contributing the max route_time (avoid double count)
             if rt_small > rt_target:
-                svc_time_other = calculate_total_service_time_hours(len(target['Customers']), params.service_time)
+                svc_time_other = calculate_total_service_time_hours(len(target['Customers']), target_config.service_time)
             else:
-                svc_time_other = calculate_total_service_time_hours(len(small['Customers']), params.service_time)
+                svc_time_other = calculate_total_service_time_hours(len(small['Customers']), target_config.service_time)
 
             # Quick lower-bound time prune before costly route-time estimation (no proximity term)
             lb = max(rt_target, rt_small) + svc_time_other
-            if lb > params.max_route_time:
+            if lb > target_config.max_route_time:
                 stats['invalid_time'] = stats.get('invalid_time', 0) + 1
-                logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={params.max_route_time:.2f}")
+                logger.debug(f"Lower-bound prune: merge {small['Cluster_ID']} + {target['Cluster_ID']} lb={lb:.2f} > max={target_config.max_route_time:.2f}")
                 continue
             stats['attempted'] += 1
-            target_config = configs_indexed.loc[target['Config_ID']]
             is_valid, route_time, demands, tsp_sequence = validate_merged_cluster(
                 small, target, target_config, customers_indexed, params
             )
@@ -291,7 +330,7 @@ def generate_merge_phase_clusters(
                 'Centroid_Latitude': centroid_lat,
                 'Centroid_Longitude': centroid_lon
             }
-            if tsp_sequence is not None:
+            if tsp_sequence is not None: 
                 new_cluster['TSP_Sequence'] = tsp_sequence
             for good in params.goods:
                 new_cluster[good] = target_config[good]
@@ -322,11 +361,11 @@ def generate_merge_phase_clusters(
 def validate_merged_cluster(
     cluster1: pd.Series,
     cluster2: pd.Series,
-    config: pd.Series,
+    config: VehicleConfiguration,
     customers_df: pd.DataFrame,
     params: Parameters
 ) -> Tuple[bool, float, Dict, list | None]:
-    """Validate if two clusters can be merged."""
+    """Validate if two clusters can be merged using the given vehicle configuration."""
     # Index customers for fast lookup
     if customers_df.index.name != 'Customer_ID':
         customers_indexed = customers_df.set_index('Customer_ID', drop=False)
@@ -341,7 +380,7 @@ def validate_merged_cluster(
         merged_goods[g] = demand1 + demand2
     
     # Validate capacity
-    if any(demand > config['Capacity'] for demand in merged_goods.values()):
+    if any(demand > config.capacity for demand in merged_goods.values()):
         return False, 0, {}, None
 
     # Get all customers from both clusters
@@ -372,9 +411,9 @@ def validate_merged_cluster(
         return False, 0, {}, None
 
     # Estimate (and cache) new route time using the general estimator
-    new_route_time, new_sequence = _get_merged_route_time(merged_customers, params)
+    new_route_time, new_sequence = _get_merged_route_time(merged_customers, config, params)
 
-    if new_route_time > params.max_route_time:
+    if new_route_time > config.max_route_time:
         return False, 0, {}, None
 
     return True, new_route_time, merged_goods, new_sequence 

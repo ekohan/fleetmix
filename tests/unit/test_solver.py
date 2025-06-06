@@ -7,11 +7,10 @@ from unittest.mock import patch, MagicMock
 from fleetmix.utils.solver import pick_solver
 
 
-def test_pick_solver_default():
-    """Test pick_solver with default auto mode."""
-    # Remove FSM_SOLVER env var if it exists
-    if 'FSM_SOLVER' in os.environ:
-        del os.environ['FSM_SOLVER']
+def test_pick_solver_default(monkeypatch):
+    """Test pick_solver with default auto mode (FSM_SOLVER unset)."""
+    # Temporarily remove FSM_SOLVER just for this test
+    monkeypatch.delenv("FSM_SOLVER", raising=False)
     
     solver = pick_solver(verbose=False)
     # Should return a solver (either CBC or Gurobi)
@@ -60,10 +59,9 @@ def test_pick_solver_auto_fallback(mock_cbc, mock_gurobi):
     assert solver == mock_cbc_solver
 
 
-def test_pick_solver_verbose():
-    """Test pick_solver with verbose mode."""
-    if 'FSM_SOLVER' in os.environ:
-        del os.environ['FSM_SOLVER']
+def test_pick_solver_verbose(monkeypatch):
+    """Test pick_solver with verbose mode when FSM_SOLVER is unset."""
+    monkeypatch.delenv("FSM_SOLVER", raising=False)
     
     # Just check it doesn't crash with verbose=True
     solver = pick_solver(verbose=True)

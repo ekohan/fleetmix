@@ -15,6 +15,7 @@ results/*.xlsx
 results/*.json
 results/*.html
 results/*.csv
+results/
 
 # Testing
 .hypothesis/
@@ -30,6 +31,8 @@ src/*.egg-info/
 *.xml
 *.egg-info/
 *.txt
+.idea/
+.cursor/
 
 # TODO: do add the paper
 paper_wip.txt

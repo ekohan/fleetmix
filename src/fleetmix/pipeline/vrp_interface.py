@@ -11,11 +11,17 @@ from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.utils.logging import log_progress, log_success, log_detail
 from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
+from fleetmix.preprocess.demand import maybe_explode
 
 class VRPType(Enum):
     CVRP = 'cvrp'
     MCVRP = 'mcvrp'
+
+
+def vehicle_configurations_to_dataframe(configs: list[VehicleConfiguration]) -> pd.DataFrame:
+    """Convert list of VehicleConfiguration to DataFrame for compatibility."""
+    return pd.DataFrame([config.to_dict() for config in configs])
 
 
 def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, Parameters]:
@@ -25,7 +31,6 @@ def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, Parameter
     return convert_vrp_to_fsm(vrp_type, **kwargs)
 
 
-
 def run_optimization(
     customers_df: pd.DataFrame,
     params: Parameters,
@@ -33,28 +38,35 @@ def run_optimization(
 ) -> tuple[FleetmixSolution, pd.DataFrame]:
     """
     Run the common FSM optimization pipeline.
-    Returns the solution dictionary and the configurations DataFrame.
+    Returns the solution object and the configurations DataFrame.
     """
     # Initialize TimeRecorder
     time_recorder = TimeRecorder()
     
     with time_recorder.measure("global"):
+        # Apply split-stop preprocessing if enabled
+        allow_split = getattr(params, 'allow_split_stops', False)
+        customers_df = maybe_explode(customers_df, allow_split)
+
+        # Convert customers DataFrame to list of Customer objects
+        customers = Customer.from_dataframe(customers_df)
+        
         # Generate vehicle configurations and clusters
         with time_recorder.measure("vehicle_configuration"):
-            configs_df = generate_vehicle_configurations(params.vehicles, params.goods)
+            configs = generate_vehicle_configurations(params.vehicles, params.goods)
         
         with time_recorder.measure("clustering"):
-            clusters_df = generate_clusters_for_configurations(
-                customers=customers_df,
-                configurations_df=configs_df,
+            clusters = generate_clusters_for_configurations(
+                customers=customers,
+                configurations=configs,
                 params=params
             )
 
         with time_recorder.measure("fsm_initial"):
             solution = solve_fsm_problem(
-                clusters_df=clusters_df,
-                configurations_df=configs_df,
-                customers_df=customers_df,
+                clusters=clusters,
+                configurations=configs,
+                customers=customers,
                 parameters=params,
                 verbose=verbose,
                 time_recorder=time_recorder
@@ -69,4 +81,6 @@ def run_optimization(
     log_detail(f"Vehicles Used: {sum(solution.vehicles_used.values())}")
     log_detail(f"Expected Vehicles: {params.expected_vehicles}")
 
+    # Convert configs to DataFrame for return (for save_optimization_results compatibility)
+    configs_df = vehicle_configurations_to_dataframe(configs)
     return solution, configs_df 

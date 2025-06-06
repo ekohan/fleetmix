@@ -19,10 +19,10 @@ from fleetmix.utils.logging import log_detail, log_debug, log_progress
 
 class CVRPBenchmarkType(Enum):
     """Types of CVRP benchmarks supported."""
-    NORMAL = "normal"      # Standard conversion with balanced demands
-    SPLIT = "split"        # Split products across customers  
-    SCALED = "scaled"      # Scale demands to fill vehicles
-    COMBINED = "combined"  # Use all conversion types
+    NORMAL = "normal"      # 1 product type
+    SPLIT = "split"        # Split original demand across compartments
+    SCALED = "scaled"      # Multiply demand by number of goods
+    COMBINED = "combined"  # Combine multiple instances to create a multi-good instance
 
 
 def convert_cvrp_to_fsm(
@@ -99,7 +99,11 @@ def _convert_normal(instance) -> tuple:
         'CVRP': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
-            compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+            compartments={'Dry': True, 'Chilled': False, 'Frozen': False},
+            extra={},
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     
@@ -135,7 +139,11 @@ def _convert_split(instance, split_ratios: Dict[str, float]) -> tuple:
         'CVRP_Multi': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
-            compartments={good: True for good in split_ratios}
+            compartments={good: True for good in split_ratios},
+            extra={},
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     
@@ -163,7 +171,11 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
         'CVRP_Scaled': VehicleSpec(
             capacity=instance.capacity * num_goods,
             fixed_cost=1000,
-            compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+            compartments={'Dry': True, 'Chilled': False, 'Frozen': False},
+            extra={},
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     
@@ -194,7 +206,11 @@ def _convert_combined(instances: List) -> tuple:
         f'CVRP_{idx+1}': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
-            compartments={g: (g == good_outer) for g in goods}
+            compartments={g: (g == good_outer) for g in goods},
+            extra={},
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=24*7  # 1 week ~ no time limit
         )
         for idx, (instance, good_outer) in enumerate(zip(instances, goods))
     }
@@ -236,10 +252,6 @@ def _create_base_params(instance) -> Parameters:
         latitude=depot_coords[0],
         longitude=depot_coords[1]
     )
-
-    params.max_route_time = float('inf')
     
-    return params 
+    return params
 
-# Expose CVRPParser alias for test monkeypatching on converter module
-CVRPParser = cvrp_parser.CVRPParser 

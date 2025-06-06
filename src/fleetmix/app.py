@@ -75,7 +75,7 @@ def _list_instances(suite: str) -> None:
     console.print(f"[dim]Usage: fleetmix benchmark {suite} --instance INSTANCE_NAME[/dim]")
 
 
-def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] = None, format: str = "json", verbose: bool = False) -> None:
+def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] = None, format: str = "json", verbose: bool = False, allow_split_stops: bool = False) -> None:
     """Run a single benchmark instance."""
     if suite == "mcvrp":
         # Run single MCVRP instance
@@ -187,6 +187,10 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         if output_dir:
             params.results_dir = output_dir
         
+        # Override allow_split_stops if specified
+        if allow_split_stops:
+            params.allow_split_stops = allow_split_stops
+        
         # Use the unified pipeline interface for optimization
         start_time = time.time()
         solution, configs_df = run_optimization(
@@ -251,7 +255,7 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         log_success(f"Results saved to {output_path.name}")
 
 
-def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False) -> None:
+def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False, allow_split_stops: bool = False) -> None:
     """Run benchmarks for all MCVRP instances."""
     datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "mcvrp"
     
@@ -269,6 +273,10 @@ def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, verbose: bool = 
             # Override output directory if specified
             if output_dir:
                 params.results_dir = output_dir
+            
+            # Override allow_split_stops if specified
+            if allow_split_stops:
+                params.allow_split_stops = allow_split_stops
             
             # Use the unified pipeline interface for optimization
             start_time = time.time()
@@ -298,7 +306,7 @@ def _run_all_mcvrp_instances(output_dir: Optional[Path] = None, verbose: bool = 
                 console.print_exception()
 
 
-def _run_all_cvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False) -> None:
+def _run_all_cvrp_instances(output_dir: Optional[Path] = None, verbose: bool = False, debug: bool = False, allow_split_stops: bool = False) -> None:
     """Run benchmarks for all CVRP instances."""
     datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "cvrp"
     
@@ -318,6 +326,10 @@ def _run_all_cvrp_instances(output_dir: Optional[Path] = None, verbose: bool = F
             # Override output directory if specified
             if output_dir:
                 params.results_dir = output_dir
+            
+            # Override allow_split_stops if specified
+            if allow_split_stops:
+                params.allow_split_stops = allow_split_stops
             
             # Use the unified pipeline interface for optimization
             start_time = time.time()
@@ -360,6 +372,7 @@ def optimize(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Minimal output (errors only)"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
+    allow_split_stops: bool = typer.Option(False, "--allow-split-stops", help="Allow customers to be served by multiple vehicles (per-good atomicity)"),
 ) -> None:
     """
     Optimize fleet size and mix for given customer demand.
@@ -400,7 +413,8 @@ def optimize(
                     config=str(config) if config else None,
                     output_dir=str(output),
                     format=format,
-                    verbose=verbose
+                    verbose=verbose,
+                    allow_split_stops=allow_split_stops
                 )
                 
                 progress.update(task, completed=True)
@@ -411,7 +425,8 @@ def optimize(
                 config=str(config) if config else None,
                 output_dir=str(output),
                 format=format,
-                verbose=verbose
+                verbose=verbose,
+                allow_split_stops=allow_split_stops
             )
         
         # Display results summary (always shown unless quiet)
@@ -458,6 +473,7 @@ def benchmark(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Minimal output (errors only)"),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
+    allow_split_stops: bool = typer.Option(False, "--allow-split-stops", help="Allow customers to be served by multiple vehicles (per-good atomicity)"),
 ) -> None:
     """
     Run benchmark suite on standard VRP instances.
@@ -483,7 +499,7 @@ def benchmark(
     
     if instance:
         # Run single instance
-        _run_single_instance(suite, instance, output, format, verbose)
+        _run_single_instance(suite, instance, output, format, verbose, allow_split_stops)
     else:
         # Run all instances
         try:
@@ -492,11 +508,11 @@ def benchmark(
                 
             if suite == "mcvrp":
                 # Implement batch MCVRP processing using pipeline interface
-                _run_all_mcvrp_instances(output, verbose, debug)
+                _run_all_mcvrp_instances(output, verbose, debug, allow_split_stops)
                         
             else:  # cvrp
                 # Implement batch CVRP processing using pipeline interface
-                _run_all_cvrp_instances(output, verbose, debug)
+                _run_all_cvrp_instances(output, verbose, debug, allow_split_stops)
             
             log_success(f"{suite.upper()} benchmark completed successfully!")
                 

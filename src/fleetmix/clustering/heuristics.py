@@ -15,9 +15,10 @@ from kmedoids import KMedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.route_time import estimate_route_time
-from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY
+from fleetmix.utils.route_time import make_rt_context
+from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY, ROUTE_TIME_ESTIMATOR_REGISTRY
 
-from fleetmix.core_types import Cluster, ClusteringContext
+from fleetmix.core_types import Cluster, ClusteringContext, VehicleConfiguration
 from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -168,6 +169,7 @@ def get_cached_demand(
 
 def get_cached_route_time(
     customers: pd.DataFrame,
+    config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     route_time_cache: Dict,
     main_params: Parameters
@@ -178,15 +180,16 @@ def get_cached_route_time(
     if result is not None:
         return result
     
-    route_time, route_sequence = estimate_route_time(
-        cluster_customers=customers,
-        depot=clustering_context.depot,
-        service_time=clustering_context.service_time,
-        avg_speed=clustering_context.avg_speed,
-        method=clustering_context.route_time_estimation,
-        max_route_time=clustering_context.max_route_time,
-        prune_tsp=main_params.prune_tsp
-    )
+    # Create RouteTimeContext using the factory
+    rt_context = make_rt_context(config, clustering_context.depot, main_params.prune_tsp)
+    
+    # Use the new interface with RouteTimeContext
+    estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(clustering_context.route_time_estimation)
+    if estimator_class is None:
+        raise ValueError(f"Unknown route time estimation method: {clustering_context.route_time_estimation}")
+    
+    estimator = estimator_class()
+    route_time, route_sequence = estimator.estimate_route_time(customers, rt_context)
     
     route_time_cache[key] = (route_time, route_sequence)
     return route_time, route_sequence
@@ -206,7 +209,7 @@ def get_feasible_customers_subset(
 
 def create_initial_clusters(
     customers_subset: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     main_params: Parameters,
     method_name: str = 'minibatch_kmeans'
@@ -235,7 +238,7 @@ def create_small_dataset_clusters(customers_subset: pd.DataFrame) -> pd.DataFram
 
 def create_normal_dataset_clusters(
     customers_subset: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     main_params: Parameters,
     method_name: str
@@ -273,7 +276,7 @@ def generate_cluster_id_base(config_id: int) -> int:
 
 def check_constraints(
     cluster_customers: pd.DataFrame,
-    config: pd.Series,
+    config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
@@ -296,19 +299,20 @@ def check_constraints(
     # Get route time from cache (ignore sequence for constraint check)
     route_time, _ = get_cached_route_time(
         cluster_customers,
+        config,
         clustering_context,
         route_time_cache,
         main_params
     )
     
-    capacity_violated = cluster_demand > config['Capacity']
-    time_violated = route_time > clustering_context.max_route_time
+    capacity_violated = cluster_demand > config.capacity
+    time_violated = route_time > config.max_route_time
     
     return capacity_violated, time_violated
 
 def should_split_cluster(
     cluster_customers: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     depth: int,
     demand_cache: Dict,
@@ -369,7 +373,7 @@ def split_cluster(
 
 def create_cluster(
     cluster_customers: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     cluster_id: int, 
     clustering_context: ClusteringContext,
     demand_cache: Dict,
@@ -388,6 +392,7 @@ def create_cluster(
     # Get route time and sequence from cache
     route_time, tsp_sequence = get_cached_route_time(
         cluster_customers,
+        config,
         clustering_context,
         route_time_cache,
         main_params
@@ -395,12 +400,12 @@ def create_cluster(
     
     cluster = Cluster(
         cluster_id=cluster_id,
-        config_id=config['Config_ID'],
+        config_id=config.config_id,
         customers=cluster_customers['Customer_ID'].tolist(),
         total_demand=total_demand,
         centroid_latitude=float(cluster_customers['Latitude'].mean()),
         centroid_longitude=float(cluster_customers['Longitude'].mean()),
-        goods_in_config=[g for g in clustering_context.goods if config[g] == 1],
+        goods_in_config=[g for g in clustering_context.goods if config.compartments[g]],
         route_time=route_time,
         method=method_name,
         tsp_sequence=tsp_sequence
@@ -409,7 +414,7 @@ def create_cluster(
 
 def process_clusters_recursively(
     initial_clusters_df: pd.DataFrame, 
-    config: pd.Series, 
+    config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     demand_cache: Dict,
     route_time_cache: Dict,
@@ -417,7 +422,7 @@ def process_clusters_recursively(
     method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process clusters recursively to ensure constraints are satisfied."""
-    config_id = config['Config_ID']
+    config_id = config.config_id
     cluster_id_base = generate_cluster_id_base(config_id)
     current_cluster_id = 0
     clusters = [] 
@@ -452,7 +457,7 @@ def process_clusters_recursively(
             if capacity_violated or time_violated:
                 logger.debug(f"⚠️ Max depth {clustering_context.max_depth} reached but constraints still violated: "
                               f"capacity={capacity_violated}, time={time_violated}, "
-                              f"method={method_name}, config_id={config['Config_ID']}")
+                              f"method={method_name}, config_id={config.config_id}")
                 skipped_count += 1
                 continue  # Skip this cluster
         
@@ -488,7 +493,7 @@ def process_clusters_recursively(
 
 def estimate_num_initial_clusters(
     customers: pd.DataFrame,
-    config: pd.Series,
+    config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     main_params: Parameters = None
 ) -> int:
@@ -504,32 +509,33 @@ def estimate_num_initial_clusters(
     # Calculate total demand for relevant goods
     total_demand = 0
     for good in clustering_context.goods:
-        if config[good]:  # Only consider goods this vehicle can carry
+        if config.compartments[good]:  # Only consider goods this vehicle can carry
             total_demand += customers[f'{good}_Demand'].sum()
 
     # Estimate clusters needed based on capacity
-    clusters_by_capacity = np.ceil(total_demand / config['Capacity'])
+    clusters_by_capacity = np.ceil(total_demand / config.capacity)
 
     # Estimate time for an average route
     avg_customers_per_cluster = len(customers) / clusters_by_capacity
     # Ensure sample size doesn't exceed population size and is at least 1 if possible
     sample_size = max(1, min(int(avg_customers_per_cluster), len(customers)))
     avg_cluster = customers.sample(n=sample_size)
-    # Unpack the tuple returned by estimate_route_time
-    avg_route_time, _ = estimate_route_time(
-        cluster_customers=avg_cluster,
-        depot=clustering_context.depot,
-        service_time=clustering_context.service_time, # in minutes
-        avg_speed=clustering_context.avg_speed,
-        method=clustering_context.route_time_estimation, # Use the specific method for estimation
-        max_route_time=clustering_context.max_route_time, # Pass max_route_time
-        prune_tsp=prune_tsp_val # Use params.prune_tsp or default False
-    )
+    
+    # Create RouteTimeContext using the factory
+    rt_context = make_rt_context(config, clustering_context.depot, prune_tsp_val)
+    
+    # Use the new interface with RouteTimeContext
+    estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(clustering_context.route_time_estimation)
+    if estimator_class is None:
+        raise ValueError(f"Unknown route time estimation method: {clustering_context.route_time_estimation}")
+    
+    estimator = estimator_class()
+    avg_route_time, _ = estimator.estimate_route_time(avg_cluster, rt_context)
 
     # Estimate clusters needed based on time
     clusters_by_time = np.ceil(
         avg_route_time * len(customers) / 
-        (clustering_context.max_route_time * avg_customers_per_cluster)
+        (config.max_route_time * avg_customers_per_cluster)
     )
 
     # Take the maximum of the two estimates

@@ -9,7 +9,8 @@ from .core import (
     _extract_solution,
     _validate_solution,
     _calculate_solution_statistics,
-    _calculate_cluster_cost
+    _calculate_cluster_cost,
+    _solve_internal
 )
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     '_extract_solution',
     '_validate_solution',
     '_calculate_solution_statistics',
-    '_calculate_cluster_cost'
+    '_calculate_cluster_cost',
+    '_solve_internal'
 ] 

@@ -13,7 +13,29 @@ from fleetmix.post_optimization.merge_phase import (
     _get_merged_route_time
 )
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
+
+
+def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
+    """Convert DataFrame to List[VehicleConfiguration] for testing."""
+    configs = []
+    for _, row in df.iterrows():
+        # Determine compartments based on goods columns
+        compartments = {}
+        goods_cols = ['Dry', 'Chilled', 'Frozen']
+        for good in goods_cols:
+            if good in row:
+                compartments[good] = bool(row[good])
+        
+        config = VehicleConfiguration(
+            config_id=row['Config_ID'],
+            vehicle_type=row.get('Vehicle_Type', 'Test'),
+            capacity=row['Capacity'],
+            fixed_cost=row['Fixed_Cost'],
+            compartments=compartments
+        )
+        configs.append(config)
+    return configs
 
 
 @pytest.fixture
@@ -39,11 +61,14 @@ def test_improve_solution_no_clusters(simple_params):
         total_variable_cost=50,
     )
     
-    configs_df = pd.DataFrame()
+    configs = []
     customers_df = pd.DataFrame()
     
     # Should return the initial solution unchanged
-    result = improve_solution(initial_solution_obj, configs_df, customers_df, simple_params)
+    # Convert DataFrame to list for new API
+    from fleetmix.core_types import Customer
+    customers_list = Customer.from_dataframe(customers_df)
+    result = improve_solution(initial_solution_obj, configs, customers_list, simple_params)
     assert result.total_cost == initial_solution_obj.total_cost
     assert result.selected_clusters.empty
 
@@ -76,6 +101,7 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
         'Chilled': [0],
         'Frozen': [0]
     })
+    configurations = dataframe_to_configurations(configs_df)
     
     customers_df = pd.DataFrame({
         'Customer_ID': ['Cust1', 'Cust2'],
@@ -84,7 +110,10 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
     })
     
     # This should handle missing goods columns
-    result = improve_solution(initial_solution_obj, configs_df, customers_df, params_with_post_opt)
+    # Convert DataFrame to list for new API
+    from fleetmix.core_types import Customer
+    customers_list = Customer.from_dataframe(customers_df)
+    result = improve_solution(initial_solution_obj, configurations, customers_list, params_with_post_opt)
     assert not result.selected_clusters.empty
 
 
@@ -113,6 +142,7 @@ def test_generate_merge_phase_clusters_with_small_clusters(simple_params):
         'Chilled': [0],
         'Frozen': [0]
     })
+    configurations = dataframe_to_configurations(configs_df)
     
     customers_df = pd.DataFrame({
         'Customer_ID': ['Cust1', 'Cust2'],
@@ -121,7 +151,7 @@ def test_generate_merge_phase_clusters_with_small_clusters(simple_params):
     })
     
     # Should generate merge candidates when small clusters exist
-    result = generate_merge_phase_clusters(selected_clusters, configs_df, customers_df, simple_params)
+    result = generate_merge_phase_clusters(selected_clusters, configurations, customers_df, simple_params)
     assert not result.empty  # Should have some merge candidates
 
 
@@ -141,13 +171,13 @@ def test_validate_merged_cluster_missing_customers(simple_params):
         'Route_Time': 1.0
     })
     
-    config = pd.Series({
-        'Config_ID': 'V1',
-        'Capacity': 50,
-        'Dry': 1,
-        'Chilled': 0,
-        'Frozen': 0
-    })
+    config = VehicleConfiguration(
+        config_id='V1',
+        vehicle_type='Test',
+        capacity=50,
+        fixed_cost=100,
+        compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+    )
     
     # Only has Cust1 and Cust2, missing Missing1
     customers_df = pd.DataFrame({
@@ -179,13 +209,13 @@ def test_validate_merged_cluster_invalid_locations(simple_params):
         'Route_Time': 1.0
     })
     
-    config = pd.Series({
-        'Config_ID': 'V1',
-        'Capacity': 50,
-        'Dry': 1,
-        'Chilled': 0,
-        'Frozen': 0
-    })
+    config = VehicleConfiguration(
+        config_id='V1',
+        vehicle_type='Test',
+        capacity=50,
+        fixed_cost=100,
+        compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+    )
     
     # Cust2 has NaN location
     customers_df = pd.DataFrame({
@@ -217,13 +247,13 @@ def test_validate_merged_cluster_capacity_exceeded(simple_params):
         'Route_Time': 1.0
     })
     
-    config = pd.Series({
-        'Config_ID': 'V1',
-        'Capacity': 50,  # Total demand would be 60, exceeding capacity
-        'Dry': 1,
-        'Chilled': 0,
-        'Frozen': 0
-    })
+    config = VehicleConfiguration(
+        config_id='V1',
+        vehicle_type='Test',
+        capacity=50,  # Total demand would be 60, exceeding capacity
+        fixed_cost=100,
+        compartments={'Dry': True, 'Chilled': False, 'Frozen': False}
+    )
     
     customers_df = pd.DataFrame({
         'Customer_ID': ['Cust1', 'Cust2'],
@@ -251,12 +281,25 @@ def test_get_merged_route_time_caching(simple_params):
         'Longitude': [0.1, 0.2]
     })
     
+    # Create a vehicle configuration for the function
+    from fleetmix.core_types import VehicleConfiguration
+    config = VehicleConfiguration(
+        config_id=1,
+        vehicle_type="Test",
+        capacity=100,
+        fixed_cost=50,
+        compartments={'Dry': True},
+        avg_speed=30.0,
+        service_time=25.0,
+        max_route_time=10.0
+    )
+    
     # First call should compute
-    time1, seq1 = _get_merged_route_time(customers, simple_params)
+    time1, seq1 = _get_merged_route_time(customers, config, simple_params)
     assert len(_merged_route_time_cache) == 1
     
     # Second call should use cache
-    time2, seq2 = _get_merged_route_time(customers, simple_params)
+    time2, seq2 = _get_merged_route_time(customers, config, simple_params)
     assert time1 == time2
     assert seq1 == seq2
     assert len(_merged_route_time_cache) == 1  # Still only one entry 

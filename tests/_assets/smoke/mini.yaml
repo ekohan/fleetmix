@@ -3,10 +3,10 @@ vehicles:
   A:
     capacity: 1000
     fixed_cost: 100
+    avg_speed: 30
+    max_route_time: 4
+    service_time: 10
 variable_cost_per_hour: 5.0
-avg_speed: 30
-max_route_time: 4
-service_time: 10
 
 depot:
   latitude: 0.0

@@ -73,14 +73,16 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
     # Set depot location
     depot_lat, depot_lon = geo_coords[instance.depot_id]
     params.depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
-    # No max route time by default
-    params.max_route_time = float('inf')
     # Single multi-compartment vehicle
     params.vehicles = {
         'MCVRP': VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
-            compartments={'Dry': True, 'Chilled': True, 'Frozen': True}
+            compartments={'Dry': True, 'Chilled': True, 'Frozen': True},
+            extra={},
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=24*7  # 1 week ~ no time limit
         )
     }
     # Expected vehicles from instance

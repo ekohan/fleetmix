@@ -17,9 +17,6 @@ class Parameters:
     """Configuration parameters for the optimization"""
     vehicles: Dict[str, VehicleSpec]
     variable_cost_per_hour: float
-    avg_speed: float
-    max_route_time: float
-    service_time: float
     depot: DepotLocation
     goods: List[str]
     clustering: Dict
@@ -34,6 +31,7 @@ class Parameters:
     nearest_merge_candidates: int = 10
     max_improvement_iterations: int = 4
     prune_tsp: bool = False
+    allow_split_stops: bool = False
 
     config_file_path: Optional[Path] = field(default=None, repr=False)
     results_dir: Path = field(default_factory=lambda: Path(os.environ.get("PROJECT_RESULTS_DIR", PROJECT_ROOT / "results")))
@@ -78,14 +76,12 @@ class Parameters:
         for v_name, v_details in raw_vehicles_data.items():
             spec_kwargs = {
                 'capacity': v_details.pop('capacity'),
-                'fixed_cost': v_details.pop('fixed_cost')
+                'fixed_cost': v_details.pop('fixed_cost'),
+                'avg_speed': v_details.pop('avg_speed'),
+                'service_time': v_details.pop('service_time'),
+                'max_route_time': v_details.pop('max_route_time'),
             }
-            # Handle compartments: should be Dict[str, bool]
-            # If compartments is defined in YAML, use it directly. Otherwise, VehicleSpec defaults to empty dict.
-            if 'compartments' in v_details:
-                spec_kwargs['compartments'] = v_details.pop('compartments') 
-            # Else, VehicleSpec will use its default_factory for compartments
-            
+                      
             # Remaining items go into extra
             spec_kwargs['extra'] = v_details 
             parsed_vehicles[v_name] = VehicleSpec(**spec_kwargs)

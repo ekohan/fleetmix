@@ -58,6 +58,9 @@ vehicles:
   Test Van:
     fixed_cost: 100
     capacity: 500
+    avg_speed: 40.0 # km/hr
+    max_route_time: 8.0 # hours
+    service_time: 10.0 # minutes, moved from clustering
     compartments:
       Dry: True
       Chilled: True
@@ -67,9 +70,6 @@ vehicles:
 
 # Root level parameters
 variable_cost_per_hour: 20.0
-avg_speed: 40.0 # km/hr
-max_route_time: 8.0 # hours
-service_time: 10.0 # minutes, moved from clustering
 
 clustering:
   route_time_estimation: 'Legacy'

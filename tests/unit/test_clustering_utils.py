@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from fleetmix.clustering import compute_composite_distance, estimate_num_initial_clusters
-from fleetmix.core_types import ClusteringContext, DepotLocation
+from fleetmix.core_types import ClusteringContext, DepotLocation, VehicleConfiguration
 from fleetmix.config.parameters import Parameters
 
 
@@ -44,15 +44,21 @@ def test_estimate_num_initial_clusters_by_capacity():
     demands = [ {'Dry':2} for _ in coords ]
     df = make_customers(coords, demands, goods)
 
-    # Build dummy config and clustering context
-    config = pd.Series({'Config_ID':1, 'Capacity':3, 'Dry':1, 'Chilled':0, 'Frozen':0})
+    # Build dummy config and clustering context using VehicleConfiguration
+    config = VehicleConfiguration(
+        config_id=1,
+        vehicle_type='TestVehicle',
+        capacity=3,
+        fixed_cost=100,
+        compartments={'Dry': True, 'Chilled': False, 'Frozen': False},
+        avg_speed=1,
+        service_time=0,
+        max_route_time=100
+    )
     depot_location = DepotLocation(latitude=0, longitude=0)
     context = ClusteringContext(
         goods=goods,
         depot=depot_location,
-        avg_speed=1,
-        service_time=0,
-        max_route_time=100,
         max_depth=1,
         route_time_estimation='Legacy',
         geo_weight=1.0,

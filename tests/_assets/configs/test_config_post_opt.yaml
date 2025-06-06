@@ -3,20 +3,24 @@ vehicles:
   Small:
     capacity: 50
     fixed_cost: 100
+    avg_speed: 30
+    max_route_time: 8
+    service_time: 10
   Medium:
     capacity: 75
     fixed_cost: 125
+    avg_speed: 30
+    max_route_time: 8
+    service_time: 10
   Large:
     capacity: 100
     fixed_cost: 150
+    avg_speed: 30
+    max_route_time: 8
+    service_time: 10
 
 # Cost Parameters
 variable_cost_per_hour: 20.0
-
-# Time Parameters
-avg_speed: 30
-max_route_time: 8
-service_time: 10
 
 # Location
 depot:

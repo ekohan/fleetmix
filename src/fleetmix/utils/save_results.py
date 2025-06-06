@@ -105,9 +105,6 @@ def save_optimization_results(
         ('---Parameters---', ''),
         ('Demand File', parameters.demand_file),
         ('Variable Cost per Hour', parameters.variable_cost_per_hour),
-        ('Average Speed', parameters.avg_speed),
-        ('Max Route Time', parameters.max_route_time),
-        ('Service Time per Customer', parameters.service_time),
         ('Max Split Depth', parameters.clustering['max_depth']),
         ('Clustering Method', parameters.clustering['method']),
         ('Clustering Distance', parameters.clustering['distance']),
@@ -123,6 +120,9 @@ def save_optimization_results(
     for v_type, specs in parameters.vehicles.items():
         summary_metrics.append((f'Vehicle Type {v_type} Capacity', specs.capacity))
         summary_metrics.append((f'Vehicle Type {v_type} Fixed Cost', specs.fixed_cost))
+        summary_metrics.append((f'Vehicle Type {v_type} Avg Speed', specs.avg_speed))
+        summary_metrics.append((f'Vehicle Type {v_type} Service Time', specs.service_time))
+        summary_metrics.append((f'Vehicle Type {v_type} Max Route Time', specs.max_route_time))
         # If VehicleSpec has an 'extra' field, we want to include those:
         if hasattr(specs, 'extra') and specs.extra:
             for extra_key, extra_value in specs.extra.items():
@@ -417,8 +417,8 @@ def save_benchmark_results(
                 configurations.append({
                     'Config_ID': f"{product}_{vt_name}",
                     'Vehicle_Type': vt_name,
-                    'Capacity': vt_info['capacity'],
-                    'Fixed_Cost': vt_info['fixed_cost'],
+                    'Capacity': vt_info.capacity,
+                    'Fixed_Cost': vt_info.fixed_cost,
                     'Dry': 1 if product == 'Dry' else 0,
                     'Chilled': 1 if product == 'Chilled' else 0,
                     'Frozen': 1 if product == 'Frozen' else 0
@@ -427,8 +427,8 @@ def save_benchmark_results(
             configurations.append({
                 'Config_ID': f"mcv_{vt_name}",
                 'Vehicle_Type': vt_name,
-                'Capacity': vt_info['capacity'],
-                'Fixed_Cost': vt_info['fixed_cost'],
+                'Capacity': vt_info.capacity,
+                'Fixed_Cost': vt_info.fixed_cost,
                 'Dry': 1,
                 'Chilled': 1,
                 'Frozen': 1
@@ -449,7 +449,7 @@ def save_benchmark_results(
                 )
                 
                 # Calculate actual utilization percentage
-                vehicle_capacity = parameters.vehicles[vehicle_type]['capacity']
+                vehicle_capacity = parameters.vehicles[vehicle_type].capacity
                 utilization = solution.vehicle_loads[route_idx] / vehicle_capacity
                 
                 route_detail = {

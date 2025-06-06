@@ -3,14 +3,12 @@ vehicles:
   Van:
     capacity: 80
     fixed_cost: 120
+    avg_speed: 35
+    max_route_time: 10
+    service_time: 15
 
 # Cost Parameters
 variable_cost_per_hour: 25.0
-
-# Time Parameters
-avg_speed: 35
-max_route_time: 10
-service_time: 15
 
 # Location
 depot:

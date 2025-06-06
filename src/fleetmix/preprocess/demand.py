@@ -3,6 +3,8 @@ Demand preprocessing for split-stop capability.
 
 This module provides functions to handle split-stop scenarios by creating
 pseudo-customers that represent subsets of goods that a physical customer requires.
+
+TODO: rename?
 """
 
 from typing import List, Dict, Mapping, Tuple
@@ -163,4 +165,7 @@ def get_subset_from_id(customer_id: str) -> Tuple[str, ...]:
         subset_str = customer_id.split('::')[1]
         return tuple(subset_str.split('-'))
     # For regular customers, assume they serve all their positive-demand goods
-    return tuple() 
+    return tuple()
+
+
+# TODO: this file can be prettier.

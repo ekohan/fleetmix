@@ -45,7 +45,7 @@ def run_optimization(
     
     with time_recorder.measure("global"):
         # Apply split-stop preprocessing if enabled
-        allow_split = getattr(params, 'allow_split_stops', False)
+        allow_split = params.allow_split_stops
         customers_df = maybe_explode(customers_df, allow_split)
 
         # Convert customers DataFrame to list of Customer objects

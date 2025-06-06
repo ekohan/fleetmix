@@ -8,6 +8,7 @@ class DummyParams:
         self.vehicles = {}
         self.goods = {}
         self.expected_vehicles = 3
+        self.allow_split_stops = False
 
 @pytest.fixture(autouse=True)
 def stub_everything(monkeypatch):

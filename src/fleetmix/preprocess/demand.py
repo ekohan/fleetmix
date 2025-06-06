@@ -42,19 +42,7 @@ def explode_customer(customer_id: str, demands: Mapping[str, float],
     """
     # Get goods with positive demand
     goods_with_demand = [good for good, qty in demands.items() if qty > 0]
-    
-    if not goods_with_demand:
-        logger.warning(f"Customer {customer_id} has no positive demands. Creating single pseudo-customer.")
-        # Create a single pseudo-customer with minimal dry demand
-        all_goods = list(demands.keys())
-        return [PseudoCustomer(
-            customer_id=f"{customer_id}::dry",
-            origin_id=customer_id,
-            subset=("dry",),
-            demands={"dry": 1.0, **{g: 0.0 for g in all_goods if g != "dry"}},
-            location=location,
-            service_time=service_time
-        )]
+    assert goods_with_demand, f"Customer {customer_id} has no positive demands - this should not happen"
     
     # Generate all non-empty subsets using bit masks
     num_goods = len(goods_with_demand)

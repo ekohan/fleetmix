@@ -67,17 +67,14 @@ class TestExplodeCustomer:
             assert pc.origin_id == "C001"
             assert pc.location == location
     
-    def test_zero_demand_customer(self):
-        """Test exploding a customer with zero demands."""
+    def test_zero_demand_customer_raises_assertion(self):
+        """Test that exploding a customer with zero demands raises an assertion error."""
         demands = {"dry": 0.0, "chilled": 0.0, "frozen": 0.0}
         location = (40.7, -74.0)
         
-        pseudo_customers = explode_customer("C001", demands, location)
-        
-        # Should create a single pseudo-customer with minimal dry demand
-        assert len(pseudo_customers) == 1
-        assert pseudo_customers[0].customer_id == "C001::dry"
-        assert pseudo_customers[0].demands["dry"] == 1.0
+        # Should raise an AssertionError for invalid zero demands
+        with pytest.raises(AssertionError):
+            explode_customer("C001", demands, location)
 
 
 class TestMaybeExplode:

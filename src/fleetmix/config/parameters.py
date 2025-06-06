@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import warnings
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -72,13 +71,6 @@ class Parameters:
         except Exception as e:
             raise ValueError(f"Error reading config file {resolved_config_path}: {str(e)}")
         
-        # Check for legacy global timing parameters
-        legacy_avg_speed = data.pop("avg_speed", None)
-        legacy_service_time = data.pop("service_time", None)
-        legacy_max_route_time = data.pop("max_route_time", None)
-        
-        has_legacy_params = any(x is not None for x in [legacy_avg_speed, legacy_service_time, legacy_max_route_time])
-        
         raw_vehicles_data = data.pop("vehicles")
         parsed_vehicles = {}
         for v_name, v_details in raw_vehicles_data.items():
@@ -87,42 +79,15 @@ class Parameters:
                 'fixed_cost': v_details.pop('fixed_cost')
             }
             
-            # Handle timing parameters - use vehicle-specific if available, otherwise fall back to legacy
+            # Handle timing parameters - expect them to be vehicle-specific
             if 'avg_speed' in v_details:
                 spec_kwargs['avg_speed'] = v_details.pop('avg_speed')
-            elif legacy_avg_speed is not None:
-                spec_kwargs['avg_speed'] = legacy_avg_speed
-                if has_legacy_params:
-                    warnings.warn(
-                        f"Using deprecated global avg_speed for vehicle {v_name}. "
-                        "Please move avg_speed to the vehicle configuration.",
-                        DeprecationWarning,
-                        stacklevel=2
-                    )
             
             if 'service_time' in v_details:
                 spec_kwargs['service_time'] = v_details.pop('service_time')
-            elif legacy_service_time is not None:
-                spec_kwargs['service_time'] = legacy_service_time
-                if has_legacy_params:
-                    warnings.warn(
-                        f"Using deprecated global service_time for vehicle {v_name}. "
-                        "Please move service_time to the vehicle configuration.",
-                        DeprecationWarning,
-                        stacklevel=2
-                    )
             
             if 'max_route_time' in v_details:
                 spec_kwargs['max_route_time'] = v_details.pop('max_route_time')
-            elif legacy_max_route_time is not None:
-                spec_kwargs['max_route_time'] = legacy_max_route_time
-                if has_legacy_params:
-                    warnings.warn(
-                        f"Using deprecated global max_route_time for vehicle {v_name}. "
-                        "Please move max_route_time to the vehicle configuration.",
-                        DeprecationWarning,
-                        stacklevel=2
-                    )
             
             # Handle compartments: should be Dict[str, bool]
             # If compartments is defined in YAML, use it directly. Otherwise, VehicleSpec defaults to empty dict.

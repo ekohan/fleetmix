@@ -273,9 +273,9 @@ class VehicleSpec:
     capacity: int
     fixed_cost: float
     compartments: Dict[str, bool] = field(default_factory=dict)
-    avg_speed: float = 30.0  # km/h - default value
-    service_time: float = 25.0  # minutes per customer - default value
-    max_route_time: float = 10.0  # hours - default value
+    avg_speed: float = 30.0  # km/h
+    service_time: float = 25.0  # minutes per customer
+    max_route_time: float = 10.0  # hours
     extra: Dict[str, Any] = field(default_factory=dict)
 
     def __getitem__(self, item: str) -> Any:
@@ -307,9 +307,9 @@ class VehicleConfiguration:
     capacity: int
     fixed_cost: float
     compartments: Dict[str, bool]
-    avg_speed: float = 30.0  # km/h - default value
-    service_time: float = 25.0  # minutes per customer - default value
-    max_route_time: float = 10.0  # hours - default value
+    avg_speed: float = 30.0  # km/h 
+    service_time: float = 25.0  # minutes per customer
+    max_route_time: float = 10.0  # hours
 
     def __getitem__(self, key: str) -> Any:
         """Support bracket notation access for backward compatibility."""

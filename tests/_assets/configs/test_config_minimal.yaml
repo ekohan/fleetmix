@@ -4,14 +4,12 @@ vehicles:
   Tiny:
     capacity: 10
     fixed_cost: 50
+    avg_speed: 30
+    max_route_time: 8
+    service_time: 10
 
 # Cost Parameters
 variable_cost_per_hour: 20.0
-
-# Time Parameters
-avg_speed: 30
-max_route_time: 8
-service_time: 10
 
 # Location
 depot:

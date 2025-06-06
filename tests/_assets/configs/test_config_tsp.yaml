@@ -3,14 +3,12 @@ vehicles:
   Truck:
     capacity: 150
     fixed_cost: 200
+    avg_speed: 40
+    max_route_time: 12
+    service_time: 20
 
 # Cost Parameters
 variable_cost_per_hour: 30.0
-
-# Time Parameters
-avg_speed: 40
-max_route_time: 12
-service_time: 20
 
 # Location
 depot:

@@ -90,6 +90,9 @@ class TestCoreAlgorithms:
                     'fixed_cost': 100,
                     # 'variable_cost_per_km': 0.5, # Not a direct Parameters field, store in extra
                     'capacity': 400,
+                    'avg_speed': 40.0,
+                    'max_route_time': 8.0,
+                    'service_time': 15.0,
                     'extra': {
                         'variable_cost_per_km': 0.5,
                         'compartments': [
@@ -100,6 +103,9 @@ class TestCoreAlgorithms:
                 'Medium Truck': {
                     'fixed_cost': 150,
                     'capacity': 800,
+                    'avg_speed': 40.0,
+                    'max_route_time': 8.0,
+                    'service_time': 15.0,
                     'extra': {
                         'variable_cost_per_km': 0.7,
                         'compartments': [
@@ -112,6 +118,9 @@ class TestCoreAlgorithms:
                 'Large Truck': {
                     'fixed_cost': 200,
                     'capacity': 1200,
+                    'avg_speed': 40.0,
+                    'max_route_time': 8.0,
+                    'service_time': 15.0,
                     'extra': {
                         'variable_cost_per_km': 0.9,
                         'compartments': [
@@ -123,9 +132,6 @@ class TestCoreAlgorithms:
                 }
             },
             'variable_cost_per_hour': 20.0,
-            'avg_speed': 40.0,
-            'max_route_time': 8.0,
-            'service_time': 15.0,
             'depot': {'latitude': 40.7831, 'longitude': -73.9712},
             'clustering': {
                 # 'max_clusters_per_vehicle': 100, # Not a direct Parameters field

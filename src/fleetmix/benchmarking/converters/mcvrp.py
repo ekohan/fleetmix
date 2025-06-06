@@ -80,8 +80,8 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
             fixed_cost=1000,
             compartments={'Dry': True, 'Chilled': True, 'Frozen': True},
             extra={},
-            avg_speed=30.0,  # Default speed for benchmarking
-            service_time=25.0,  # Default service time
+            avg_speed=30.0,
+            service_time=25.0,
             max_route_time=float('inf')  # No time limit for benchmarking
         )
     }

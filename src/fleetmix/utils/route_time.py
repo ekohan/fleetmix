@@ -23,7 +23,7 @@ def make_rt_context(config: 'VehicleConfiguration',
     Factory function to create RouteTimeContext from VehicleConfiguration.
     
     Args:
-        config: VehicleConfiguration containing timing parameters
+        config: VehicleConfiguration containing timing parameters specific to the vehicle
         depot: DepotLocation object
         prune_tsp: Whether to prune TSP calculations
         

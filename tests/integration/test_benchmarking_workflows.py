@@ -285,6 +285,9 @@ EOF
                     'Test Van': {
                         'fixed_cost': 100,
                         'capacity': int(cvrp_instance.capacity),  # Convert numpy to int
+                        'avg_speed': 40.0,
+                        'max_route_time': 8.0,
+                        'service_time': 15.0,
                         'compartments': {'Dry': True, 'Chilled': True, 'Frozen': True},
                         'extra': {
                             'variable_cost_per_km': 0.5 
@@ -292,9 +295,6 @@ EOF
                     }
                 },
                 'variable_cost_per_hour': 20.0,
-                'avg_speed': 40.0,
-                'max_route_time': 8.0,
-                'service_time': 15.0,
                 'depot': {'latitude': float(cvrp_instance.coordinates[1][0]), 'longitude': float(cvrp_instance.coordinates[1][1])},  # Convert numpy to float
                 'clustering': {
                     'route_time_estimation': 'BHH',
@@ -437,6 +437,9 @@ EOF
                 'Test Van': {
                     'fixed_cost': 100,
                     'capacity': 400,
+                    'avg_speed': 40.0,
+                    'max_route_time': 8.0,
+                    'service_time': 15.0,
                     'compartments': {'Dry': True, 'Chilled': False, 'Frozen': False},
                     'extra': {
                         'variable_cost_per_km': 0.5 
@@ -444,9 +447,6 @@ EOF
                 }
             },
             'variable_cost_per_hour': 20.0,
-            'avg_speed': 40.0,
-            'max_route_time': 8.0,
-            'service_time': 15.0,
             'depot': {'latitude': 0.0, 'longitude': 0.0},
             'clustering': {
                 'route_time_estimation': 'Legacy',

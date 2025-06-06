@@ -11,9 +11,16 @@ class TestPickSolver(unittest.TestCase):
     """Test cases for pick_solver function."""
     
     def setUp(self):
-        """Clear environment variable before each test."""
-        if 'FSM_SOLVER' in os.environ:
-            del os.environ['FSM_SOLVER']
+        """Backup and clear FSM_SOLVER before each test to avoid side-effects."""
+        self._orig_solver_env = os.environ.get("FSM_SOLVER")
+        os.environ.pop("FSM_SOLVER", None)
+
+    def tearDown(self):
+        """Restore original FSM_SOLVER after each test."""
+        if self._orig_solver_env is not None:
+            os.environ["FSM_SOLVER"] = self._orig_solver_env
+        else:
+            os.environ.pop("FSM_SOLVER", None)
     
     @patch('pulp.GUROBI_CMD')
     def test_pick_solver_explicit_gurobi(self, mock_gurobi):

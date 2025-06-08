@@ -54,7 +54,7 @@ from fleetmix.utils.solver import pick_solver
 
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Cluster, Customer
-from fleetmix.preprocess.demand import is_pseudo_customer, get_origin_id, get_subset_from_id
+from fleetmix.preprocess.demand import get_origin_id, get_subset_from_id
 logger = FleetmixLogger.get_logger(__name__)
 
 # Helper functions for working with List[VehicleConfiguration]

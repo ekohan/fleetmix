@@ -1,6 +1,5 @@
 import itertools
-import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict
 from fleetmix.core_types import VehicleSpec, VehicleConfiguration
 
 def generate_vehicle_configurations(vehicle_types: Dict[str, VehicleSpec], goods: List[str]) -> List[VehicleConfiguration]:

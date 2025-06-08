@@ -2,7 +2,7 @@
 import logging
 import os
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional
 from tqdm import tqdm
 
 class LogLevel(Enum):

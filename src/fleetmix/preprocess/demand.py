@@ -7,9 +7,8 @@ pseudo-customers that represent subsets of goods that a physical customer requir
 TODO: rename?
 """
 
-from typing import List, Dict, Mapping, Tuple
+from typing import List, Mapping, Tuple
 import pandas as pd
-import itertools
 
 from fleetmix.core_types import PseudoCustomer
 from fleetmix.utils.logging import FleetmixLogger

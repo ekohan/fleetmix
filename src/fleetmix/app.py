@@ -1,7 +1,6 @@
 """
 Command-line interface for Fleetmix using Typer.
 """
-import sys
 from pathlib import Path
 from typing import Optional
 import time
@@ -17,7 +16,6 @@ from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.logging import LogLevel, setup_logging, log_progress, log_success, log_error
-from fleetmix.core_types import FleetmixSolution
 from fleetmix.config.parameters import Parameters
 
 app = typer.Typer(
@@ -86,7 +84,7 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
             log_error(f"MCVRP instance '{instance}' not found")
             available = _get_available_instances("mcvrp")
             console.print(f"[yellow]Available instances:[/yellow] {', '.join(available[:5])}{'...' if len(available) > 5 else ''}")
-            console.print(f"[dim]Use 'fleetmix benchmark mcvrp --list' to see all available instances[/dim]")
+            console.print("[dim]Use 'fleetmix benchmark mcvrp --list' to see all available instances[/dim]")
             raise typer.Exit(1)
         
         log_progress(f"Running MCVRP instance {instance}...")
@@ -170,7 +168,7 @@ def _run_single_instance(suite: str, instance: str, output_dir: Optional[Path] =
         if instance not in available:
             log_error(f"CVRP instance '{instance}' not found")
             console.print(f"[yellow]Available instances:[/yellow] {', '.join(available[:5])}{'...' if len(available) > 5 else ''}")
-            console.print(f"[dim]Use 'fleetmix benchmark cvrp --list' to see all available instances[/dim]")
+            console.print("[dim]Use 'fleetmix benchmark cvrp --list' to see all available instances[/dim]")
             raise typer.Exit(1)
         
         log_progress(f"Running CVRP instance {instance}...")

@@ -5,7 +5,7 @@ Converter for MCVRP instances into FSM format.
 __all__ = ["convert_mcvrp_to_fsm"]
 
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional
 
 import pandas as pd
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp

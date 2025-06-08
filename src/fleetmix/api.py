@@ -2,9 +2,8 @@
 API facade for Fleetmix - provides a single entry point for programmatic usage.
 """
 from pathlib import Path
-from typing import Union, Optional, Dict, Any
+from typing import Union, Optional
 import pandas as pd
-import time
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.utils.data_processing import load_customer_demand

@@ -144,16 +144,16 @@ if __name__ == "__main__":
         instance = cvrp_parser.parse()
         solution = cvrp_parser.parse_solution()
         
-        print(f"\nInstance details:")
+        print("\nInstance details:")
         print(f"Name: {instance.name}")
         print(f"Dimension: {instance.dimension}")
         print(f"Capacity: {instance.capacity}")
         print(f"Number of vehicles: {instance.num_vehicles}")
         
-        print(f"\nSolution details:")
+        print("\nSolution details:")
         print(f"Number of routes: {solution.num_vehicles}")
         print(f"Total cost: {solution.cost}")
-        print(f"Routes:")
+        print("Routes:")
         for i, route in enumerate(solution.routes, 1):
             print(f"Route #{i}: {route}")
             

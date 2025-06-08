@@ -43,7 +43,7 @@ from haversine import haversine_vector, Unit
 from dataclasses import replace
 
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
-from fleetmix.utils.route_time import estimate_route_time, calculate_total_service_time_hours, make_rt_context
+from fleetmix.utils.route_time import calculate_total_service_time_hours, make_rt_context
 from fleetmix.config.parameters import Parameters
 from fleetmix.registry import ROUTE_TIME_ESTIMATOR_REGISTRY
 
@@ -142,7 +142,6 @@ def _improve_internal(
     params: Parameters
 ) -> FleetmixSolution:
     """Internal implementation that processes DataFrames."""
-    from fleetmix.optimization import solve_fsm_problem
 
     best_solution = initial_solution
     best_cost = best_solution.total_cost if best_solution.total_cost is not None else float('inf')

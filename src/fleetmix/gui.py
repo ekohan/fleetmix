@@ -13,13 +13,12 @@ import time
 import shutil
 from datetime import datetime, date
 import traceback
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any
 import numpy as np
 from dataclasses import is_dataclass, asdict
 
 import fleetmix.api as api
 from fleetmix.config.parameters import Parameters
-from fleetmix.utils.save_results import visualize_clusters
 
 
 # Page configuration
@@ -360,7 +359,7 @@ def main():
                 col1_v, col2_v = st.columns(2) # Unique var names for columns
                 with col1_v:
                     capacity = st.number_input(
-                        f"Capacity",
+                        "Capacity",
                         min_value=100,
                         max_value=1000000,
                         value=int(vehicle_data.capacity if hasattr(vehicle_data, 'capacity') else vehicle_data['capacity']),
@@ -369,7 +368,7 @@ def main():
                     )
                 with col2_v:
                     fixed_cost = st.number_input(
-                        f"Fixed Cost",
+                        "Fixed Cost",
                         min_value=0,
                         max_value=1000000,
                         value=int(vehicle_data.fixed_cost if hasattr(vehicle_data, 'fixed_cost') else vehicle_data['fixed_cost']),
@@ -381,7 +380,7 @@ def main():
                 col1_t, col2_t, col3_t = st.columns(3)
                 with col1_t:
                     avg_speed = st.number_input(
-                        f"Avg Speed (km/h)",
+                        "Avg Speed (km/h)",
                         min_value=10,
                         max_value=100,
                         value=int(vehicle_data.avg_speed if hasattr(vehicle_data, 'avg_speed') else 30),
@@ -390,7 +389,7 @@ def main():
                     )
                 with col2_t:
                     service_time = st.number_input(
-                        f"Service Time (min)",
+                        "Service Time (min)",
                         min_value=5,
                         max_value=12000,
                         value=int(vehicle_data.service_time if hasattr(vehicle_data, 'service_time') else 25),
@@ -399,7 +398,7 @@ def main():
                     )
                 with col3_t:
                     max_route_time = st.number_input(
-                        f"Max Route Time (h)",
+                        "Max Route Time (h)",
                         min_value=4,
                         max_value=240,
                         value=int(vehicle_data.max_route_time if hasattr(vehicle_data, 'max_route_time') else 10),

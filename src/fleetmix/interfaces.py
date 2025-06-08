@@ -1,5 +1,5 @@
 """Protocol definitions for pluggable components in FleetMix."""
-from typing import Protocol, List, Dict, Tuple, Any
+from typing import Protocol, List, Tuple
 import pandas as pd
 import pulp
 

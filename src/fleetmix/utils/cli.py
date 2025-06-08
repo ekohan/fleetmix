@@ -1,5 +1,4 @@
 from argparse import ArgumentParser, RawTextHelpFormatter
-from pathlib import Path
 from typing import Dict, Any
 from fleetmix.config.parameters import Parameters
 import sys

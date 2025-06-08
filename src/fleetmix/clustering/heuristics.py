@@ -14,7 +14,6 @@ from sklearn.metrics import pairwise_distances
 from kmedoids import KMedoids
 from sklearn.mixture import GaussianMixture
 from fleetmix.config.parameters import Parameters
-from fleetmix.utils.route_time import estimate_route_time
 from fleetmix.utils.route_time import make_rt_context
 from fleetmix.registry import register_clusterer, CLUSTERER_REGISTRY, ROUTE_TIME_ESTIMATOR_REGISTRY
 

@@ -1,7 +1,6 @@
 """Registry for pluggable components in FleetMix."""
 from typing import Dict, Type, List, Optional
 import pandas as pd
-import numpy as np
 
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
 from .core_types import ClusteringContext

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from pathlib import Path
 import pandas as pd
 
 from fleetmix.benchmarking.converters.vrp import convert_vrp_to_fsm
@@ -9,7 +8,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.optimization import solve_fsm_problem
-from fleetmix.utils.logging import log_progress, log_success, log_detail
+from fleetmix.utils.logging import log_progress, log_detail
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
 from fleetmix.preprocess.demand import maybe_explode

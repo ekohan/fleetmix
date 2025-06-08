@@ -9,13 +9,12 @@ from pathlib import Path
 from typing import List, Dict, Union, Optional
 
 import pandas as pd
-import numpy as np
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import VehicleSpec, DepotLocation
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 import fleetmix.benchmarking.parsers.cvrp as cvrp_parser
-from fleetmix.utils.logging import log_detail, log_debug, log_progress
+from fleetmix.utils.logging import log_detail
 
 class CVRPBenchmarkType(Enum):
     """Types of CVRP benchmarks supported."""
@@ -107,7 +106,7 @@ def _convert_normal(instance) -> tuple:
         )
     }
     
-    log_detail(f"\nVehicle Configuration:")
+    log_detail("\nVehicle Configuration:")
     log_detail(f"Capacity: {instance.capacity}")
     log_detail(f"Fixed Cost: {params.vehicles['CVRP']['fixed_cost']}")
     log_detail(f"Compartments: {params.vehicles['CVRP']['compartments']}")

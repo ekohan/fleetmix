@@ -2,7 +2,7 @@
 import logging
 import os
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 from tqdm import tqdm
 
 class LogLevel(Enum):
@@ -56,7 +56,7 @@ class FleetmixLogger:
     """Centralized logger for Fleetmix with level management."""
     
     _current_level = LogLevel.NORMAL
-    _loggers = {}
+    _loggers: dict[str, logging.Logger] = {}
     
     @classmethod
     def set_level(cls, level: LogLevel):
@@ -206,10 +206,7 @@ def setup_logging(level: Optional[LogLevel] = None):
         console.setLevel(logging.INFO)  # Or logging.DEBUG if VERBOSE means more than INFO
     elif level == LogLevel.DEBUG:
         console.setLevel(logging.DEBUG)
-    else: # Default case, should align with default LogLevel.NORMAL
-        console.setLevel(logging.INFO)
-        
-    logger.addHandler(console)
+        logger.addHandler(console)
     
     # Suppress third-party noise
     suppress_third_party_logs()
@@ -220,6 +217,7 @@ class ProgressTracker:
         self.steps = steps
         self.show_progress = FleetmixLogger.get_level().value >= LogLevel.NORMAL.value
         
+        self.pbar: Optional[tqdm]
         if self.show_progress:
             self.pbar = tqdm(
                 total=len(steps), 

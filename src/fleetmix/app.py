@@ -27,7 +27,7 @@ app = typer.Typer(
 console = Console()
 
 
-def _get_default_config() -> Parameters:
+def _get_default_config() -> Optional[Parameters]:
     """Load default configuration to get default values for CLI parameters."""
     try:
         return Parameters.from_yaml()
@@ -614,7 +614,7 @@ def convert(
             solution=solution,
             configurations_df=configs_df,
             parameters=params,
-            filename=results_path,
+            filename=str(results_path),
             format=format,
             is_benchmark=True,
             expected_vehicles=params.expected_vehicles,

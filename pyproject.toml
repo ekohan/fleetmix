@@ -46,9 +46,53 @@ test = [
     "hypothesis",
     "pytest-xdist",
 ]
+dev = [
+    "mypy",
+    "types-tqdm",
+    "types-PyYAML", 
+    "types-seaborn",
+    "pandas-stubs",
+]
 
 [tool.setuptools.package-dir]
 "" = "src"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# Ignore untyped imports for libraries without stubs
+[[tool.mypy.overrides]]
+module = [
+    "pulp.*",
+    "vrplib.*", 
+    "haversine.*",
+    "sklearn.*",
+    "kmedoids.*",
+    "joblib.*",
+    "folium.*",
+    "streamlit_folium.*",
+    "geopy.*",
+    "gurobipy.*",
+    "pyvrp.*",
+    "numba.*",
+    "cython.*",
+    "plotly.*",
+    "rich.*",
+    "streamlit.*",
+]
+ignore_missing_imports = true

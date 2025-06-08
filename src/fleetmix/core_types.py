@@ -64,10 +64,10 @@ class Customer:
             return pd.DataFrame(columns=['Customer_ID', 'Latitude', 'Longitude'])
         
         # Determine all goods from all customers
-        all_goods = set()
+        all_goods: set[str] = set()
         for customer in customers:
             all_goods.update(customer.demands.keys())
-        all_goods = sorted(all_goods)
+        all_goods_list = sorted(all_goods)
         
         data = []
         for customer in customers:
@@ -77,7 +77,7 @@ class Customer:
                 'Longitude': customer.location[1]
             }
             # Add demand columns
-            for good in all_goods:
+            for good in all_goods_list:
                 col_name = f'{good.title()}_Demand'
                 row[col_name] = customer.demands.get(good, 0.0)
             data.append(row)
@@ -242,7 +242,7 @@ class FleetmixSolution:
     """
     Represents the solution of a fleet optimization problem.
     """
-    selected_clusters: pd.DataFrame = field(default_factory=empty_dataframe_factory)
+    selected_clusters: pd.DataFrame = field(default_factory=empty_dataframe_factory) # TODO: convert into type
     total_fixed_cost: float = 0.0
     total_variable_cost: float = 0.0
     total_penalties: float = 0.0
@@ -255,6 +255,7 @@ class FleetmixSolution:
     solver_status: str = "Unknown"
     solver_name: str = "Unknown"
     solver_runtime_sec: float = 0.0
+    post_optimization_runtime_sec: Optional[float] = None
     time_measurements: Optional[List[TimeMeasurement]] = None
 
     def __post_init__(self):

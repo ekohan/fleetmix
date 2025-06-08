@@ -3,7 +3,7 @@ Bidirectional projection between VRP Euclidean and lat/lon space.
 """
 
 from dataclasses import dataclass
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 import numpy as np
 
 
@@ -47,7 +47,7 @@ class CoordinateConverter:
     def __init__(
         self,
         cvrp_coords: Dict[int, Tuple[float, float]],
-        geo_bounds: GeoBounds = None
+        geo_bounds: Optional[GeoBounds] = None
     ):
         """
         Initialize the converter with CVRP coordinates and optional geographic bounds.
@@ -198,10 +198,10 @@ def validate_conversion(converter: CoordinateConverter, original_coords: Dict[in
 if __name__ == "__main__":
     # Example usage
     example_coords = {
-        1: (0, 0),    # Depot
-        2: (100, 100),
-        3: (200, 50),
-        4: (150, 150)
+        1: (0.0, 0.0),    # Depot
+        2: (100.0, 100.0),
+        3: (200.0, 50.0),
+        4: (150.0, 150.0)
     }
     
     # Create converter with default bounds (Boston area)

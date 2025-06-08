@@ -1,5 +1,5 @@
 """Route time estimation methods for vehicle routing."""
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional, Any
 import numpy as np
 import pandas as pd
 from haversine import haversine
@@ -12,11 +12,11 @@ from pyvrp.stop import MaxIterations
 
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.registry import register_route_time_estimator, ROUTE_TIME_ESTIMATOR_REGISTRY
-from fleetmix.core_types import RouteTimeContext, DepotLocation
+from fleetmix.core_types import RouteTimeContext, DepotLocation, VehicleConfiguration
 
 logger = FleetmixLogger.get_logger(__name__)
 
-def make_rt_context(config: 'VehicleConfiguration',
+def make_rt_context(config: VehicleConfiguration,
                     depot: DepotLocation,
                     prune_tsp: bool) -> RouteTimeContext:
     """
@@ -60,7 +60,7 @@ def calculate_total_service_time_hours(num_customers: int, service_time_per_cust
 
 # Global cache for distance and duration matrices (populated if TSP method is used)
 # Now keyed by avg_speed to support different vehicle configurations
-_matrix_cache = {}
+_matrix_cache: Dict[float, Dict[str, Any]] = {}
 
 def build_distance_duration_matrices(
     customers_df: pd.DataFrame,
@@ -142,7 +142,7 @@ def estimate_route_time(
     service_time: float,
     avg_speed: float,
     method: str = 'Legacy',
-    max_route_time: float = None,
+    max_route_time: Optional[float] = None,
     prune_tsp: bool = False
 ) -> Tuple[float, List[str]]:
     """Estimate total route duration for a customer cluster.
@@ -385,10 +385,10 @@ class TSPEstimator:
             logger.debug(f"Using cached matrices for cluster TSP (Size: {num_customers}, Speed: {context.avg_speed} km/h)")
             # Get the speed-specific distance and duration matrices and mapping
             speed_cache = _matrix_cache[context.avg_speed]
-            global_distance_matrix = speed_cache['distance_matrix']
-            global_duration_matrix = speed_cache['duration_matrix']
-            customer_id_to_idx = speed_cache['customer_id_to_idx']
-            depot_idx = speed_cache['depot_idx'] # Should be 0
+            global_distance_matrix: np.ndarray = speed_cache['distance_matrix']
+            global_duration_matrix: np.ndarray = speed_cache['duration_matrix']
+            customer_id_to_idx: Dict[str, int] = speed_cache['customer_id_to_idx']
+            depot_idx: int = speed_cache['depot_idx'] # Should be 0
 
             # Get indices for this specific cluster (Depot + Cluster Customers)
             cluster_indices = [depot_idx]

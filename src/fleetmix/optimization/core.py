@@ -61,7 +61,7 @@ logger = FleetmixLogger.get_logger(__name__)
 def _find_config_by_id(configurations: List[VehicleConfiguration], config_id: str) -> VehicleConfiguration:
     """Find configuration by ID from list."""
     for config in configurations:
-        if config.config_id == config_id:
+        if str(config.config_id) == str(config_id):
             return config
     raise KeyError(f"Configuration {config_id} not found")
 
@@ -267,7 +267,7 @@ def _create_model(
     clusters_df: pd.DataFrame,
     configurations: List[VehicleConfiguration],
     parameters: Parameters
-) -> Tuple[pulp.LpProblem, Dict[str, pulp.LpVariable], Dict[Tuple[str, Any], pulp.LpVariable], Dict[Tuple[str, str], float]]:
+) -> Tuple[pulp.LpProblem, Dict[Any, pulp.LpVariable], Dict[Tuple[Any, Any], pulp.LpVariable], Dict[Tuple[Any, Any], float]]:
     """
     Create the optimization model M aligning with the mathematical formulation.
     """
@@ -292,7 +292,7 @@ def _create_model(
     }
 
     # V_k: vehicle configurations that can serve cluster k
-    V_k = {}
+    V_k: dict[Any, set[Any]] = {}
     for k in K:
         V_k[k] = set()
         cluster = clusters_df.loc[clusters_df['Cluster_ID'] == k].iloc[0]
@@ -320,7 +320,7 @@ def _create_model(
             V_k[k].add('NoVehicle')  # Placeholder
             x_vars['NoVehicle', k] = pulp.LpVariable(f"x_NoVehicle_{k}", cat='Binary')
             model += x_vars['NoVehicle', k] == 0
-            c_vk['NoVehicle', k] = 0  # Cost is zero as it's not selected
+            c_vk['NoVehicle', k] = 0.0  # Cost is zero as it's not selected
 
     # Create remaining decision variables
     for k in K:
@@ -337,24 +337,24 @@ def _create_model(
                 config = _find_config_by_id(configurations, v)
                 # Calculate load percentage
                 total_demand = sum(cluster['Total_Demand'][g] for g in parameters.goods)
-                capacity = config.capacity
+                capacity = float(config.capacity)
                 load_percentage = total_demand / capacity
 
                 # Apply fixed penalty if under threshold
-                penalty_amount = parameters.light_load_penalty if load_percentage < parameters.light_load_threshold else 0
+                penalty_amount = float(parameters.light_load_penalty) if load_percentage < parameters.light_load_threshold else 0.0
                 base_cost = _calculate_cluster_cost(
                     cluster=cluster,
                     config=config,
                     parameters=parameters
                 )
                 
-                c_vk[v, k] = base_cost + penalty_amount
+                c_vk[v, k] = float(base_cost + penalty_amount)
                 logger.debug(
                     f"Cluster {k}, vehicle {v}: Load Percentage = {load_percentage:.2f}, "
                     f"Penalty = {penalty_amount}"
                 )
             else:
-                c_vk[v, k] = 0  # Cost is zero for placeholder
+                c_vk[v, k] = 0.0  # Cost is zero for placeholder
 
     # Objective Function
     model += pulp.lpSum(
@@ -372,7 +372,7 @@ def _create_model(
         
         # Get all physical customers and their goods
         physical_customers = set(origin_id.values())
-        goods_by_physical = {}
+        goods_by_physical: dict[str, set[str]] = {}
         for physical_customer in physical_customers:
             goods_by_physical[physical_customer] = set()
             for customer_id in N:
@@ -581,17 +581,17 @@ def _calculate_cluster_cost(
         Base cost of serving the cluster with the given vehicle configuration.
     """
     # Base costs
-    fixed_cost = config.fixed_cost
-    route_time = cluster['Route_Time']
-    variable_cost = parameters.variable_cost_per_hour * route_time
+    fixed_cost = float(config.fixed_cost)
+    route_time = float(cluster['Route_Time'])
+    variable_cost = float(parameters.variable_cost_per_hour) * route_time
 
     # Compartment setup cost
     num_compartments = sum(1 for g in parameters.goods if config[g])
     compartment_cost = 0.0
     if num_compartments > 1:
-        compartment_cost = parameters.compartment_setup_cost * (num_compartments - 1)
+        compartment_cost = float(parameters.compartment_setup_cost) * (num_compartments - 1)
 
     # Total cost
     total_cost = fixed_cost + variable_cost + compartment_cost
     
-    return total_cost 
+    return float(total_cost) 

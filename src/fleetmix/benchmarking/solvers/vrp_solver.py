@@ -83,8 +83,8 @@ class VRPSolver:
             vehicle_types.append(VehicleType(
                 num_available=len(expanded_clients),
                 capacity=[vt_spec.capacity],
-                fixed_cost=vt_spec.fixed_cost,
-                max_duration=vt_spec.max_route_time * 3600
+                fixed_cost=int(vt_spec.fixed_cost),
+                max_duration=int(vt_spec.max_route_time * 3600)
             ))
 
         # Calculate base distance matrix
@@ -113,16 +113,16 @@ class VRPSolver:
     def _calculate_distance_matrix(self, n_clients: int) -> np.ndarray:
         """Calculate distance matrix for expanded client list."""
         distance_matrix = np.zeros((n_clients + 1, n_clients + 1))  # +1 for depot
-        client_coords_list = [(0, 0)] * (n_clients + 1) # Store coords (lat, lon) for depot + clients
+        client_coords_list = [(0.0, 0.0)] * (n_clients + 1) # Store coords (lat, lon) for depot + clients
         
         # Add depot coordinates at index 0
-        depot_coords = (self.params.depot['latitude'], self.params.depot['longitude'])
+        depot_coords = (float(self.params.depot['latitude']), float(self.params.depot['longitude']))
         client_coords_list[0] = depot_coords
         
         # Calculate distances and store client coordinates
         client_idx = 0
         for _, row in self.customers.iterrows():
-            coords = (row['Latitude'], row['Longitude'])
+            coords = (float(row['Latitude']), float(row['Longitude']))
             
             # Check if this customer should be included based on benchmark type
             if self.benchmark_type == BenchmarkType.MULTI_COMPARTMENT:
@@ -265,7 +265,7 @@ class VRPSolver:
             # Calculate route time using vehicle-specific parameters
             route_time, _ = estimate_route_time(
                 cluster_customers=route_customers,
-                depot=self.params.depot,
+                depot=self.params.depot.to_dict(),
                 service_time=vehicle_spec.service_time,
                 avg_speed=vehicle_spec.avg_speed,
                 method='BHH',
@@ -309,7 +309,7 @@ class VRPSolver:
             )
             
         # Use feasible_routes for solution
-        routes = feasible_routes
+        routes_as_lists = feasible_routes
         
         # Calculate costs
         fixed_cost = solution.fixed_vehicle_cost()
@@ -336,25 +336,22 @@ class VRPSolver:
                     logger.warning(f"Route {route_idx} exceeds vehicle capacity: {load}/{vehicle_capacity}")
                     load = vehicle_capacity
 
-                vehicle_loads.append(load)
+                vehicle_loads.append(float(load))
                 vehicle_utilizations.append((load / vehicle_capacity) * 100)  # Store as percentage
                 vehicle_types.append(vehicle_type_idx)  # Store the vehicle type index
-                route_distances.append(solution.distance())
+                route_distances.append(float(solution.distance()))
                 
-        # Now convert routes to lists for storage
-        routes = [[i for i in route] for route in solution.routes()]
-
         return VRPSolution(
             total_cost=fixed_cost + variable_cost,
             fixed_cost=fixed_cost,
             variable_cost=variable_cost,
             total_distance=solution.distance(),
             num_vehicles=len(feasible_routes),
-            routes=feasible_routes,
+            routes=routes_as_lists,
             vehicle_loads=vehicle_loads,
             execution_time=result.runtime,
             solver_status="Optimal" if solution.is_feasible() else "Infeasible",
-            route_sequences=[[str(i) for i in route] for route in feasible_routes],
+            route_sequences=[[str(i) for i in route] for route in routes_as_lists],
             vehicle_utilization=vehicle_utilizations,
             vehicle_types=vehicle_types,
             route_times=route_times,
@@ -398,8 +395,21 @@ class VRPSolver:
             vehicles_by_product = {good: 0 for good in self.params.goods}
             for route in routes:
                 if route:  # If route is not empty
-                    # Assuming client_products is a list mapping client index to product type
-                    product = self.client_products[route[1]-1]  # Get product type of first client in route (skip depot)
+                    # Get product type of first client in route (skip depot) 
+                    # Note: This assumes single-product routes in SINGLE_COMPARTMENT mode
+                    first_client_idx = route[1] - 1  # -1 because routes are 1-indexed, array is 0-indexed
+                    if hasattr(self, 'client_products') and first_client_idx < len(self.client_products):
+                        product = self.client_products[first_client_idx]
+                    else:
+                        # Fallback: determine product from customer demands
+                        if first_client_idx < len(self.customers):
+                            customer_row = self.customers.iloc[first_client_idx]
+                            for good in self.params.goods:
+                                if customer_row.get(f'{good}_Demand', 0) > 0:
+                                    product = good
+                                    break
+                        else:
+                            product = 'unknown'
                     vehicles_by_product[product] += 1
             
             # Print vehicle breakdown

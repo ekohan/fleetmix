@@ -29,6 +29,7 @@ src/*.egg-info/
 *.pdf
 *.docx
 *.xml
+*.xlsx
 *.egg-info/
 *.txt
 .idea/

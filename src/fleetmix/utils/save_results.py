@@ -23,7 +23,7 @@ import numpy as np
 import seaborn as sns
 import ast
 import folium
-from typing import Dict
+from typing import Dict, Optional
 from fleetmix.core_types import BenchmarkType, VRPSolution, FleetmixSolution
 from fleetmix.utils.logging import FleetmixLogger
 from dataclasses import asdict
@@ -34,7 +34,7 @@ def save_optimization_results(
     solution: FleetmixSolution,
     configurations_df: pd.DataFrame,
     parameters: Parameters,
-    filename: str = None,
+    filename: Optional[str] = None,
     format: str = 'excel',
     is_benchmark: bool = False,
     expected_vehicles: int | None = None,
@@ -226,9 +226,9 @@ def save_optimization_results(
 
     try:
         if format == 'json':
-            _write_to_json(output_filename, data) # _write_to_json will use data['time_measurements_json']
+            _write_to_json(str(output_filename), data) # _write_to_json will use data['time_measurements_json']
         else:
-            _write_to_excel(output_filename, data) # _write_to_excel will use data['time_measurements_excel']
+            _write_to_excel(str(output_filename), data) # _write_to_excel will use data['time_measurements_excel']
             
         # Only create visualization for optimization results
         if not is_benchmark:
@@ -400,7 +400,7 @@ def save_benchmark_results(
     solutions: Dict[str, VRPSolution],
     parameters: Parameters,
     benchmark_type: BenchmarkType,
-    filename: str = None,
+    filename: Optional[str] = None,
     format: str = 'excel'
 ) -> None:
     """Save VRP benchmark results in the same format as optimization results"""
@@ -437,7 +437,7 @@ def save_benchmark_results(
     configurations_df = pd.DataFrame(configurations)
     
     # Create cluster details DataFrame from routes
-    cluster_details = []
+    cluster_details_list = []
     for product, solution in solutions.items():
         for route_idx, route in enumerate(solution.routes):
             if route:  # Skip empty routes
@@ -488,9 +488,9 @@ def save_benchmark_results(
                         route_detail['Vehicle_Utilization'] = total_load
 
                 
-                cluster_details.append(route_detail)
+                cluster_details_list.append(route_detail)
     
-    cluster_details = pd.DataFrame(cluster_details)
+    cluster_details = pd.DataFrame(cluster_details_list)
     
     # Count vehicles used by type
     vehicles_used_series = pd.Series({
@@ -503,6 +503,7 @@ def save_benchmark_results(
     # Create a FleetmixSolution object for benchmark to pass to the main save function
     # This is a bit of a workaround, ideally, save_benchmark_results would construct its own dict/excel directly
     # or be more tightly integrated if it must use the same saving logic.
+    # TODO: find a better way to do this; check time measurements
     benchmark_solution_obj = FleetmixSolution(
         selected_clusters=cluster_details, # This is a DataFrame of routes, not true clusters
         total_fixed_cost=sum(sol.fixed_cost for sol in solutions.values()),

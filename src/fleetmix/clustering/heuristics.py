@@ -6,7 +6,7 @@ It contains the lower-level implementation details of the clustering algorithms,
 and recursive splitting logic.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional, Any
 import pandas as pd
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
@@ -38,7 +38,9 @@ class MiniBatchKMeansClusterer:
         """Cluster customers using MiniBatch KMeans."""
         data = compute_cluster_metric_input(customers, context, 'minibatch_kmeans')
         model = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
-        return model.fit_predict(data).tolist()
+        labels = model.fit_predict(data)
+        # Convert numpy array to list of ints
+        return [int(label) for label in labels]
 
 
 @register_clusterer('kmedoids')
@@ -56,7 +58,9 @@ class KMedoidsClusterer:
             max_iter=300,
             random_state=42
         )
-        return model.fit_predict(data).tolist()
+        labels = model.fit_predict(data)
+        # Convert numpy array to list of ints
+        return [int(label) for label in labels]
 
 
 @register_clusterer('agglomerative')
@@ -68,7 +72,9 @@ class AgglomerativeClusterer:
         # Agglomerative clustering needs precomputed distance matrix
         data = compute_cluster_metric_input(customers, context, 'agglomerative')
         model = AgglomerativeClustering(n_clusters=n_clusters, metric='precomputed', linkage='average')
-        return model.fit_predict(data).tolist()
+        labels = model.fit_predict(data)
+        # Convert numpy array to list of ints
+        return [int(label) for label in labels]
 
 
 @register_clusterer('gaussian_mixture')
@@ -83,7 +89,9 @@ class GaussianMixtureClusterer:
             random_state=42,
             covariance_type='full'
         )
-        return model.fit_predict(data).tolist()
+        labels = model.fit_predict(data)
+        # Convert numpy array to list of ints
+        return [int(label) for label in labels]
 
 
 def compute_cluster_metric_input(
@@ -142,23 +150,23 @@ def compute_composite_distance(
         demand_dist = demand_dist / demand_dist.max()
     
     # Combine distances with weights
-    composite_distance = (geo_weight * geo_dist) + (demand_weight * demand_dist)
+    composite_distance: np.ndarray = (geo_weight * geo_dist) + (demand_weight * demand_dist)
     
     return composite_distance
 
 def get_cached_demand(
     customers: pd.DataFrame,
     goods: List[str],
-    demand_cache: Dict
+    demand_cache: Dict[Any, Dict[str, float]]
 ) -> Dict[str, float]:
     """Get demand from cache or compute and cache it."""
     # Use sorted tuple of customer IDs as key (immutable and hashable)
     key = tuple(sorted(customers['Customer_ID']))
     
     # Check if in cache
-    result = demand_cache.get(key, None)
-    if result is not None:
-        return result
+    cached_result = demand_cache.get(key)
+    if cached_result is not None:
+        return cached_result
     
     # Not in cache, compute it
     demand_dict = {g: float(customers[f'{g}_Demand'].sum()) for g in goods}
@@ -171,14 +179,14 @@ def get_cached_route_time(
     customers: pd.DataFrame,
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
-    route_time_cache: Dict,
+    route_time_cache: Dict[Any, Tuple[float, List[str]]],
     main_params: Parameters
 ) -> Tuple[float, List[str]]:
     """Get route time and sequence (if TSP) from cache or compute and cache it."""
     key = tuple(sorted(customers['Customer_ID']))
-    result = route_time_cache.get(key, None)
-    if result is not None:
-        return result
+    cached_result = route_time_cache.get(key)
+    if cached_result is not None:
+        return cached_result
     
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(config, clustering_context.depot, main_params.prune_tsp)
@@ -191,8 +199,9 @@ def get_cached_route_time(
     estimator = estimator_class()
     route_time, route_sequence = estimator.estimate_route_time(customers, rt_context)
     
-    route_time_cache[key] = (route_time, route_sequence)
-    return route_time, route_sequence
+    result = (route_time, route_sequence)
+    route_time_cache[key] = result
+    return result
 
 def get_feasible_customers_subset(
     customers: pd.DataFrame, 
@@ -278,8 +287,8 @@ def check_constraints(
     cluster_customers: pd.DataFrame,
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
-    demand_cache: Dict,
-    route_time_cache: Dict,
+    demand_cache: Dict[Any, Dict[str, float]],
+    route_time_cache: Dict[Any, Tuple[float, List[str]]],
     main_params: Parameters
 ) -> tuple[bool, bool]:
     """
@@ -315,8 +324,8 @@ def should_split_cluster(
     config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
     depth: int,
-    demand_cache: Dict,
-    route_time_cache: Dict,
+    demand_cache: Dict[Any, Dict[str, float]],
+    route_time_cache: Dict[Any, Tuple[float, List[str]]],
     main_params: Parameters
 ) -> bool:
     """Determine if a cluster should be split based on constraints."""
@@ -352,16 +361,17 @@ def split_cluster(
     
     # Create instance and split into 2 clusters
     clusterer = clusterer_class()
-    sub_labels = clusterer.fit(cluster_customers, context=clustering_context, n_clusters=2)
+    sub_labels_list = clusterer.fit(cluster_customers, context=clustering_context, n_clusters=2)
     
     # Convert list to numpy array for indexing
-    sub_labels = np.array(sub_labels)
+    sub_labels = np.array(sub_labels_list)
     
     # Create sub-clusters
     sub_clusters = []
     sub_cluster_sizes = []
     for label in [0, 1]:
-        sub_cluster = cluster_customers[sub_labels == label]
+        mask = sub_labels == label
+        sub_cluster = cluster_customers[mask]
         if not sub_cluster.empty:
             sub_clusters.append(sub_cluster)
             sub_cluster_sizes.append(len(sub_cluster))
@@ -376,8 +386,8 @@ def create_cluster(
     config: VehicleConfiguration, 
     cluster_id: int, 
     clustering_context: ClusteringContext,
-    demand_cache: Dict,
-    route_time_cache: Dict,
+    demand_cache: Dict[Any, Dict[str, float]],
+    route_time_cache: Dict[Any, Tuple[float, List[str]]],
     main_params: Parameters,
     method_name: str
 ) -> Cluster:
@@ -416,12 +426,15 @@ def process_clusters_recursively(
     initial_clusters_df: pd.DataFrame, 
     config: VehicleConfiguration, 
     clustering_context: ClusteringContext,
-    demand_cache: Dict,
-    route_time_cache: Dict,
-    main_params: Parameters = None,
+    demand_cache: Dict[Any, Dict[str, float]],
+    route_time_cache: Dict[Any, Tuple[float, List[str]]],
+    main_params: Optional[Parameters] = None,
     method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process clusters recursively to ensure constraints are satisfied."""
+    if main_params is None:
+        raise ValueError("main_params is required for cluster processing")
+    
     config_id = config.config_id
     cluster_id_base = generate_cluster_id_base(config_id)
     current_cluster_id = 0
@@ -495,7 +508,7 @@ def estimate_num_initial_clusters(
     customers: pd.DataFrame,
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
-    main_params: Parameters = None
+    main_params: Optional[Parameters] = None
 ) -> int:
     """
     Estimate the number of initial clusters needed based on capacity and time constraints.

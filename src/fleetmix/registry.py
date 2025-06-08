@@ -1,5 +1,5 @@
 """Registry for pluggable components in FleetMix."""
-from typing import Dict, Type, List
+from typing import Dict, Type, List, Optional
 import pandas as pd
 import numpy as np
 
@@ -44,7 +44,7 @@ def register_solver_adapter(name: str):
 class CombinedClusterer:
     """Clusterer that combines results from multiple sub-methods."""
     
-    def __init__(self, sub_methods: List[str] = None):
+    def __init__(self, sub_methods: Optional[List[str]] = None):
         # Default sub_methods if not provided
         self.sub_methods = sub_methods or ['minibatch_kmeans', 'kmedoids', 'gaussian_mixture']
     

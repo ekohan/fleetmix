@@ -30,8 +30,13 @@ class CVRPParser:
             logger.info(f"Using BKS vehicles ({num_vehicles}) from solution file")
         except (FileNotFoundError, Exception) as e:
             # Fall back to k value from instance name if .sol file not found or error
-            num_vehicles = int(name.split('-k')[-1]) if '-k' in name else None
-            logger.warning(f"Could not read solution file, using k value ({num_vehicles}): {e}")
+            if '-k' in name:
+                num_vehicles = int(name.split('-k')[-1])
+                logger.warning(f"Could not read solution file, using k value ({num_vehicles}): {e}")
+            else:
+                # For test files or non-standard naming, use a default value
+                num_vehicles = 1
+                logger.warning(f"Could not read solution file and no k value in name '{name}', using default ({num_vehicles}): {e}")
         
         # Use VRPLIB to parse the instance
         instance_data = vrplib.read_instance(str(self.file_path))
@@ -123,21 +128,21 @@ if __name__ == "__main__":
     import argparse
     
     # Set up argument parser
-    parser = argparse.ArgumentParser(description='Parse CVRP instance and solution files')
-    parser.add_argument('--instance', 
+    arg_parser = argparse.ArgumentParser(description='Parse CVRP instance and solution files')
+    arg_parser.add_argument('--instance', 
                        default='X-n106-k14',
                        help='Name of the instance file (without extension)')
     
-    args = parser.parse_args()
+    args = arg_parser.parse_args()
     
     # Construct file path
     instance_path = Path(__file__).parent.parent / 'datasets' / 'cvrp' / f'{args.instance}.vrp'
     
     # Parse instance and solution
     try:
-        parser = CVRPParser(str(instance_path))
-        instance = parser.parse()
-        solution = parser.parse_solution()
+        cvrp_parser = CVRPParser(str(instance_path))
+        instance = cvrp_parser.parse()
+        solution = cvrp_parser.parse_solution()
         
         print(f"\nInstance details:")
         print(f"Name: {instance.name}")

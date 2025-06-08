@@ -6,7 +6,7 @@ optimization process. This is the main entry point for the cluster-first phase o
 cluster-first, fleet-design second heuristic.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 import pandas as pd
 from joblib import Parallel, delayed
 from multiprocessing import Manager
@@ -104,7 +104,8 @@ def _generate_clusters(
             from fleetmix.utils.route_time import build_distance_duration_matrices
             unique_speeds = set(config.avg_speed for config in configurations)
             for speed in unique_speeds:
-                build_distance_duration_matrices(customers, params.depot, speed)
+                depot_dict = {'latitude': params.depot.latitude, 'longitude': params.depot.longitude}
+                build_distance_duration_matrices(customers, depot_dict, speed)
                 logger.debug(f"Built matrices for avg_speed={speed} km/h")
         else:
             logger.info("TSP route estimation not used. Skipping matrix precomputation.")
@@ -177,12 +178,19 @@ def process_configuration(
     customers: pd.DataFrame,
     feasible_customers: Dict,
     context: ClusteringContext,
-    demand_cache: Dict = None,
-    route_time_cache: Dict = None,
-    main_params: Parameters = None,
+    demand_cache: Optional[Dict] = None,
+    route_time_cache: Optional[Dict] = None,
+    main_params: Optional[Parameters] = None,
     method_name: str = 'minibatch_kmeans'
 ) -> List[Cluster]:
     """Process a single vehicle configuration to generate feasible clusters."""
+    if main_params is None:
+        raise ValueError("main_params is required for configuration processing")
+    
+    # Provide default empty dictionaries if caches are None
+    demand_cache = demand_cache or {}
+    route_time_cache = route_time_cache or {}
+    
     # 1. Get customers that can be served by the configuration
     customers_subset = get_feasible_customers_subset(customers, feasible_customers, config.config_id)
     if customers_subset.empty:
@@ -282,6 +290,7 @@ def _get_clustering_context_list(params: Parameters) -> List[Tuple[ClusteringCon
         logger.info("🔄 Generating context variations for 'combine' method")
         
         # Check if sub_methods are specified in the clustering params
+        # TODO: offer this as a parameter
         sub_methods = params.clustering.get('combine_sub_methods', None)
         if sub_methods is None:
             # Use default sub_methods

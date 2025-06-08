@@ -113,7 +113,7 @@ def convert_numpy_types(obj):
         return obj.isoformat()
     elif isinstance(obj, Path):
         return str(obj)
-    elif is_dataclass(obj):
+    elif is_dataclass(obj) and not isinstance(obj, type):
         return convert_numpy_types(asdict(obj))
     return obj
 

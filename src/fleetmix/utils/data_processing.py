@@ -13,7 +13,7 @@ import pandas as pd
 from pathlib import Path
 from fleetmix.utils.logging import log_detail
 
-def data_dir():
+def data_dir() -> Path:
     return Path(__file__).resolve().parents[3] / "data"
 
 def get_demand_profiles_dir() -> Path:

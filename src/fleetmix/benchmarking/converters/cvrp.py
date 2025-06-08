@@ -6,7 +6,7 @@ __all__ = ["convert_cvrp_to_fsm", "CVRPBenchmarkType"]
 
 from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
 import pandas as pd
 import numpy as np
@@ -29,8 +29,8 @@ def convert_cvrp_to_fsm(
     instance_names: Union[str, List[str]],
     benchmark_type: CVRPBenchmarkType,
     num_goods: int = 3,
-    split_ratios: Dict[str, float] = None,
-    custom_instance_paths: Dict[str, Path] = None
+    split_ratios: Optional[Dict[str, float]] = None,
+    custom_instance_paths: Optional[Dict[str, Path]] = None
 ) -> tuple:
     """
     Convert CVRP instance(s) to FSM format based on benchmark type.

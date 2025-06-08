@@ -5,7 +5,7 @@ Converter for MCVRP instances into FSM format.
 __all__ = ["convert_mcvrp_to_fsm"]
 
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import pandas as pd
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
@@ -13,7 +13,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import VehicleSpec, DepotLocation
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
-def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) -> tuple:
+def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Optional[Path] = None) -> tuple:
     """Convert an MCVRP *.dat* file to Fleetmix inputs.
 
     Parameters

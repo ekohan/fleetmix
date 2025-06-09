@@ -1,40 +1,43 @@
 """
 API facade for Fleetmix - provides a single entry point for programmatic usage.
 """
+
 from pathlib import Path
-from typing import Union, Optional
+
 import pandas as pd
 
-from fleetmix.config.parameters import Parameters
-from fleetmix.utils.data_processing import load_customer_demand
-from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import solve_fsm_problem
-from fleetmix.utils.logging import FleetmixLogger, log_warning
-from fleetmix.utils.time_measurement import TimeRecorder
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Customer
 from fleetmix.preprocess.demand import maybe_explode
+from fleetmix.utils.data_processing import load_customer_demand
+from fleetmix.utils.logging import FleetmixLogger, log_warning
+from fleetmix.utils.save_results import save_optimization_results
+from fleetmix.utils.time_measurement import TimeRecorder
+from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
-logger = FleetmixLogger.get_logger('fleetmix.api')
+logger = FleetmixLogger.get_logger("fleetmix.api")
 
 
-def vehicle_configurations_to_dataframe(configs: list[VehicleConfiguration]) -> pd.DataFrame:
+def vehicle_configurations_to_dataframe(
+    configs: list[VehicleConfiguration],
+) -> pd.DataFrame:
     """Convert list of VehicleConfiguration to DataFrame for compatibility."""
     return pd.DataFrame([config.to_dict() for config in configs])
 
 
 def optimize(
-    demand: Union[str, Path, pd.DataFrame],
-    config: Optional[Union[str, Path, Parameters]] = None,
+    demand: str | Path | pd.DataFrame,
+    config: str | Path | Parameters | None = None,
     output_dir: str = "results",
     format: str = "excel",
     verbose: bool = False,
-    allow_split_stops: bool = False
+    allow_split_stops: bool = False,
 ) -> FleetmixSolution:
     """
     Optimize fleet size and mix for given demand and configuration.
-    
+
     Args:
         demand: Customer demand data - can be:
             - Path to CSV/Excel file containing customer demand data
@@ -44,35 +47,34 @@ def optimize(
             - Parameters object
             - None (uses default configuration)
         output_dir: Directory to save results (default: "results")
-        format: Output format - "excel" or "json" (default: "excel")  
+        format: Output format - "excel" or "json" (default: "excel")
         verbose: Enable verbose logging (default: False)
         allow_split_stops: Allow customers to be served by multiple vehicles (default: False)
-    
+
     Returns:
         FleetmixSolution: Optimization results
-        
+
     Raises:
         FileNotFoundError: If demand file or config file doesn't exist
         ValueError: If demand data is invalid or optimization fails
-        
+
     Example:
         >>> # Optimize using file paths
         >>> solution = optimize("demand.csv", "config.yaml")
         >>> print(f"Total cost: ${solution.total_cost:,.2f}")
         >>> print(f"Vehicles used: {solution.total_vehicles}")
-        
-        >>> # Optimize using DataFrame and Parameters object  
+
+        >>> # Optimize using DataFrame and Parameters object
         >>> import pandas as pd
         >>> demand_df = pd.read_csv("demand.csv")
         >>> params = Parameters.from_yaml("config.yaml")
         >>> solution = optimize(demand_df, params, verbose=True)
     """
-    
+
     # Initialize TimeRecorder
     time_recorder = TimeRecorder()
-    
+
     with time_recorder.measure("global"):
-        
         # Step 1: Load demand data
         if isinstance(demand, pd.DataFrame):
             customers_df = demand.copy()
@@ -88,9 +90,9 @@ def optimize(
                 with time_recorder.measure("load_demand"):
                     # Try to read the CSV directly first
                     df = pd.read_csv(demand_path)
-                    
+
                     # Check if it's already in wide format (has demand columns)
-                    if any(col.endswith('_Demand') for col in df.columns):
+                    if any(col.endswith("_Demand") for col in df.columns):
                         # Already in wide format, use it directly
                         customers_df = df
                     else:
@@ -99,16 +101,16 @@ def optimize(
                 logger.info(f"Loaded {len(customers_df)} customers from {demand_path}")
             except Exception as e:
                 raise ValueError(
-                    f"Error loading demand data from {demand_path}:\n{str(e)}\n"
+                    f"Error loading demand data from {demand_path}:\n{e!s}\n"
                     f"Please check the file format and ensure it contains valid demand data."
                 )
-        
+
         # Validate demand data
         if customers_df.empty:
             raise ValueError(
                 "Demand data is empty. Please provide a file with customer demand data."
             )
-        
+
         # Step 2: Load parameters
         if config is None:
             # Use default parameters by loading from default config file
@@ -126,58 +128,58 @@ def optimize(
                 params = Parameters.from_yaml(str(config_path))
             except Exception as e:
                 raise ValueError(
-                    f"Error loading configuration from {config_path}:\n{str(e)}\n"
+                    f"Error loading configuration from {config_path}:\n{e!s}\n"
                     f"Please check the YAML syntax and required fields."
                 )
-        
+
         # Override allow_split_stops if provided via API
         if allow_split_stops != params.allow_split_stops:
             params.allow_split_stops = allow_split_stops
-        
+
         # Apply split-stop preprocessing if enabled
         customers_df = maybe_explode(customers_df, params.allow_split_stops)
-        
+
         # Validate demand DataFrame has required columns
-        required_columns = ['Customer_ID', 'Latitude', 'Longitude']
-        demand_columns = [f'{good}_Demand' for good in params.goods]
+        required_columns = ["Customer_ID", "Latitude", "Longitude"]
+        demand_columns = [f"{good}_Demand" for good in params.goods]
         required_columns.extend(demand_columns)
-        
-        missing_columns = [col for col in required_columns if col not in customers_df.columns]
+
+        missing_columns = [
+            col for col in required_columns if col not in customers_df.columns
+        ]
         if missing_columns:
             raise ValueError(
                 f"Missing required columns: {missing_columns}\n"
                 f"Required columns are: {required_columns}\n"
                 f"Available columns are: {list(customers_df.columns)}"
             )
-        
+
         # Convert customers DataFrame to list of Customer objects
         customers = Customer.from_dataframe(customers_df)
-        
+
         # Step 3: Generate vehicle configurations
         try:
             with time_recorder.measure("vehicle_configuration"):
                 configs = generate_vehicle_configurations(params.vehicles, params.goods)
         except Exception as e:
             raise ValueError(
-                f"Error generating vehicle configurations:\n{str(e)}\n"
+                f"Error generating vehicle configurations:\n{e!s}\n"
                 f"Please check your vehicle and goods definitions in the config."
             )
-        
+
         # Step 4: Generate clusters
         try:
             with time_recorder.measure("clustering"):
                 clusters = generate_clusters_for_configurations(
-                    customers=customers,
-                    configurations=configs,
-                    params=params
+                    customers=customers, configurations=configs, params=params
                 )
         except Exception as e:
             raise ValueError(
-                f"Error generating customer clusters:\n{str(e)}\n"
+                f"Error generating customer clusters:\n{e!s}\n"
                 f"This could be due to incompatible vehicle capacities, "
                 f"time constraints, or compartment configurations."
             )
-        
+
         # Check if clustering generated any valid clusters
         if not clusters:
             raise ValueError(
@@ -188,7 +190,7 @@ def optimize(
                 "- Time constraints are too restrictive\n"
                 "Please review your configuration and customer data."
             )
-        
+
         # Step 5: Solve optimization problem
         try:
             with time_recorder.measure("fsm_initial"):
@@ -198,15 +200,15 @@ def optimize(
                     customers=customers,
                     parameters=params,
                     verbose=verbose,
-                    time_recorder=time_recorder
+                    time_recorder=time_recorder,
                 )
         except Exception as e:
             raise ValueError(
-                f"Error during optimization:\n{str(e)}\n"
+                f"Error during optimization:\n{e!s}\n"
                 f"This could be due to infeasible problem constraints "
                 f"or insufficient cluster coverage."
             )
-    
+
     # Add time measurements to solution
     solution.time_measurements = time_recorder.measurements
 
@@ -215,15 +217,15 @@ def optimize(
         try:
             # Convert configs to DataFrame for saving
             configs_df = vehicle_configurations_to_dataframe(configs)
-            
+
             save_optimization_results(
                 solution=solution,
                 configurations_df=configs_df,
                 parameters=params,
-                format=format
+                format=format,
             )
             logger.info(f"Results saved to {output_dir}")
         except Exception as e:
-            log_warning(f"Failed to save results: {str(e)}")
-    
-    return solution 
+            log_warning(f"Failed to save results: {e!s}")
+
+    return solution

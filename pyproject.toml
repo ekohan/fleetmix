@@ -48,6 +48,7 @@ test = [
 ]
 dev = [
     "mypy",
+    "ruff",
     "types-tqdm",
     "types-PyYAML", 
     "types-seaborn",
@@ -96,3 +97,45 @@ module = [
     "streamlit.*",
 ]
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "fleetmix-env",
+    "tests",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings  
+    "F",     # pyflakes
+    "I",     # isort
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "W293",   # blank line contains whitespace
+    "W291",   # trailing whitespace
+    "F401",   # unused import (often intentional in __init__.py)
+    "F841",   # unused variable (often intentional in tests)
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["fleetmix"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

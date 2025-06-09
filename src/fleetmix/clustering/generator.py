@@ -6,141 +6,173 @@ optimization process. This is the main entry point for the cluster-first phase o
 cluster-first, fleet-design second heuristic.
 """
 
-from typing import Dict, List, Tuple, Optional
-import pandas as pd
-from joblib import Parallel, delayed
-from multiprocessing import Manager
 import itertools
 from dataclasses import replace
+from multiprocessing import Manager
+
+import pandas as pd
+from joblib import Parallel, delayed
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Cluster, ClusteringContext, DepotLocation, VehicleConfiguration, Customer
+from fleetmix.core_types import (
+    Cluster,
+    ClusteringContext,
+    Customer,
+    DepotLocation,
+    VehicleConfiguration,
+)
+from fleetmix.utils.logging import FleetmixLogger
+
 from .heuristics import (
-    get_feasible_customers_subset,
     create_initial_clusters,
+    get_feasible_customers_subset,
     process_clusters_recursively,
 )
 
-from fleetmix.utils.logging import FleetmixLogger
 logger = FleetmixLogger.get_logger(__name__)
+
 
 class Symbols:
     """Unicode symbols for logging."""
+
     CHECKMARK = "✓"
     CROSS = "✗"
 
+
 def generate_clusters_for_configurations(
-    customers: List[Customer],
-    configurations: List[VehicleConfiguration],
+    customers: list[Customer],
+    configurations: list[VehicleConfiguration],
     params: Parameters,
-) -> List[Cluster]:
+) -> list[Cluster]:
     """
     Generate clusters for each vehicle configuration in parallel.
-    
+
     Args:
         customers: List of Customer objects containing customer data
         configurations: List of vehicle configurations
         params: Parameters object containing vehicle configuration parameters
-    
+
     Returns:
         List of Cluster objects containing all generated clusters
     """
     # Convert to DataFrame for internal processing
     customers_df = Customer.to_dataframe(customers)
-    
+
     # Call internal implementation
     clusters_df = _generate_clusters(customers_df, configurations, params)
-    
+
     # Convert back to list of Cluster objects
     return Cluster.from_dataframe(clusters_df)
 
+
 def _generate_clusters(
     customers: pd.DataFrame,
-    configurations: List[VehicleConfiguration],
+    configurations: list[VehicleConfiguration],
     params: Parameters,
 ) -> pd.DataFrame:
     """
     Internal implementation - generate clusters for each vehicle configuration in parallel.
-    
+
     Args:
         customers: DataFrame containing customer data
         configurations: List of vehicle configurations
         params: Parameters object containing vehicle configuration parameters
-    
+
     Returns:
         DataFrame containing all generated clusters
     """
     logger.info("--- Starting Cluster Generation Process ---")
     if customers.empty or not configurations:
-        logger.warning("Input customers or configurations are empty. Returning empty DataFrame.")
+        logger.warning(
+            "Input customers or configurations are empty. Returning empty DataFrame."
+        )
         return pd.DataFrame()
 
     with Manager() as manager:
         shared_demand_cache = manager.dict()
         shared_route_time_cache = manager.dict()
-        
+
         logger.info("Initializing shared caches for demand and route time calculations")
 
         # 1. Generate feasibility mapping
         logger.info("Generating feasibility mapping...")
         feasible_customers = _generate_feasibility_mapping(
-            customers, 
-            configurations,
-            params.goods
+            customers, configurations, params.goods
         )
         if not feasible_customers:
-            logger.warning("No customers are feasible for any configuration. Returning empty DataFrame.")
+            logger.warning(
+                "No customers are feasible for any configuration. Returning empty DataFrame."
+            )
             return pd.DataFrame()
-        logger.info(f"Feasibility mapping generated for {len(feasible_customers)} customers.")
+        logger.info(
+            f"Feasibility mapping generated for {len(feasible_customers)} customers."
+        )
 
         # 2. Generate list of (ClusteringContext, method_name) tuples for all runs
         context_and_methods = _get_clustering_context_list(params)
 
         # 3. Precompute distance/duration matrices if TSP route estimation is used
-        tsp_needed = any(clustering_context.route_time_estimation == 'TSP' for clustering_context, _ in context_and_methods)
+        tsp_needed = any(
+            clustering_context.route_time_estimation == "TSP"
+            for clustering_context, _ in context_and_methods
+        )
         if tsp_needed:
-            logger.info("TSP route estimation detected. Building distance/duration matrices per vehicle configuration...")
+            logger.info(
+                "TSP route estimation detected. Building distance/duration matrices per vehicle configuration..."
+            )
             # Build matrices for each unique avg_speed value across configurations
             from fleetmix.utils.route_time import build_distance_duration_matrices
+
             unique_speeds = set(config.avg_speed for config in configurations)
             for speed in unique_speeds:
-                depot_dict = {'latitude': params.depot.latitude, 'longitude': params.depot.longitude}
+                depot_dict = {
+                    "latitude": params.depot.latitude,
+                    "longitude": params.depot.longitude,
+                }
                 build_distance_duration_matrices(customers, depot_dict, speed)
                 logger.debug(f"Built matrices for avg_speed={speed} km/h")
         else:
-            logger.info("TSP route estimation not used. Skipping matrix precomputation.")
+            logger.info(
+                "TSP route estimation not used. Skipping matrix precomputation."
+            )
 
         cluster_id_generator = itertools.count()
 
         # 4. Process configurations in parallel for each context configuration
         all_clusters = []
         for clustering_context, method_name in context_and_methods:
-            logger.info(f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---")
+            logger.info(
+                f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---"
+            )
 
             # Run clustering for all configurations using these context in parallel, process-based
-            clusters_by_config = Parallel(n_jobs=-1, backend='loky')(
+            clusters_by_config = Parallel(n_jobs=-1, backend="loky")(
                 delayed(process_configuration)(
-                    config, 
-                    customers, 
-                    feasible_customers, 
+                    config,
+                    customers,
+                    feasible_customers,
                     clustering_context,
                     shared_demand_cache,
                     shared_route_time_cache,
                     params,
-                    method_name
+                    method_name,
                 )
                 for config in configurations
             )
-            
+
             # Flatten the list of lists returned by Parallel and assign IDs
             for config_clusters in clusters_by_config:
                 for cluster in config_clusters:
                     # Assign unique Cluster_ID
                     cluster.cluster_id = next(cluster_id_generator)
                     all_clusters.append(cluster)
-            logger.info(f"--- Configuration {method_name} completed, generated {len([c for config_clusters in clusters_by_config for c in config_clusters])} raw clusters ---")
+            logger.info(
+                f"--- Configuration {method_name} completed, generated {len([c for config_clusters in clusters_by_config for c in config_clusters])} raw clusters ---"
+            )
 
-        logger.info(f"Cache statistics: {len(shared_demand_cache)} demand entries, {len(shared_route_time_cache)} route time entries")
+        logger.info(
+            f"Cache statistics: {len(shared_demand_cache)} demand entries, {len(shared_route_time_cache)} route time entries"
+        )
 
     if not all_clusters:
         logger.warning("No clusters were generated by any configuration.")
@@ -148,12 +180,14 @@ def _generate_clusters(
 
     # Convert to dictionary for DataFrame
     all_clusters_dicts = [cluster.to_dict() for cluster in all_clusters]
-    
+
     # Remove duplicate clusters based on customer sets
-    logger.info(f"Combining and deduplicating {len(all_clusters_dicts)} raw clusters from all configurations...")
+    logger.info(
+        f"Combining and deduplicating {len(all_clusters_dicts)} raw clusters from all configurations..."
+    )
     combined_clusters_df = pd.DataFrame(all_clusters_dicts)
     unique_clusters_df = _deduplicate_clusters(combined_clusters_df)
-    
+
     # Check if no clusters were generated
     if unique_clusters_df.empty:
         error_msg = "No feasible clusters could be generated!\n"
@@ -169,85 +203,106 @@ def _generate_clusters(
     validate_cluster_coverage(unique_clusters_df, customers)
 
     logger.info("--- Cluster Generation Complete ---")
-    logger.info(f"{Symbols.CHECKMARK} Generated a total of {len(unique_clusters_df)} unique clusters across all configurations.")
+    logger.info(
+        f"{Symbols.CHECKMARK} Generated a total of {len(unique_clusters_df)} unique clusters across all configurations."
+    )
 
     return unique_clusters_df
+
 
 def process_configuration(
     config: VehicleConfiguration,
     customers: pd.DataFrame,
-    feasible_customers: Dict,
+    feasible_customers: dict,
     context: ClusteringContext,
-    demand_cache: Optional[Dict] = None,
-    route_time_cache: Optional[Dict] = None,
-    main_params: Optional[Parameters] = None,
-    method_name: str = 'minibatch_kmeans'
-) -> List[Cluster]:
+    demand_cache: dict | None = None,
+    route_time_cache: dict | None = None,
+    main_params: Parameters | None = None,
+    method_name: str = "minibatch_kmeans",
+) -> list[Cluster]:
     """Process a single vehicle configuration to generate feasible clusters."""
     if main_params is None:
         raise ValueError("main_params is required for configuration processing")
-    
+
     # Provide default empty dictionaries if caches are None
     demand_cache = demand_cache or {}
     route_time_cache = route_time_cache or {}
-    
+
     # 1. Get customers that can be served by the configuration
-    customers_subset = get_feasible_customers_subset(customers, feasible_customers, config.config_id)
+    customers_subset = get_feasible_customers_subset(
+        customers, feasible_customers, config.config_id
+    )
     if customers_subset.empty:
         return []
-    
+
     # 2. Create initial clusters (one large cluster for the subset)
-    initial_clusters_df = create_initial_clusters(customers_subset, config, context, main_params, method_name)
-    
+    initial_clusters_df = create_initial_clusters(
+        customers_subset, config, context, main_params, method_name
+    )
+
     # 3. Process clusters recursively until constraints are satisfied
-    return process_clusters_recursively(initial_clusters_df, config, context, demand_cache, route_time_cache, main_params, method_name)
+    return process_clusters_recursively(
+        initial_clusters_df,
+        config,
+        context,
+        demand_cache,
+        route_time_cache,
+        main_params,
+        method_name,
+    )
+
 
 def validate_cluster_coverage(clusters_df, customers_df):
     """Validate that all customers are covered by at least one cluster."""
-    customer_coverage = {cid: False for cid in customers_df['Customer_ID']}
-    for customers in clusters_df['Customers']:
+    customer_coverage = dict.fromkeys(customers_df["Customer_ID"], False)
+    for customers in clusters_df["Customers"]:
         for cid in customers:
             customer_coverage[cid] = True
     uncovered = [cid for cid, covered in customer_coverage.items() if not covered]
-    
+
     if uncovered:
-        logger.warning(f"Found {len(uncovered)} customers not covered by any cluster: {uncovered[:5]}...")
+        logger.warning(
+            f"Found {len(uncovered)} customers not covered by any cluster: {uncovered[:5]}..."
+        )
     else:
-        logger.info(f"{Symbols.CHECKMARK} All {len(customer_coverage)} customers are covered by at least one cluster.")
+        logger.info(
+            f"{Symbols.CHECKMARK} All {len(customer_coverage)} customers are covered by at least one cluster."
+        )
+
 
 def _generate_feasibility_mapping(
     customers: pd.DataFrame,
-    configurations: List[VehicleConfiguration],
-    goods: List[str]
-) -> Dict:
+    configurations: list[VehicleConfiguration],
+    goods: list[str],
+) -> dict:
     """Generate mapping of feasible configurations for each customer."""
     feasible_customers = {}
-    
+
     for _, customer in customers.iterrows():
-        customer_id = customer['Customer_ID']
+        customer_id = customer["Customer_ID"]
         feasible_configs = []
-        
+
         for config in configurations:
             if _is_customer_feasible(customer, config, goods):
                 feasible_configs.append(config.config_id)
-        
+
         if feasible_configs:
             feasible_customers[customer_id] = feasible_configs
-    
+
     return feasible_customers
 
+
 def _is_customer_feasible(
-    customer: pd.Series,
-    config: VehicleConfiguration,
-    goods: List[str]
+    customer: pd.Series, config: VehicleConfiguration, goods: list[str]
 ) -> bool:
     """Check if a customer's demands can be served by a configuration."""
     for good in goods:
-        if customer[f'{good}_Demand'] > 0 and not config.compartments[good]:
+        if customer[f"{good}_Demand"] > 0 and not config.compartments[good]:
             return False
-        if customer[f'{good}_Demand'] > config.capacity:
+        if customer[f"{good}_Demand"] > config.capacity:
             return False
     return True
+
 
 def _deduplicate_clusters(clusters_df: pd.DataFrame) -> pd.DataFrame:
     """Removes duplicate clusters based on the set of customers."""
@@ -256,66 +311,82 @@ def _deduplicate_clusters(clusters_df: pd.DataFrame) -> pd.DataFrame:
     logger.debug(f"Starting deduplication with {len(clusters_df)} clusters.")
     # Create a column of frozensets for efficient duplicate checking
     # The lambda handles cases where 'Customers' might not be a list/tuple, creating an empty set
-    clusters_df['Customer_Set'] = clusters_df['Customers'].apply(
+    clusters_df["Customer_Set"] = clusters_df["Customers"].apply(
         lambda x: frozenset(x) if isinstance(x, (list, tuple)) else frozenset()
     )
     # Drop duplicates based on the frozenset column
-    deduplicated_df = clusters_df.drop_duplicates(subset=['Customer_Set'], keep='first').drop(columns=['Customer_Set'])
-    
+    deduplicated_df = clusters_df.drop_duplicates(
+        subset=["Customer_Set"], keep="first"
+    ).drop(columns=["Customer_Set"])
+
     if len(deduplicated_df) < len(clusters_df):
-        logger.debug(f"Finished deduplication: Removed {len(clusters_df) - len(deduplicated_df)} duplicate clusters, {len(deduplicated_df)} unique clusters remain.")
+        logger.debug(
+            f"Finished deduplication: Removed {len(clusters_df) - len(deduplicated_df)} duplicate clusters, {len(deduplicated_df)} unique clusters remain."
+        )
     else:
-        logger.debug(f"Finished deduplication: No duplicate clusters found ({len(deduplicated_df)} clusters).")
+        logger.debug(
+            f"Finished deduplication: No duplicate clusters found ({len(deduplicated_df)} clusters)."
+        )
     return deduplicated_df
 
-def _get_clustering_context_list(params: Parameters) -> List[Tuple[ClusteringContext, str]]:
+
+def _get_clustering_context_list(
+    params: Parameters,
+) -> list[tuple[ClusteringContext, str]]:
     """Generates a list of (ClusteringContext, method_name) tuples for all runs."""
     context_list = []
 
     # Convert depot dict to DepotLocation
-    depot_location = DepotLocation(latitude=params.depot['latitude'], longitude=params.depot['longitude'])
+    depot_location = DepotLocation(
+        latitude=params.depot["latitude"], longitude=params.depot["longitude"]
+    )
 
     # Create base context object with common parameters
     base_context = ClusteringContext(
         goods=params.goods,
         depot=depot_location,
-        max_depth=params.clustering['max_depth'],
-        route_time_estimation=params.clustering['route_time_estimation'],
-        geo_weight=params.clustering['geo_weight'],
-        demand_weight=params.clustering['demand_weight']
+        max_depth=params.clustering["max_depth"],
+        route_time_estimation=params.clustering["route_time_estimation"],
+        geo_weight=params.clustering["geo_weight"],
+        demand_weight=params.clustering["demand_weight"],
     )
 
-    method = params.clustering['method']
-    if method == 'combine':
+    method = params.clustering["method"]
+    if method == "combine":
         logger.info("🔄 Generating context variations for 'combine' method")
-        
+
         # Check if sub_methods are specified in the clustering params
         # TODO: offer this as a parameter
-        sub_methods = params.clustering.get('combine_sub_methods', None)
+        sub_methods = params.clustering.get("combine_sub_methods", None)
         if sub_methods is None:
             # Use default sub_methods
-            sub_methods = ['minibatch_kmeans', 'kmedoids', 'gaussian_mixture']
-        
+            sub_methods = ["minibatch_kmeans", "kmedoids", "gaussian_mixture"]
+
         # 1. Base methods - Use default weights from base_context
         for method_name in sub_methods:
             context_list.append((base_context, method_name))
 
         # 2. Agglomerative with different explicit weights
         weight_combinations = [
-            (1.0, 0.0), (0.8, 0.2), (0.6, 0.4), (0.4, 0.6), (0.2, 0.8), (0.0, 1.0)
+            (1.0, 0.0),
+            (0.8, 0.2),
+            (0.6, 0.4),
+            (0.4, 0.6),
+            (0.2, 0.8),
+            (0.0, 1.0),
         ]
         for geo_w, demand_w in weight_combinations:
             agglomerative_context = replace(
-                base_context,
-                geo_weight=geo_w,
-                demand_weight=demand_w
+                base_context, geo_weight=geo_w, demand_weight=demand_w
             )
-            context_list.append((agglomerative_context, 'agglomerative'))
+            context_list.append((agglomerative_context, "agglomerative"))
 
     else:
         # Single method specified: Use the base_context as configured initially
         logger.info(f"📍 Using single method configuration: {method}")
         context_list.append((base_context, method))
 
-    logger.info(f"Generated {len(context_list)} distinct clustering context configurations.")
-    return context_list 
+    logger.info(
+        f"Generated {len(context_list)} distinct clustering context configurations."
+    )
+    return context_list

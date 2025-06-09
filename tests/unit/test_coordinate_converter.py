@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 
 from fleetmix.utils.coordinate_converter import CoordinateConverter, GeoBounds
 
@@ -40,7 +39,9 @@ def test_scale_maintains_aspect_ratio():
     }
     converter = CoordinateConverter(coords)
     # The scale factor should be the minimum of x_scale and y_scale
-    assert converter.scale == pytest.approx(min(converter.x_scale, converter.y_scale), rel=1e-6)
+    assert converter.scale == pytest.approx(
+        min(converter.x_scale, converter.y_scale), rel=1e-6
+    )
     # scale is no greater than each individual scale
     assert converter.scale <= converter.x_scale
-    assert converter.scale <= converter.y_scale 
+    assert converter.scale <= converter.y_scale

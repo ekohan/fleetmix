@@ -190,7 +190,9 @@ def compute_composite_distance(
 
 
 def get_cached_demand(
-    customers: list[CustomerBase], goods: list[str], demand_cache: dict[Any, dict[str, float]]
+    customers: list[CustomerBase],
+    goods: list[str],
+    demand_cache: dict[Any, dict[str, float]],
 ) -> dict[str, float]:
     """Get demand from cache or compute and cache it."""
     # Use sorted tuple of customer IDs as key (immutable and hashable)
@@ -216,19 +218,27 @@ def get_cached_demand(
             for good in goods_subset:
                 good_lower = good.lower()
                 # Find the matching good in the customer's demands (case-insensitive)
-                demand_key = next((k for k in customer.demands if k.lower() == good_lower), None)
+                demand_key = next(
+                    (k for k in customer.demands if k.lower() == good_lower), None
+                )
                 if demand_key:
                     # Find the matching good in the goods list (case-insensitive)
-                    goods_key = next((g for g in goods if g.lower() == good_lower), None)
+                    goods_key = next(
+                        (g for g in goods if g.lower() == good_lower), None
+                    )
                     if goods_key:
                         origin_demands[origin_id][goods_key] = max(
-                            origin_demands[origin_id][goods_key], customer.demands[demand_key]
+                            origin_demands[origin_id][goods_key],
+                            customer.demands[demand_key],
                         )
         else:
             # For regular customers, simple sum
             for good in goods:
                 good_lower = good.lower()
-                demand_value = next((v for k, v in customer.demands.items() if k.lower() == good_lower), 0.0)
+                demand_value = next(
+                    (v for k, v in customer.demands.items() if k.lower() == good_lower),
+                    0.0,
+                )
                 demand_dict[good] += demand_value
 
     # Add pseudo-customer demands to the total
@@ -284,8 +294,9 @@ def get_feasible_customers_subset(
 ) -> list[CustomerBase]:
     """Extract feasible customers for a given configuration."""
     return [
-        customer for customer in customers
-        if customer.customer_id in feasible_customers 
+        customer
+        for customer in customers
+        if customer.customer_id in feasible_customers
         and config_id in feasible_customers[customer.customer_id]
     ]
 
@@ -306,7 +317,9 @@ def create_initial_clusters(
         )
 
 
-def create_small_dataset_clusters(customers_subset: list[CustomerBase]) -> list[list[CustomerBase]]:
+def create_small_dataset_clusters(
+    customers_subset: list[CustomerBase],
+) -> list[list[CustomerBase]]:
     """Create clusters for small datasets (≤2 customers)."""
     # Put all customers in a single cluster
     return [customers_subset]
@@ -347,7 +360,9 @@ def create_normal_dataset_clusters(
     clusters = []
     for cluster_label in range(num_clusters):
         cluster_customers = [
-            customers_subset[i] for i, label in enumerate(labels) if label == cluster_label
+            customers_subset[i]
+            for i, label in enumerate(labels)
+            if label == cluster_label
         ]
         if cluster_customers:  # Only add non-empty clusters
             clusters.append(cluster_customers)
@@ -451,7 +466,11 @@ def split_cluster(
     sub_cluster_sizes = []
     for label in [0, 1]:
         mask = sub_labels == label
-        sub_cluster = [cluster_customers[i] for i, is_in_cluster in enumerate(mask) if is_in_cluster]
+        sub_cluster = [
+            cluster_customers[i]
+            for i, is_in_cluster in enumerate(mask)
+            if is_in_cluster
+        ]
         if sub_cluster:  # Only add non-empty clusters
             sub_clusters.append(sub_cluster)
             sub_cluster_sizes.append(len(sub_cluster))
@@ -487,8 +506,12 @@ def create_cluster(
 
     # Calculate centroid
     if cluster_customers:
-        centroid_latitude = sum(customer.location[0] for customer in cluster_customers) / len(cluster_customers)
-        centroid_longitude = sum(customer.location[1] for customer in cluster_customers) / len(cluster_customers)
+        centroid_latitude = sum(
+            customer.location[0] for customer in cluster_customers
+        ) / len(cluster_customers)
+        centroid_longitude = sum(
+            customer.location[1] for customer in cluster_customers
+        ) / len(cluster_customers)
     else:
         centroid_latitude = 0.0
         centroid_longitude = 0.0
@@ -527,7 +550,9 @@ def process_clusters_recursively(
     clusters = []
 
     # Process clusters until all constraints are satisfied
-    clusters_to_check = [(cluster_customers, 0) for cluster_customers in initial_clusters]
+    clusters_to_check = [
+        (cluster_customers, 0) for cluster_customers in initial_clusters
+    ]
 
     logger.info(
         f"Starting recursive processing for config {config_id} with {len(clusters_to_check)} initial clusters"
@@ -629,7 +654,9 @@ def estimate_num_initial_clusters(
 
     # Calculate total demand. For pseudo-customers, this is aggregated by origin.
     demand_cache: dict[Any, dict[str, float]] = {}
-    demand_dict = get_cached_demand(customers_list, clustering_context.goods, demand_cache)
+    demand_dict = get_cached_demand(
+        customers_list, clustering_context.goods, demand_cache
+    )
 
     total_demand = 0.0
     for good in clustering_context.goods:
@@ -652,19 +679,24 @@ def estimate_num_initial_clusters(
         sample_customers_df = customers
 
     # Estimate time for an average route
-    avg_customers_per_cluster = num_stops / clusters_by_capacity if clusters_by_capacity > 0 else num_stops
-    
+    avg_customers_per_cluster = (
+        num_stops / clusters_by_capacity if clusters_by_capacity > 0 else num_stops
+    )
+
     # Ensure sample size doesn't exceed population size and is at least 1 if possible
-    if np.isinf(avg_customers_per_cluster) or np.isnan(avg_customers_per_cluster) or avg_customers_per_cluster < 1:
+    if (
+        np.isinf(avg_customers_per_cluster)
+        or np.isnan(avg_customers_per_cluster)
+        or avg_customers_per_cluster < 1
+    ):
         sample_size = num_stops
     else:
         sample_size = max(1, min(int(avg_customers_per_cluster), num_stops))
-    
+
     if sample_size > 0:
         avg_cluster = sample_customers_df.sample(n=sample_size)
     else:
         avg_cluster = pd.DataFrame(columns=customers.columns)
-
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(config, clustering_context.depot, prune_tsp_val)

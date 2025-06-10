@@ -91,15 +91,15 @@ def explode_customer(
 def explode_customers(customers: list[CustomerBase]) -> list[CustomerBase]:
     """
     Explode regular customers into pseudo-customers while preserving existing pseudo-customers.
-    
+
     Args:
         customers: List of CustomerBase objects (mix of Customer and PseudoCustomer)
-        
+
     Returns:
         List of CustomerBase objects with regular customers exploded into pseudo-customers
     """
     result = []
-    
+
     for customer in customers:
         if customer.is_pseudo_customer():
             # Already a pseudo-customer, keep as-is
@@ -113,8 +113,10 @@ def explode_customers(customers: list[CustomerBase]) -> list[CustomerBase]:
                 service_time=customer.service_time,
             )
             result.extend(pseudo_customers)
-    
-    logger.debug(f"Exploded {len(customers)} customers into {len(result)} pseudo-customers")
+
+    logger.debug(
+        f"Exploded {len(customers)} customers into {len(result)} pseudo-customers"
+    )
     return result
 
 
@@ -139,13 +141,13 @@ def maybe_explode(customers_df: pd.DataFrame, allow_split_stops: bool) -> pd.Dat
 
     # Convert DataFrame to CustomerBase objects
     customers = Customer.from_dataframe(customers_df)
-    
+
     # Explode customers into pseudo-customers
     exploded_customers = explode_customers(customers)
-    
+
     # Convert back to DataFrame
     result_df = Customer.to_dataframe(exploded_customers)
-    
+
     logger.info(
         f"Created {len(result_df)} pseudo-customers from {len(customers_df)} original customers"
     )
@@ -156,7 +158,7 @@ def maybe_explode(customers_df: pd.DataFrame, allow_split_stops: bool) -> pd.Dat
 # Legacy utility functions - DEPRECATED - Use CustomerBase methods instead
 def is_pseudo_customer(customer_id: str) -> bool:
     """Check if a customer ID represents a pseudo-customer (contains '::').
-    
+
     DEPRECATED: Use customer.is_pseudo_customer() method instead.
     """
     return "::" in customer_id
@@ -164,7 +166,7 @@ def is_pseudo_customer(customer_id: str) -> bool:
 
 def get_origin_id(customer_id: str) -> str:
     """Extract the original customer ID from a pseudo-customer ID.
-    
+
     DEPRECATED: Use customer.get_origin_id() method instead.
     """
     if is_pseudo_customer(customer_id):
@@ -174,7 +176,7 @@ def get_origin_id(customer_id: str) -> str:
 
 def get_subset_from_id(customer_id: str) -> tuple[str, ...]:
     """Extract the goods subset from a pseudo-customer ID.
-    
+
     DEPRECATED: Use customer.get_goods_subset() method instead.
     """
     if is_pseudo_customer(customer_id):

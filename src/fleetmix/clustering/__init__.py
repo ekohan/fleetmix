@@ -24,7 +24,7 @@ __all__ = [
     "Cluster",
     "ClusteringContext",
     "Customer",
-    "CustomerBase", 
+    "CustomerBase",
     "PseudoCustomer",
     "_is_customer_feasible",
     "compute_composite_distance",

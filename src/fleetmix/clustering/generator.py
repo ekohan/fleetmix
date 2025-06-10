@@ -236,12 +236,14 @@ def process_configuration(
 
 def validate_cluster_coverage(clusters: list[Cluster], customers: list[CustomerBase]):
     """Validate that all customers are covered by at least one cluster."""
-    customer_coverage = dict.fromkeys([customer.customer_id for customer in customers], False)
-    
+    customer_coverage = dict.fromkeys(
+        [customer.customer_id for customer in customers], False
+    )
+
     for cluster in clusters:
         for customer_id in cluster.customers:
             customer_coverage[customer_id] = True
-            
+
     uncovered = [cid for cid, covered in customer_coverage.items() if not covered]
 
     if uncovered:
@@ -292,13 +294,13 @@ def _deduplicate_clusters(clusters: list[Cluster]) -> list[Cluster]:
     """Removes duplicate clusters based on the set of customers."""
     if not clusters:
         return clusters
-        
+
     logger.debug(f"Starting deduplication with {len(clusters)} clusters.")
-    
+
     # Create mapping from customer sets to clusters
     seen_customer_sets = {}
     unique_clusters = []
-    
+
     for cluster in clusters:
         customer_set = frozenset(cluster.customers)
         if customer_set not in seen_customer_sets:

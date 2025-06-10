@@ -39,35 +39,35 @@ class BenchmarkType(Enum):
 @dataclass
 class CustomerBase(ABC):
     """Base class for all customer types (regular and pseudo-customers)."""
-    
+
     customer_id: str
     demands: dict[str, float]  # e.g., {'dry': 10, 'chilled': 5}
     location: tuple[float, float]  # (latitude, longitude)
     service_time: float  # Service time in minutes
-    
+
     @abstractmethod
     def is_pseudo_customer(self) -> bool:
         """Return True if this is a pseudo-customer."""
         pass
-    
+
     @abstractmethod
     def get_origin_id(self) -> str:
         """Return the original customer ID (for pseudo-customers) or self ID (for regular customers)."""
         pass
-    
-    @abstractmethod 
+
+    @abstractmethod
     def get_goods_subset(self) -> tuple[str, ...]:
         """Return the goods subset this customer represents."""
         pass
-    
+
     def total_demand(self) -> float:
         """Return total demand across all goods."""
         return sum(self.demands.values())
-    
+
     def has_demand_for(self, good: str) -> bool:
         """Check if customer has positive demand for a specific good."""
         return self.demands.get(good, 0.0) > 0
-    
+
     def get_required_goods(self) -> set[str]:
         """Return set of goods with positive demand."""
         return {good for good, demand in self.demands.items() if demand > 0}
@@ -83,15 +83,15 @@ class PseudoCustomer(CustomerBase):
 
     origin_id: str  # Original physical customer ID
     subset: tuple[str, ...]  # Tuple of goods this pseudo-customer represents
-    
+
     def is_pseudo_customer(self) -> bool:
         """Return True for pseudo-customers."""
         return True
-    
+
     def get_origin_id(self) -> str:
         """Return the original customer ID."""
         return self.origin_id
-    
+
     def get_goods_subset(self) -> tuple[str, ...]:
         """Return the goods subset this pseudo-customer represents."""
         return self.subset
@@ -104,11 +104,11 @@ class Customer(CustomerBase):
     def is_pseudo_customer(self) -> bool:
         """Return False for regular customers."""
         return False
-    
+
     def get_origin_id(self) -> str:
-        """Return self customer_id for regular customers.""" 
+        """Return self customer_id for regular customers."""
         return self.customer_id
-    
+
     def get_goods_subset(self) -> tuple[str, ...]:
         """Return all goods with positive demand for regular customers."""
         return tuple(sorted(self.get_required_goods()))
@@ -126,7 +126,7 @@ class Customer(CustomerBase):
                 origin_id = customer_id_str.split("::")[0]
                 subset_str = customer_id_str.split("::")[1]
                 subset = tuple(subset_str.split("-"))
-                
+
                 # Extract demands from columns ending with '_Demand'
                 demand_cols = [col for col in df.columns if col.endswith("_Demand")]
                 demands = {}
@@ -191,12 +191,12 @@ class Customer(CustomerBase):
             for good in all_goods_list:
                 col_name = f"{good}_Demand"
                 row[col_name] = customer.demands.get(good, 0.0)
-                
+
             # Add pseudo-customer specific fields if applicable
             if customer.is_pseudo_customer():
                 row["Origin_ID"] = customer.get_origin_id()
                 row["Subset"] = "|".join(customer.get_goods_subset())
-                
+
             data.append(row)
 
         return pd.DataFrame(data)

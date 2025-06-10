@@ -204,7 +204,9 @@ def _solve_internal(
             error_msg = "Optimization problem is infeasible!"
 
             if clusters_without_vehicles:
-                error_msg += f"\nClusters without feasible vehicles: {clusters_without_vehicles}"
+                error_msg += (
+                    f"\nClusters without feasible vehicles: {clusters_without_vehicles}"
+                )
                 error_msg += "\nPossible causes:"
                 error_msg += "\n- Vehicle capacities are too small for cluster demands"
                 error_msg += "\n- No vehicles have the right compartment mix"

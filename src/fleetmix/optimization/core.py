@@ -213,7 +213,7 @@ def _solve_internal(
                 and clusters_without_vehicles
                 and not parameters.allow_split_stops
             ):
-                error_msg = f"Optimization failed with status: Not Solved"
+                error_msg = "Optimization failed with status: Not Solved"
                 raise RuntimeError(error_msg)
 
             error_msg = "Optimization problem is infeasible!"

@@ -181,6 +181,8 @@ def _solve_internal(
         if status_name == "Infeasible":
             # Check if any clusters have no feasible vehicles
             clusters_without_vehicles = []
+            has_novehicle_vars = False
+
             for _, cluster in clusters_df.iterrows():
                 cluster_id = cluster["Cluster_ID"]
                 has_feasible_vehicle = False
@@ -200,6 +202,19 @@ def _solve_internal(
 
                 if not has_feasible_vehicle:
                     clusters_without_vehicles.append(cluster_id)
+
+            # Check if we have NoVehicle variables in the x_vars
+            has_novehicle_vars = any(v == "NoVehicle" for v, k in x_vars.keys())
+
+            # If we have NoVehicle variables and infeasible clusters, this should be
+            # treated as "Not Solved" rather than "Infeasible" in traditional mode
+            if (
+                has_novehicle_vars
+                and clusters_without_vehicles
+                and not parameters.allow_split_stops
+            ):
+                error_msg = f"Optimization failed with status: Not Solved"
+                raise RuntimeError(error_msg)
 
             error_msg = "Optimization problem is infeasible!"
 

@@ -27,7 +27,12 @@ import pandas as pd
 import seaborn as sns
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import BenchmarkType, FleetmixSolution, VRPSolution
+from fleetmix.core_types import (
+    BenchmarkType,
+    FleetmixSolution,
+    VehicleConfiguration,
+    VRPSolution,
+)
 from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
@@ -35,7 +40,7 @@ logger = FleetmixLogger.get_logger(__name__)
 
 def save_optimization_results(
     solution: FleetmixSolution,
-    configurations_df: pd.DataFrame,
+    configurations: list[VehicleConfiguration],
     parameters: Parameters,
     filename: str | None = None,
     format: str = "excel",
@@ -57,6 +62,9 @@ def save_optimization_results(
 
     output_filename.parent.mkdir(parents=True, exist_ok=True)
 
+    # Create a lookup dictionary for configurations
+    config_lookup = {str(config.config_id): config for config in configurations}
+
     # Calculate metrics and prepare data
     if "Customers" in solution.selected_clusters.columns:
         customers_per_cluster = solution.selected_clusters["Customers"].apply(len)
@@ -75,10 +83,8 @@ def save_optimization_results(
                 if isinstance(cluster["Total_Demand"], str)
                 else cluster["Total_Demand"]
             )
-            config = configurations_df[
-                configurations_df["Config_ID"] == cluster["Config_ID"]
-            ].iloc[0]
-            total_utilization = (sum(total_demand.values()) / config["Capacity"]) * 100
+            config = config_lookup[str(cluster["Config_ID"])]
+            total_utilization = (sum(total_demand.values()) / config.capacity) * 100
 
         load_percentages.append(total_utilization)
         logger.debug(
@@ -172,9 +178,7 @@ def save_optimization_results(
 
         # Add demand and load percentages by product type
         for cluster_idx, cluster in cluster_details.iterrows():
-            config = configurations_df[
-                configurations_df["Config_ID"] == cluster["Config_ID"]
-            ].iloc[0]
+            config = config_lookup[str(cluster["Config_ID"])]
 
             total_demand = (
                 ast.literal_eval(cluster["Total_Demand"])
@@ -194,16 +198,19 @@ def save_optimization_results(
             for good in parameters.goods:
                 load_column_name = f"Load_{good}_pct"
                 cluster_details.at[cluster_idx, load_column_name] = (
-                    total_demand[good] / config["Capacity"]
+                    total_demand[good] / config.capacity
                 )
 
             # Calculate TOTAL load percentage and empty percentage
-            config_capacity = config["Capacity"]
+            config_capacity = config.capacity
             total_load_pct = (
                 total_demand_sum / config_capacity if config_capacity > 0 else 0
             )
             cluster_details.at[cluster_idx, "Load_total_pct"] = total_load_pct
             cluster_details.at[cluster_idx, "Load_empty_pct"] = 1 - total_load_pct
+
+    # Convert configurations to DataFrame for output compatibility
+    configurations_df = pd.DataFrame([config.to_dict() for config in configurations])
 
     data = {
         "summary_metrics": summary_metrics,
@@ -504,155 +511,3 @@ def visualize_clusters(
     # Save map
     viz_filename = str(filename).rsplit(".", 1)[0] + "_clusters.html"
     m.save(viz_filename)
-
-
-def save_benchmark_results(
-    solutions: dict[str, VRPSolution],
-    parameters: Parameters,
-    benchmark_type: BenchmarkType,
-    filename: str | None = None,
-    format: str = "excel",
-) -> None:
-    """Save VRP benchmark results in the same format as optimization results"""
-
-    # Calculate total metrics across all solutions
-    total_cost = sum(sol.total_cost for sol in solutions.values())
-    execution_time = max(sol.execution_time for sol in solutions.values())
-
-    # Create configurations DataFrame
-    configurations = []
-    for vt_name, vt_info in parameters.vehicles.items():
-        if benchmark_type == BenchmarkType.SINGLE_COMPARTMENT:
-            for product in parameters.goods:
-                configurations.append(
-                    {
-                        "Config_ID": f"{product}_{vt_name}",
-                        "Vehicle_Type": vt_name,
-                        "Capacity": vt_info.capacity,
-                        "Fixed_Cost": vt_info.fixed_cost,
-                        "Dry": 1 if product == "Dry" else 0,
-                        "Chilled": 1 if product == "Chilled" else 0,
-                        "Frozen": 1 if product == "Frozen" else 0,
-                    }
-                )
-        else:  # MULTI_COMPARTMENT
-            configurations.append(
-                {
-                    "Config_ID": f"mcv_{vt_name}",
-                    "Vehicle_Type": vt_name,
-                    "Capacity": vt_info.capacity,
-                    "Fixed_Cost": vt_info.fixed_cost,
-                    "Dry": 1,
-                    "Chilled": 1,
-                    "Frozen": 1,
-                }
-            )
-
-    configurations_df = pd.DataFrame(configurations)
-
-    # Create cluster details DataFrame from routes
-    cluster_details_list = []
-    for product, solution in solutions.items():
-        for route_idx, route in enumerate(solution.routes):
-            if route:  # Skip empty routes
-                # Get vehicle type index from the route's vehicle type
-                vehicle_type = list(parameters.vehicles.keys())[
-                    solution.vehicle_types[route_idx]
-                ]
-                config_id = (
-                    f"{product}_{vehicle_type}"
-                    if benchmark_type == BenchmarkType.SINGLE_COMPARTMENT
-                    else f"mcv_{vehicle_type}"
-                )
-
-                # Calculate actual utilization percentage
-                vehicle_capacity = parameters.vehicles[vehicle_type].capacity
-                utilization = solution.vehicle_loads[route_idx] / vehicle_capacity
-
-                route_detail = {
-                    "Cluster_ID": f"{product}_route_{route_idx}",
-                    "Config_ID": config_id,
-                    "Num_Customers": len(route) - 1,  # Subtract depot
-                    "Route_Time": solution.route_times[route_idx],
-                    "Estimated_Distance": solution.route_distances[route_idx],
-                    "Vehicle_Utilization": utilization,
-                }
-
-                if benchmark_type == BenchmarkType.SINGLE_COMPARTMENT:
-                    # For single compartment, only one product has demand
-                    for good in parameters.goods:
-                        # Demand percentage is 100% for the product type, 0% for others
-                        route_detail[f"Demand_{good}_pct"] = (
-                            1.0 if good == product else 0.0
-                        )
-                        # Load percentage is the vehicle utilization for the product type, 0% for others
-                        route_detail[f"Load_{good}_pct"] = (
-                            utilization if good == product else 0.0
-                        )
-
-                    # Calculate empty percentage
-                    route_detail["Load_empty_pct"] = 1.0 - utilization
-                    route_detail["Vehicle_Utilization"] = utilization
-
-                elif hasattr(solution, "compartment_configurations"):
-                    config = solution.compartment_configurations[route_idx]
-                    total_load = sum(config.values())
-
-                    # Set demand percentages based on compartment configuration
-                    for good in parameters.goods:
-                        route_detail[f"Demand_{good}_pct"] = (
-                            config.get(good, 0.0) / total_load
-                            if total_load > 0
-                            else 0.0
-                        )
-                        route_detail[f"Load_{good}_pct"] = config.get(good, 0.0)
-
-                    # Empty percentage is already calculated in the configuration
-                    route_detail["Load_empty_pct"] = 1.0 - total_load
-                    route_detail["Vehicle_Utilization"] = total_load
-
-                cluster_details_list.append(route_detail)
-
-    cluster_details = pd.DataFrame(cluster_details_list)
-
-    # Count vehicles used by type
-    vehicles_used_series = pd.Series(
-        {
-            vt_name: sum(
-                1
-                for sol in solutions.values()
-                for vt_idx in sol.vehicle_types
-                if list(parameters.vehicles.keys())[vt_idx] == vt_name
-            )
-            for vt_name in parameters.vehicles.keys()
-        }
-    )
-
-    # Create a FleetmixSolution object for benchmark to pass to the main save function
-    # This is a bit of a workaround, ideally, save_benchmark_results would construct its own dict/excel directly
-    # or be more tightly integrated if it must use the same saving logic.
-    # TODO: find a better way to do this; check time measurements
-    benchmark_solution_obj = FleetmixSolution(
-        selected_clusters=cluster_details,  # This is a DataFrame of routes, not true clusters
-        total_fixed_cost=sum(sol.fixed_cost for sol in solutions.values()),
-        total_variable_cost=sum(sol.variable_cost for sol in solutions.values()),
-        total_penalties=0,
-        total_light_load_penalties=0,
-        total_compartment_penalties=0,
-        total_cost=total_cost,
-        vehicles_used=vehicles_used_series.to_dict(),  # Convert Series to Dict
-        total_vehicles=len(cluster_details),  # Number of routes
-        solver_name="PyVRP",
-        solver_status="Optimal",
-        solver_runtime_sec=execution_time,  # Approximation, PyVRP doesn't split this out easily
-        # time_measurements might be relevant if PyVRP provided them
-    )
-
-    save_optimization_results(
-        solution=benchmark_solution_obj,
-        configurations_df=configurations_df,
-        parameters=parameters,
-        filename=filename,
-        format=format,
-        is_benchmark=True,
-    )

@@ -20,13 +20,6 @@ from fleetmix.utils.vehicle_configurations import generate_vehicle_configuration
 logger = FleetmixLogger.get_logger("fleetmix.api")
 
 
-def vehicle_configurations_to_dataframe(
-    configs: list[VehicleConfiguration],
-) -> pd.DataFrame:
-    """Convert list of VehicleConfiguration to DataFrame for compatibility."""
-    return pd.DataFrame([config.to_dict() for config in configs])
-
-
 def optimize(
     demand: str | Path | pd.DataFrame,
     config: str | Path | Parameters | None = None,
@@ -215,12 +208,9 @@ def optimize(
     # Step 6: Save results if output directory is specified
     if output_dir:
         try:
-            # Convert configs to DataFrame for saving
-            configs_df = vehicle_configurations_to_dataframe(configs)
-
             save_optimization_results(
                 solution=solution,
-                configurations_df=configs_df,
+                configurations=configs,
                 parameters=params,
                 format=format,
             )

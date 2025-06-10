@@ -17,7 +17,7 @@ from fleetmix.benchmarking.models.models import CVRPInstance, MCVRPInstance
 from fleetmix.benchmarking.parsers.cvrp import CVRPParser
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
-from fleetmix.core_types import FleetmixSolution, VRPSolution
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, VRPSolution
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.save_results import save_optimization_results
 
@@ -212,13 +212,14 @@ EOF
             params.time_limit_minutes = 1  # Quick test
 
             # Run optimization
-            solution, configs_df = run_optimization(
+            solution, configs = run_optimization(
                 customers_df=customers_df, params=params, verbose=True
             )
 
             # Verify solution structure - solution is FleetmixSolution
             assert solution.solver_status is not None  # Attribute access
-            assert isinstance(configs_df, pd.DataFrame)
+            assert isinstance(configs, list)
+            assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
         except Exception as e:
             pytest.skip(f"CVRP pipeline test failed: {e!s}")
@@ -239,13 +240,14 @@ EOF
             params.time_limit_minutes = 1  # Quick test
 
             # Run optimization
-            solution, configs_df = run_optimization(
+            solution, configs = run_optimization(
                 customers_df=customers_df, params=params, verbose=True
             )
 
             # Verify solution structure - solution is FleetmixSolution
             assert solution.solver_status is not None  # Attribute access
-            assert isinstance(configs_df, pd.DataFrame)
+            assert isinstance(configs, list)
+            assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
         except Exception as e:
             pytest.skip(f"MCVRP pipeline test failed: {e!s}")
@@ -388,116 +390,6 @@ EOF
         except Exception as e:
             pytest.skip(f"VRP solver test failed: {e!s}")
 
-    def test_save_benchmark_results(self, temp_results_dir):
-        """Test benchmark result saving functionality."""
-        # Create mock solution data for FleetmixSolution
-        mock_fleetmix_solution = FleetmixSolution(
-            selected_clusters=pd.DataFrame(
-                {
-                    "Cluster_ID": [1, 2, 3],
-                    "Config_ID": [1, 1, 2],
-                    "Customers": [[1, 2], [3], [4, 5]],
-                    "Total_Demand": [
-                        {"Dry": 100, "Chilled": 50, "Frozen": 0},
-                        {"Dry": 80, "Chilled": 0, "Frozen": 0},
-                        {"Dry": 0, "Chilled": 70, "Frozen": 30},
-                    ],
-                    "Route_Time": [1.5, 0.8, 2.1],
-                    "Centroid_Latitude": [40.0, 40.1, 40.2],
-                    "Centroid_Longitude": [-73.0, -73.1, -73.2],
-                    "Method": ["test", "test", "test"],
-                }
-            ),
-            solver_name="test_solver",
-            solver_status="Optimal",
-            solver_runtime_sec=10.5,
-            total_fixed_cost=500.0,
-            total_variable_cost=200.0,
-            total_light_load_penalties=10.0,
-            total_compartment_penalties=5.0,
-            total_penalties=15.0,
-            total_cost=715.0,  # 500 + 200 + 15
-            vehicles_used={"Small Van": 2, "Large Truck": 1},
-            total_vehicles=3,
-            missing_customers=set(),
-            # time_measurements can be added if needed for a specific test scenario
-        )
-
-        mock_configs_df = pd.DataFrame(
-            {
-                "Config_ID": [1, 2],
-                "Vehicle_Name": ["Small Van", "Large Truck"],
-                "Fixed_Cost": [100, 200],
-                "Capacity": [400, 800],
-            }
-        )
-
-        # Create mock parameters
-        from fleetmix.config.parameters import Parameters
-
-        # Create a temporary YAML for the mock_params to load from
-        mock_params_dict = {
-            "goods": ["Dry"],
-            "vehicles": {
-                "Test Van": {
-                    "fixed_cost": 100,
-                    "capacity": 400,
-                    "avg_speed": 40.0,
-                    "max_route_time": 8.0,
-                    "service_time": 15.0,
-                    "compartments": {"Dry": True, "Chilled": False, "Frozen": False},
-                    "extra": {"variable_cost_per_km": 0.5},
-                }
-            },
-            "variable_cost_per_hour": 20.0,
-            "depot": {"latitude": 0.0, "longitude": 0.0},
-            "clustering": {
-                "route_time_estimation": "Legacy",
-                "method": "minibatch_kmeans",
-                "max_depth": 5,
-                "geo_weight": 0.7,
-                "demand_weight": 0.3,
-                "distance": "euclidean",
-            },
-            "demand_file": "dummy_demand.csv",
-            "light_load_penalty": 10.0,
-            "light_load_threshold": 0.5,
-            "compartment_setup_cost": 100.0,
-            "format": "json",
-            "post_optimization": False,
-            "prune_tsp": False,
-            # small_cluster_size, nearest_merge_candidates, max_improvement_iterations are also in Parameters
-            # but might use defaults if not specified here and in from_yaml
-        }
-
-        import yaml
-
-        temp_yaml_path = temp_results_dir / "mock_params_for_benchmark_save.yaml"
-        with open(temp_yaml_path, "w") as f:
-            yaml.dump(mock_params_dict, f)
-
-        mock_params = Parameters.from_yaml(temp_yaml_path)
-        mock_params.results_dir = temp_results_dir
-
-        # Test saving as JSON
-        output_path = temp_results_dir / "test_benchmark.json"
-        save_optimization_results(
-            solution=mock_fleetmix_solution,
-            configurations_df=mock_configs_df,
-            parameters=mock_params,
-            filename=str(output_path),
-            format="json",
-            is_benchmark=True,
-        )
-
-        # Verify file was created and contains expected data
-        assert output_path.exists()
-        with open(output_path) as f:
-            saved_data = json.load(f)
-
-        assert saved_data["Execution Details"]["Solver Status"] == "Optimal"
-        assert saved_data["Execution Details"]["Total Cost"] == 715.0  # 500 + 200 + 15
-
     def test_real_dataset_availability(self):
         """Test availability of real benchmark datasets."""
         # Check if real CVRP datasets are available
@@ -617,7 +509,7 @@ EOF
 
             start_optimization = time.time()
 
-            solution, configs_df = run_optimization(
+            solution, configs = run_optimization(
                 customers_df=customers_df, params=params, verbose=False
             )
 

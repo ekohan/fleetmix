@@ -20,13 +20,6 @@ class VRPType(Enum):
     MCVRP = "mcvrp"
 
 
-def vehicle_configurations_to_dataframe(
-    configs: list[VehicleConfiguration],
-) -> pd.DataFrame:
-    """Convert list of VehicleConfiguration to DataFrame for compatibility."""
-    return pd.DataFrame([config.to_dict() for config in configs])
-
-
 def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, Parameters]:
     """
     Library facade to convert VRP instances to FSM format.
@@ -36,10 +29,10 @@ def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, Parameter
 
 def run_optimization(
     customers_df: pd.DataFrame, params: Parameters, verbose: bool = False
-) -> tuple[FleetmixSolution, pd.DataFrame]:
+) -> tuple[FleetmixSolution, list[VehicleConfiguration]]:
     """
     Run the common FSM optimization pipeline.
-    Returns the solution object and the configurations DataFrame.
+    Returns the solution object and the vehicleconfigurations list.
     """
     # Initialize TimeRecorder
     time_recorder = TimeRecorder()
@@ -80,6 +73,4 @@ def run_optimization(
     log_detail(f"Vehicles Used: {sum(solution.vehicles_used.values())}")
     log_detail(f"Expected Vehicles: {params.expected_vehicles}")
 
-    # Convert configs to DataFrame for return (for save_optimization_results compatibility)
-    configs_df = vehicle_configurations_to_dataframe(configs)
-    return solution, configs_df
+    return solution, configs

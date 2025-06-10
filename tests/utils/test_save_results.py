@@ -14,13 +14,13 @@ from fleetmix.core_types import (
     BenchmarkType,
     DepotLocation,
     FleetmixSolution,
+    VehicleConfiguration,
     VehicleSpec,
     VRPSolution,
 )
 from fleetmix.utils.save_results import (
     _write_to_excel,
     _write_to_json,
-    save_benchmark_results,
     save_optimization_results,
     visualize_clusters,
 )
@@ -63,14 +63,22 @@ class TestSaveOptimizationResults(unittest.TestCase):
             time_measurements=None,
         )
 
-        self.configurations_df = pd.DataFrame(
-            {
-                "Config_ID": ["C1", "C2"],
-                "Vehicle_Type": ["Type1", "Type2"],
-                "Capacity": [1000, 2000],
-                "Fixed_Cost": [100, 200],
-            }
-        )
+        self.configurations = [
+            VehicleConfiguration(
+                config_id="C1",
+                vehicle_type="Type1",
+                capacity=1000,
+                fixed_cost=100,
+                compartments={"Dry": True, "Chilled": True, "Frozen": False},
+            ),
+            VehicleConfiguration(
+                config_id="C2",
+                vehicle_type="Type2",
+                capacity=2000,
+                fixed_cost=200,
+                compartments={"Dry": True, "Frozen": True, "Chilled": False},
+            ),
+        ]
 
         self.parameters = MagicMock(spec=Parameters)
         self.parameters.results_dir = Path(tempfile.gettempdir())
@@ -114,7 +122,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
         try:
             save_optimization_results(
                 solution=self.solution,
-                configurations_df=self.configurations_df,
+                configurations=self.configurations,
                 parameters=self.parameters,
                 filename=temp_file,
                 format="excel",
@@ -140,7 +148,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
         try:
             save_optimization_results(
                 solution=self.solution,
-                configurations_df=self.configurations_df,
+                configurations=self.configurations,
                 parameters=self.parameters,
                 filename=temp_file,
                 format="json",
@@ -164,7 +172,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
 
         save_optimization_results(
             solution=self.solution,
-            configurations_df=self.configurations_df,
+            configurations=self.configurations,
             parameters=self.parameters,
         )
 
@@ -204,7 +212,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
 
         save_optimization_results(
             solution=solution_with_times,
-            configurations_df=self.configurations_df,
+            configurations=self.configurations,
             parameters=self.parameters,
         )
 
@@ -391,85 +399,6 @@ class TestVisualizeCluster(unittest.TestCase):
 
         # Check cluster markers were created (2 clusters)
         self.assertEqual(mock_circle.call_count, 2)
-
-
-class TestSaveBenchmarkResults(unittest.TestCase):
-    """Test cases for save_benchmark_results function."""
-
-    def setUp(self):
-        """Set up test data."""
-        # Create mock VRP solutions
-        self.solutions = {
-            "Dry": MagicMock(spec=VRPSolution),
-            "Chilled": MagicMock(spec=VRPSolution),
-        }
-
-        for product, sol in self.solutions.items():
-            sol.total_cost = 1000.0
-            sol.execution_time = 5.0
-            sol.routes = [[0, 1, 2, 0], [0, 3, 4, 0]]  # Two routes
-            sol.vehicle_types = [0, 1]  # Different vehicle types
-            sol.vehicle_loads = [800, 1500]
-            sol.route_times = [3.5, 4.2]
-            sol.route_distances = [50.0, 75.0]
-            sol.fixed_cost = 500.0
-            sol.variable_cost = 300.0
-
-        # Create mock parameters
-        self.parameters = MagicMock(spec=Parameters)
-        self.parameters.results_dir = Path(tempfile.gettempdir())
-        self.parameters.vehicles = {
-            "Type1": VehicleSpec(
-                capacity=1000, fixed_cost=100, compartments={"Dry": True}, extra={}
-            ),
-            "Type2": VehicleSpec(
-                capacity=2000, fixed_cost=200, compartments={"Chilled": True}, extra={}
-            ),
-        }
-        self.parameters.goods = ["Dry", "Chilled", "Frozen"]
-
-    @patch("fleetmix.utils.save_results.save_optimization_results")
-    def test_save_benchmark_results_single_compartment(self, mock_save_opt):
-        """Test saving single compartment benchmark results."""
-        save_benchmark_results(
-            self.solutions,
-            self.parameters,
-            BenchmarkType.SINGLE_COMPARTMENT,
-            format="excel",
-        )
-
-        # Check that save_optimization_results was called
-        mock_save_opt.assert_called_once()
-
-        # Check arguments
-        call_args = mock_save_opt.call_args[1]
-        self.assertTrue(call_args["is_benchmark"])
-        self.assertNotIn("expected_vehicles", call_args)
-
-    @patch("fleetmix.utils.save_results.save_optimization_results")
-    def test_save_benchmark_results_multi_compartment(self, mock_save_opt):
-        """Test saving multi-compartment benchmark results."""
-        # Add compartment configurations to solutions
-        for sol in self.solutions.values():
-            sol.compartment_configurations = [
-                {"Dry": 0.5, "Chilled": 0.3, "Frozen": 0.2},
-                {"Dry": 0.6, "Chilled": 0.0, "Frozen": 0.4},
-            ]
-
-        save_benchmark_results(
-            self.solutions,
-            self.parameters,
-            BenchmarkType.MULTI_COMPARTMENT,
-            format="json",
-        )
-
-        # Check that save_optimization_results was called
-        mock_save_opt.assert_called_once()
-
-        # Check format
-        call_args = mock_save_opt.call_args[1]
-        self.assertEqual(call_args["format"], "json")
-
 
 if __name__ == "__main__":
     unittest.main()

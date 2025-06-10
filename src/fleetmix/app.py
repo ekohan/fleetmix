@@ -13,6 +13,7 @@ from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.config.parameters import Parameters
+from fleetmix.core_types import VehicleConfiguration
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.logging import (
     LogLevel,
@@ -28,6 +29,16 @@ app = typer.Typer(
     add_completion=False,
 )
 console = Console()
+
+
+def _find_config_by_id(
+    configurations: list[VehicleConfiguration], config_id: str
+) -> VehicleConfiguration:
+    """Find configuration by ID from list."""
+    for config in configurations:
+        if str(config.config_id) == str(config_id):
+            return config
+    raise KeyError(f"Configuration {config_id} not found")
 
 
 def _get_default_config() -> Parameters | None:
@@ -115,7 +126,7 @@ def _run_single_instance(
             params.results_dir = output_dir
 
         # Use the unified pipeline interface for optimization
-        solution, configs_df = run_optimization(
+        solution, configs = run_optimization(
             customers_df=customers_df, params=params, verbose=verbose
         )
 
@@ -124,7 +135,7 @@ def _run_single_instance(
         output_path = params.results_dir / f"mcvrp_{instance}.{ext}"
         save_optimization_results(
             solution=solution,
-            configurations_df=configs_df,
+            configurations=configs,
             parameters=params,
             filename=str(output_path),
             format=format,
@@ -160,9 +171,7 @@ def _run_single_instance(
                     )  # Convert to percentage
                 elif "Total_Demand" in cluster and "Config_ID" in cluster:
                     # Calculate load percentage from total demand and vehicle capacity
-                    config = configs_df[
-                        configs_df["Config_ID"] == cluster["Config_ID"]
-                    ].iloc[0]
+                    config = _find_config_by_id(configs, str(cluster["Config_ID"]))
                     if isinstance(cluster["Total_Demand"], dict):
                         total_demand = sum(cluster["Total_Demand"].values())
                     elif isinstance(cluster["Total_Demand"], str):
@@ -173,7 +182,7 @@ def _run_single_instance(
                         )
                     else:
                         total_demand = cluster["Total_Demand"]
-                    load_pct = (total_demand / config["Capacity"]) * 100
+                    load_pct = (total_demand / config.capacity) * 100
 
                 if load_pct is not None:
                     table.add_row(
@@ -215,7 +224,7 @@ def _run_single_instance(
             params.allow_split_stops = allow_split_stops
 
         # Use the unified pipeline interface for optimization
-        solution, configs_df = run_optimization(
+        solution, configs = run_optimization(
             customers_df=customers_df, params=params, verbose=verbose
         )
 
@@ -224,7 +233,7 @@ def _run_single_instance(
         output_path = params.results_dir / f"cvrp_{instance}_normal.{ext}"
         save_optimization_results(
             solution=solution,
-            configurations_df=configs_df,
+            configurations=configs,
             parameters=params,
             filename=str(output_path),
             format=format,
@@ -260,9 +269,7 @@ def _run_single_instance(
                     )  # Convert to percentage
                 elif "Total_Demand" in cluster and "Config_ID" in cluster:
                     # Calculate load percentage from total demand and vehicle capacity
-                    config = configs_df[
-                        configs_df["Config_ID"] == cluster["Config_ID"]
-                    ].iloc[0]
+                    config = _find_config_by_id(configs, str(cluster["Config_ID"]))
                     if isinstance(cluster["Total_Demand"], dict):
                         total_demand = sum(cluster["Total_Demand"].values())
                     elif isinstance(cluster["Total_Demand"], str):
@@ -273,7 +280,7 @@ def _run_single_instance(
                         )
                     else:
                         total_demand = cluster["Total_Demand"]
-                    load_pct = (total_demand / config["Capacity"]) * 100
+                    load_pct = (total_demand / config.capacity) * 100
 
                 if load_pct is not None:
                     table.add_row(
@@ -310,7 +317,7 @@ def _run_all_mcvrp_instances(
                 params.allow_split_stops = allow_split_stops
 
             # Use the unified pipeline interface for optimization
-            solution, configs_df = run_optimization(
+            solution, configs = run_optimization(
                 customers_df=customers_df, params=params, verbose=verbose
             )
 
@@ -319,7 +326,7 @@ def _run_all_mcvrp_instances(
             output_path = params.results_dir / f"mcvrp_{instance}.{format}"
             save_optimization_results(
                 solution=solution,
-                configurations_df=configs_df,
+                configurations=configs,
                 parameters=params,
                 filename=str(output_path),
                 format=format,
@@ -365,7 +372,7 @@ def _run_all_cvrp_instances(
                 params.allow_split_stops = allow_split_stops
 
             # Use the unified pipeline interface for optimization
-            solution, configs_df = run_optimization(
+            solution, configs = run_optimization(
                 customers_df=customers_df, params=params, verbose=verbose
             )
 
@@ -374,7 +381,7 @@ def _run_all_cvrp_instances(
             output_path = params.results_dir / f"cvrp_{instance}_normal.{format}"
             save_optimization_results(
                 solution=solution,
-                configurations_df=configs_df,
+                configurations=configs,
                 parameters=params,
                 filename=str(output_path),
                 format=format,
@@ -675,7 +682,7 @@ def convert(
         if not quiet:
             log_progress("Running optimization on converted instance...")
 
-        solution, configs_df = run_optimization(
+        solution, configs = run_optimization(
             customers_df=customers_df,
             params=params,
             verbose=verbose,
@@ -687,7 +694,7 @@ def convert(
 
         save_optimization_results(
             solution=solution,
-            configurations_df=configs_df,
+            configurations=configs,
             parameters=params,
             filename=str(results_path),
             format=format,

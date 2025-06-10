@@ -43,37 +43,3 @@ def register_solver_adapter(name: str):
         return cls
 
     return decorator
-
-
-# Special implementation: CombinedClusterer
-@register_clusterer("combine")
-class CombinedClusterer:
-    """Clusterer that combines results from multiple sub-methods."""
-
-    def __init__(self, sub_methods: list[str] | None = None):
-        # Default sub_methods if not provided
-        self.sub_methods = sub_methods or [
-            "minibatch_kmeans",
-            "kmedoids",
-            "gaussian_mixture",
-        ]
-
-    def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
-    ) -> list[int]:
-        """
-        Implementation that combines results from multiple clusterers.
-
-        For the 'combine' method, we run multiple clustering algorithms and return
-        all their results mapped to unique label ranges. This is handled specially
-        in generator.py to create multiple context configurations.
-
-        Note: This is a placeholder since the actual 'combine' logic is handled
-        at a higher level in generator.py by creating multiple ClusteringContext objects.
-        This implementation should not be called directly.
-        """
-        logger.warning(
-            "CombinedClusterer.fit() called directly - this should be handled by generator.py"
-        )
-        # Return simple labels as fallback
-        return list(range(min(n_clusters, len(customers))))

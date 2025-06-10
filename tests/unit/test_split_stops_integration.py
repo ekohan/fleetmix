@@ -59,7 +59,7 @@ class TestSplitStopsIntegration:
                     "fixed_cost": 100,
                     "avg_speed": 30,
                     "service_time": 25,
-                    "max_route_time": 10,
+                    "max_route_time": 24,  # in hours
                     "compartments": {"Dry": True, "Chilled": True, "Frozen": True},
                 },
                 "LargeTruck": {
@@ -67,7 +67,7 @@ class TestSplitStopsIntegration:
                     "fixed_cost": 150,
                     "avg_speed": 30,
                     "service_time": 25,
-                    "max_route_time": 10,
+                    "max_route_time": 24,  # in hours
                     "compartments": {"Dry": True, "Chilled": True, "Frozen": True},
                 },
             },
@@ -186,7 +186,7 @@ class TestSplitStopsIntegration:
                 goods_needed = set()
                 for good in ["Dry", "Chilled", "Frozen"]:
                     if customer_row[f"{good}_Demand"] > 0:
-                        goods_needed.add(good.lower())
+                        goods_needed.add(good)
                 coverage_map[customer_id] = goods_needed
 
         # Verify each physical customer has all their goods covered
@@ -195,7 +195,7 @@ class TestSplitStopsIntegration:
             required_goods = set()
             for good in ["Dry", "Chilled", "Frozen"]:
                 if customer_row[f"{good}_Demand"] > 0:
-                    required_goods.add(good.lower())
+                    required_goods.add(good)
 
             # Check coverage
             covered_goods = coverage_map.get(customer_id, set())

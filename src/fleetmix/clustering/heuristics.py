@@ -16,7 +16,13 @@ from sklearn.metrics import pairwise_distances
 from sklearn.mixture import GaussianMixture
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Cluster, ClusteringContext, VehicleConfiguration
+from fleetmix.core_types import (
+    Cluster,
+    ClusteringContext,
+    Customer,
+    CustomerBase,
+    VehicleConfiguration,
+)
 from fleetmix.registry import (
     CLUSTERER_REGISTRY,
     ROUTE_TIME_ESTIMATOR_REGISTRY,
@@ -156,6 +162,19 @@ def compute_composite_distance(
     demand_dist = pairwise_distances(demand_profiles, metric="cosine")
     demand_dist = np.nan_to_num(demand_dist, nan=1.0)
 
+    # If dealing with pseudo-customers, force demand distance to 0 for same-origin customers
+    if "Origin_ID" in customers.columns:
+        origin_ids = customers["Origin_ID"].values
+        unique_origins = pd.unique(origin_ids[pd.notna(origin_ids)])
+
+        for origin_id in unique_origins:
+            indices = np.where(origin_ids == origin_id)[0]
+            if len(indices) > 1:
+                # Create all pairs of indices for this origin_id
+                idx_pairs = np.array(np.meshgrid(indices, indices)).T.reshape(-1, 2)
+                # Set demand distance to 0 for these pairs
+                demand_dist[idx_pairs[:, 0], idx_pairs[:, 1]] = 0.0
+
     # Normalize distances
     if geo_dist.max() > 0:
         geo_dist = geo_dist / geo_dist.max()
@@ -171,19 +190,51 @@ def compute_composite_distance(
 
 
 def get_cached_demand(
-    customers: pd.DataFrame, goods: list[str], demand_cache: dict[Any, dict[str, float]]
+    customers: list[CustomerBase], goods: list[str], demand_cache: dict[Any, dict[str, float]]
 ) -> dict[str, float]:
     """Get demand from cache or compute and cache it."""
     # Use sorted tuple of customer IDs as key (immutable and hashable)
-    key = tuple(sorted(customers["Customer_ID"]))
+    key = tuple(sorted(customer.customer_id for customer in customers))
 
     # Check if in cache
     cached_result = demand_cache.get(key)
     if cached_result is not None:
         return cached_result
 
-    # Not in cache, compute it
-    demand_dict = {g: float(customers[f"{g}_Demand"].sum()) for g in goods}
+    # Not in cache, compute it. This handles regular, pseudo, and mixed customer lists.
+    demand_dict = {g: 0.0 for g in goods}
+    origin_demands: dict[str, dict[str, float]] = {}  # For pseudo-customers
+
+    for customer in customers:
+        if customer.is_pseudo_customer():
+            origin_id = customer.get_origin_id()
+            if origin_id not in origin_demands:
+                origin_demands[origin_id] = {g: 0.0 for g in goods}
+
+            # Only add demand for goods in this pseudo-customer's subset
+            goods_subset = customer.get_goods_subset()
+            for good in goods_subset:
+                good_lower = good.lower()
+                # Find the matching good in the customer's demands (case-insensitive)
+                demand_key = next((k for k in customer.demands if k.lower() == good_lower), None)
+                if demand_key:
+                    # Find the matching good in the goods list (case-insensitive)
+                    goods_key = next((g for g in goods if g.lower() == good_lower), None)
+                    if goods_key:
+                        origin_demands[origin_id][goods_key] = max(
+                            origin_demands[origin_id][goods_key], customer.demands[demand_key]
+                        )
+        else:
+            # For regular customers, simple sum
+            for good in goods:
+                good_lower = good.lower()
+                demand_value = next((v for k, v in customer.demands.items() if k.lower() == good_lower), 0.0)
+                demand_dict[good] += demand_value
+
+    # Add pseudo-customer demands to the total
+    for single_origin_demands in origin_demands.values():
+        for good, value in single_origin_demands.items():
+            demand_dict[good] += value
 
     # Store in cache
     demand_cache[key] = demand_dict
@@ -191,17 +242,20 @@ def get_cached_demand(
 
 
 def get_cached_route_time(
-    customers: pd.DataFrame,
+    customers: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     route_time_cache: dict[Any, tuple[float, list[str]]],
     main_params: Parameters,
 ) -> tuple[float, list[str]]:
     """Get route time and sequence (if TSP) from cache or compute and cache it."""
-    key = tuple(sorted(customers["Customer_ID"]))
+    key = tuple(sorted(customer.customer_id for customer in customers))
     cached_result = route_time_cache.get(key)
     if cached_result is not None:
         return cached_result
+
+    # Convert to DataFrame for route time estimation (temporary until we refactor route time estimators)
+    customers_df = Customer.to_dataframe(customers)
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(
@@ -218,7 +272,7 @@ def get_cached_route_time(
         )
 
     estimator = estimator_class()
-    route_time, route_sequence = estimator.estimate_route_time(customers, rt_context)
+    route_time, route_sequence = estimator.estimate_route_time(customers_df, rt_context)
 
     result = (route_time, route_sequence)
     route_time_cache[key] = result
@@ -226,68 +280,56 @@ def get_cached_route_time(
 
 
 def get_feasible_customers_subset(
-    customers: pd.DataFrame, feasible_customers: dict, config_id: int
-) -> pd.DataFrame:
+    customers: list[CustomerBase], feasible_customers: dict, config_id: int
+) -> list[CustomerBase]:
     """Extract feasible customers for a given configuration."""
-    return customers[
-        customers["Customer_ID"].isin(
-            [cid for cid, configs in feasible_customers.items() if config_id in configs]
-        )
-    ].copy()
+    return [
+        customer for customer in customers
+        if customer.customer_id in feasible_customers 
+        and config_id in feasible_customers[customer.customer_id]
+    ]
 
 
 def create_initial_clusters(
-    customers_subset: pd.DataFrame,
+    customers_subset: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     main_params: Parameters,
     method_name: str = "minibatch_kmeans",
-) -> pd.DataFrame:
+) -> list[list[CustomerBase]]:
     """Create initial clusters for the given customer subset."""
-    # Create a working copy
-    customers_copy = customers_subset.copy()
-
-    # Add total demand directly if needed for the algorithm
-    # This is equivalent to what add_demand_information was doing
-    customers_copy["Total_Demand"] = customers_copy[
-        [f"{g}_Demand" for g in clustering_context.goods]
-    ].sum(axis=1)
-
-    if len(customers_copy) <= 2:
-        return create_small_dataset_clusters(customers_copy)
+    if len(customers_subset) <= 2:
+        return create_small_dataset_clusters(customers_subset)
     else:
         return create_normal_dataset_clusters(
-            customers_copy, config, clustering_context, main_params, method_name
+            customers_subset, config, clustering_context, main_params, method_name
         )
 
 
-def create_small_dataset_clusters(customers_subset: pd.DataFrame) -> pd.DataFrame:
+def create_small_dataset_clusters(customers_subset: list[CustomerBase]) -> list[list[CustomerBase]]:
     """Create clusters for small datasets (≤2 customers)."""
-    customers_copy = customers_subset.copy()
-    data = customers_copy[["Latitude", "Longitude"]].values
-    data = np.ascontiguousarray(data, dtype=np.float64)
-    model = MiniBatchKMeans(n_clusters=1, random_state=42)
-    customers_copy["Cluster"] = model.fit_predict(data)
-    return customers_copy
+    # Put all customers in a single cluster
+    return [customers_subset]
 
 
 def create_normal_dataset_clusters(
-    customers_subset: pd.DataFrame,
+    customers_subset: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     main_params: Parameters,
     method_name: str,
-) -> pd.DataFrame:
+) -> list[list[CustomerBase]]:
     """Create clusters for normal-sized datasets."""
-    customers_copy = customers_subset.copy()
+    # Convert to DataFrame temporarily for clustering algorithm
+    customers_df = Customer.to_dataframe(customers_subset)
 
     # Determine number of clusters
     num_clusters = estimate_num_initial_clusters(
-        customers_copy, config, clustering_context, main_params
+        customers_df, config, clustering_context, main_params
     )
 
     # Ensure the number of clusters doesn't exceed the number of customers
-    num_clusters = min(num_clusters, len(customers_copy))
+    num_clusters = min(num_clusters, len(customers_subset))
 
     # Get the clusterer from registry
     clusterer_class = CLUSTERER_REGISTRY.get(method_name)
@@ -298,11 +340,19 @@ def create_normal_dataset_clusters(
     # Create instance and cluster
     clusterer = clusterer_class()
     labels = clusterer.fit(
-        customers_copy, context=clustering_context, n_clusters=num_clusters
+        customers_df, context=clustering_context, n_clusters=num_clusters
     )
-    customers_copy["Cluster"] = labels
 
-    return customers_copy
+    # Group customers by cluster label
+    clusters = []
+    for cluster_label in range(num_clusters):
+        cluster_customers = [
+            customers_subset[i] for i, label in enumerate(labels) if label == cluster_label
+        ]
+        if cluster_customers:  # Only add non-empty clusters
+            clusters.append(cluster_customers)
+
+    return clusters
 
 
 def generate_cluster_id_base(config_id: int) -> int:
@@ -311,7 +361,7 @@ def generate_cluster_id_base(config_id: int) -> int:
 
 
 def check_constraints(
-    cluster_customers: pd.DataFrame,
+    cluster_customers: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
@@ -342,7 +392,7 @@ def check_constraints(
 
 
 def should_split_cluster(
-    cluster_customers: pd.DataFrame,
+    cluster_customers: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     depth: int,
@@ -373,11 +423,14 @@ def should_split_cluster(
 
 
 def split_cluster(
-    cluster_customers: pd.DataFrame,
+    cluster_customers: list[CustomerBase],
     clustering_context: ClusteringContext,
     method_name: str,
-) -> list[pd.DataFrame]:
+) -> list[list[CustomerBase]]:
     """Split an oversized cluster into smaller ones."""
+    # Convert to DataFrame temporarily for clustering algorithm
+    customers_df = Customer.to_dataframe(cluster_customers)
+
     # Get the clusterer from registry
     clusterer_class = CLUSTERER_REGISTRY.get(method_name)
     if clusterer_class is None:
@@ -387,7 +440,7 @@ def split_cluster(
     # Create instance and split into 2 clusters
     clusterer = clusterer_class()
     sub_labels_list = clusterer.fit(
-        cluster_customers, context=clustering_context, n_clusters=2
+        customers_df, context=clustering_context, n_clusters=2
     )
 
     # Convert list to numpy array for indexing
@@ -398,8 +451,8 @@ def split_cluster(
     sub_cluster_sizes = []
     for label in [0, 1]:
         mask = sub_labels == label
-        sub_cluster = cluster_customers[mask]
-        if not sub_cluster.empty:
+        sub_cluster = [cluster_customers[i] for i, is_in_cluster in enumerate(mask) if is_in_cluster]
+        if sub_cluster:  # Only add non-empty clusters
             sub_clusters.append(sub_cluster)
             sub_cluster_sizes.append(len(sub_cluster))
 
@@ -412,7 +465,7 @@ def split_cluster(
 
 
 def create_cluster(
-    cluster_customers: pd.DataFrame,
+    cluster_customers: list[CustomerBase],
     config: VehicleConfiguration,
     cluster_id: int,
     clustering_context: ClusteringContext,
@@ -432,13 +485,21 @@ def create_cluster(
         cluster_customers, config, clustering_context, route_time_cache, main_params
     )
 
+    # Calculate centroid
+    if cluster_customers:
+        centroid_latitude = sum(customer.location[0] for customer in cluster_customers) / len(cluster_customers)
+        centroid_longitude = sum(customer.location[1] for customer in cluster_customers) / len(cluster_customers)
+    else:
+        centroid_latitude = 0.0
+        centroid_longitude = 0.0
+
     cluster = Cluster(
         cluster_id=cluster_id,
         config_id=config.config_id,
-        customers=cluster_customers["Customer_ID"].tolist(),
+        customers=[customer.customer_id for customer in cluster_customers],
         total_demand=total_demand,
-        centroid_latitude=float(cluster_customers["Latitude"].mean()),
-        centroid_longitude=float(cluster_customers["Longitude"].mean()),
+        centroid_latitude=centroid_latitude,
+        centroid_longitude=centroid_longitude,
         goods_in_config=[g for g in clustering_context.goods if config.compartments[g]],
         route_time=route_time,
         method=method_name,
@@ -448,7 +509,7 @@ def create_cluster(
 
 
 def process_clusters_recursively(
-    initial_clusters_df: pd.DataFrame,
+    initial_clusters: list[list[CustomerBase]],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
@@ -466,10 +527,7 @@ def process_clusters_recursively(
     clusters = []
 
     # Process clusters until all constraints are satisfied
-    clusters_to_check = [
-        (initial_clusters_df[initial_clusters_df["Cluster"] == c], 0)
-        for c in initial_clusters_df["Cluster"].unique()
-    ]
+    clusters_to_check = [(cluster_customers, 0) for cluster_customers in initial_clusters]
 
     logger.info(
         f"Starting recursive processing for config {config_id} with {len(clusters_to_check)} initial clusters"
@@ -565,20 +623,48 @@ def estimate_num_initial_clusters(
     # Default prune_tsp flag if main_params not provided
     prune_tsp_val = main_params.prune_tsp if main_params is not None else False
 
-    # Calculate total demand for relevant goods
-    total_demand = 0
+    # Convert to CustomerBase objects and determine if they are pseudo-customers
+    customers_list = Customer.from_dataframe(customers)
+    is_pseudo = bool(customers_list and customers_list[0].is_pseudo_customer())
+
+    # Calculate total demand. For pseudo-customers, this is aggregated by origin.
+    demand_cache: dict[Any, dict[str, float]] = {}
+    demand_dict = get_cached_demand(customers_list, clustering_context.goods, demand_cache)
+
+    total_demand = 0.0
     for good in clustering_context.goods:
-        if config.compartments[good]:  # Only consider goods this vehicle can carry
-            total_demand += customers[f"{good}_Demand"].sum()
+        if config.compartments.get(good):  # Only consider goods this vehicle can carry
+            total_demand += demand_dict.get(good, 0.0)
 
     # Estimate clusters needed based on capacity
-    clusters_by_capacity = np.ceil(total_demand / config.capacity)
+    if total_demand == 0:
+        clusters_by_capacity = 1.0  # At least one cluster needed even with zero demand
+    else:
+        clusters_by_capacity = np.ceil(total_demand / config.capacity)
+
+    # For pseudo-customers, count unique origins for stop count and sample from unique locations
+    if is_pseudo:
+        num_stops = customers["Origin_ID"].nunique()
+        # Sample from unique origins to get a representative cluster for time estimation
+        sample_customers_df = customers.drop_duplicates(subset=["Origin_ID"])
+    else:
+        num_stops = len(customers)
+        sample_customers_df = customers
 
     # Estimate time for an average route
-    avg_customers_per_cluster = len(customers) / clusters_by_capacity
+    avg_customers_per_cluster = num_stops / clusters_by_capacity if clusters_by_capacity > 0 else num_stops
+    
     # Ensure sample size doesn't exceed population size and is at least 1 if possible
-    sample_size = max(1, min(int(avg_customers_per_cluster), len(customers)))
-    avg_cluster = customers.sample(n=sample_size)
+    if np.isinf(avg_customers_per_cluster) or np.isnan(avg_customers_per_cluster) or avg_customers_per_cluster < 1:
+        sample_size = num_stops
+    else:
+        sample_size = max(1, min(int(avg_customers_per_cluster), num_stops))
+    
+    if sample_size > 0:
+        avg_cluster = sample_customers_df.sample(n=sample_size)
+    else:
+        avg_cluster = pd.DataFrame(columns=customers.columns)
+
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(config, clustering_context.depot, prune_tsp_val)
@@ -596,11 +682,14 @@ def estimate_num_initial_clusters(
     avg_route_time, _ = estimator.estimate_route_time(avg_cluster, rt_context)
 
     # Estimate clusters needed based on time
-    clusters_by_time = np.ceil(
-        avg_route_time
-        * len(customers)
-        / (config.max_route_time * avg_customers_per_cluster)
-    )
+    if config.max_route_time > 0 and avg_customers_per_cluster > 0:
+        clusters_by_time = np.ceil(
+            avg_route_time
+            * num_stops
+            / (config.max_route_time * avg_customers_per_cluster)
+        )
+    else:
+        clusters_by_time = 1.0
 
     # Take the maximum of the two estimates
     num_clusters = int(max(clusters_by_capacity, clusters_by_time, 1))

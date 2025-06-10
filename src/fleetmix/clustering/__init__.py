@@ -5,6 +5,9 @@ Customer clustering for the cluster-first heuristic (§4.2).
 from fleetmix.core_types import (
     Cluster,
     ClusteringContext,
+    Customer,
+    CustomerBase,
+    PseudoCustomer,
 )
 
 from .generator import (
@@ -20,6 +23,9 @@ from .heuristics import (
 __all__ = [
     "Cluster",
     "ClusteringContext",
+    "Customer",
+    "CustomerBase", 
+    "PseudoCustomer",
     "_is_customer_feasible",
     "compute_composite_distance",
     "estimate_num_initial_clusters",

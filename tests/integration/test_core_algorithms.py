@@ -596,7 +596,7 @@ class TestCoreAlgorithms:
             # If cluster created, should contain the single customer
             cluster = clusters[0]
             customers_list = cluster.customers
-            assert 1 in customers_list
+            assert "1" in customers_list  # Customer ID is converted to string
 
     def test_algorithm_performance_bounds(self, realistic_customers, realistic_config):
         """Test that algorithms complete within reasonable time bounds."""

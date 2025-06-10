@@ -162,12 +162,9 @@ def test_capacity_violation_model_warning_traditional_mode(toy_fsm_core_data, ca
         for rec in caplog.record_tuples
     ), "Expected debug message about unserviceable cluster"
 
-    # Use pytest's raises to catch the expected sys.exit(1) call
-    with pytest.raises(SystemExit) as excinfo:
+    # Use pytest's raises to catch the expected RuntimeError for "Not Solved" status
+    with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
         optimization._solve_internal(clusters_df, configurations, customers_df, params)
-
-    # Verify that the exit code is 1 as expected
-    assert excinfo.value.code == 1
 
 
 def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, caplog):
@@ -199,7 +196,7 @@ def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, cap
     ), "Expected debug message about unserviceable cluster"
 
     # In split-stop mode, the optimization should succeed but return an empty solution
-    # rather than raising SystemExit (this is the correct behavior)
+    # rather than raising an exception (this is the correct behavior)
     solution = optimization._solve_internal(
         clusters_df, configurations, customers_df, params
     )
@@ -242,14 +239,9 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
         for rec in caplog.record_tuples
     ), "Expected debug message about unserviceable cluster"
 
-    # Check logs for specific messages
-
-    # Use pytest's raises to catch the expected sys.exit(1) call
-    with pytest.raises(SystemExit) as excinfo:
+    # Use pytest's raises to catch the expected RuntimeError for "Not Solved" status
+    with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
         optimization._solve_internal(clusters_df, configurations, customers_df, params)
-
-    # Verify that the exit code is 1 as expected
-    assert excinfo.value.code == 1
 
     # Check stdout for the infeasible message
     # We don't need to check logs as the warning is printed to stdout, not logged

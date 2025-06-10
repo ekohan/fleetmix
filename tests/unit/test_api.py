@@ -178,7 +178,7 @@ def test_optimize_with_infeasible_problem(minimal_config_path):
         }
     )
 
-    with pytest.raises(ValueError, match="No feasible clusters"):
+    with pytest.raises(ValueError, match="No feasible clusters could be generated"):
         optimize(
             demand=large_demand_df,
             config=str(minimal_config_path),

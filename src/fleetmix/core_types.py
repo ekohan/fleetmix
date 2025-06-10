@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
@@ -36,38 +37,137 @@ class BenchmarkType(Enum):
 
 
 @dataclass
-class Customer:
-    """Represents a single customer with their demands."""
-
+class CustomerBase(ABC):
+    """Base class for all customer types (regular and pseudo-customers)."""
+    
     customer_id: str
     demands: dict[str, float]  # e.g., {'dry': 10, 'chilled': 5}
     location: tuple[float, float]  # (latitude, longitude)
+    service_time: float  # Service time in minutes
+    
+    @abstractmethod
+    def is_pseudo_customer(self) -> bool:
+        """Return True if this is a pseudo-customer."""
+        pass
+    
+    @abstractmethod
+    def get_origin_id(self) -> str:
+        """Return the original customer ID (for pseudo-customers) or self ID (for regular customers)."""
+        pass
+    
+    @abstractmethod 
+    def get_goods_subset(self) -> tuple[str, ...]:
+        """Return the goods subset this customer represents."""
+        pass
+    
+    def total_demand(self) -> float:
+        """Return total demand across all goods."""
+        return sum(self.demands.values())
+    
+    def has_demand_for(self, good: str) -> bool:
+        """Check if customer has positive demand for a specific good."""
+        return self.demands.get(good, 0.0) > 0
+    
+    def get_required_goods(self) -> set[str]:
+        """Return set of goods with positive demand."""
+        return {good for good, demand in self.demands.items() if demand > 0}
+
+
+@dataclass
+class PseudoCustomer(CustomerBase):
+    """Represents a pseudo-customer for split-stop capability.
+
+    A pseudo-customer represents a subset of goods that a physical customer needs,
+    allowing the physical customer to be served by multiple vehicles.
+    """
+
+    origin_id: str  # Original physical customer ID
+    subset: tuple[str, ...]  # Tuple of goods this pseudo-customer represents
+    
+    def is_pseudo_customer(self) -> bool:
+        """Return True for pseudo-customers."""
+        return True
+    
+    def get_origin_id(self) -> str:
+        """Return the original customer ID."""
+        return self.origin_id
+    
+    def get_goods_subset(self) -> tuple[str, ...]:
+        """Return the goods subset this pseudo-customer represents."""
+        return self.subset
+
+
+@dataclass
+class Customer(CustomerBase):
+    """Represents a single customer with their demands."""
+
+    def is_pseudo_customer(self) -> bool:
+        """Return False for regular customers."""
+        return False
+    
+    def get_origin_id(self) -> str:
+        """Return self customer_id for regular customers.""" 
+        return self.customer_id
+    
+    def get_goods_subset(self) -> tuple[str, ...]:
+        """Return all goods with positive demand for regular customers."""
+        return tuple(sorted(self.get_required_goods()))
 
     @staticmethod
-    def from_dataframe(df: pd.DataFrame) -> list["Customer"]:
+    def from_dataframe(df: pd.DataFrame) -> list["CustomerBase"]:
         """Convert DataFrame to list of Customer objects."""
-        customers = []
+        customers: list[CustomerBase] = []
         for _, row in df.iterrows():
-            # Extract demands from columns ending with '_Demand'
-            demand_cols = [col for col in df.columns if col.endswith("_Demand")]
-            demands = {}
-            for col in demand_cols:
-                good_name = col.replace("_Demand", "").lower()
-                demands[good_name] = row[col]
+            customer: CustomerBase  # Explicit type annotation for the customer variable
+            # Check if this is a pseudo-customer or regular customer
+            customer_id_str = str(row["Customer_ID"])
+            if "::" in customer_id_str:
+                # This is a pseudo-customer
+                origin_id = customer_id_str.split("::")[0]
+                subset_str = customer_id_str.split("::")[1]
+                subset = tuple(subset_str.split("-"))
+                
+                # Extract demands from columns ending with '_Demand'
+                demand_cols = [col for col in df.columns if col.endswith("_Demand")]
+                demands = {}
+                for col in demand_cols:
+                    good_name = col.replace("_Demand", "")
+                    demands[good_name] = row[col]
 
-            customer = Customer(
-                customer_id=row["Customer_ID"],
-                demands=demands,
-                location=(
-                    row.get("Latitude", 0.0),
-                    row.get("Longitude", 0.0),
-                ),  # Handle missing location
-            )
+                customer = PseudoCustomer(
+                    customer_id=customer_id_str,
+                    origin_id=origin_id,
+                    subset=subset,
+                    demands=demands,
+                    location=(
+                        row.get("Latitude", 0.0),
+                        row.get("Longitude", 0.0),
+                    ),
+                    service_time=row.get("Service_Time", 25.0),
+                )
+            else:
+                # This is a regular customer
+                # Extract demands from columns ending with '_Demand'
+                demand_cols = [col for col in df.columns if col.endswith("_Demand")]
+                demands = {}
+                for col in demand_cols:
+                    good_name = col.replace("_Demand", "")
+                    demands[good_name] = row[col]
+
+                customer = Customer(
+                    customer_id=customer_id_str,
+                    demands=demands,
+                    location=(
+                        row.get("Latitude", 0.0),
+                        row.get("Longitude", 0.0),
+                    ),
+                    service_time=row.get("Service_Time", 25.0),
+                )
             customers.append(customer)
         return customers
 
     @staticmethod
-    def to_dataframe(customers: list["Customer"]) -> pd.DataFrame:
+    def to_dataframe(customers: list["CustomerBase"]) -> pd.DataFrame:
         """Convert list of Customer objects to DataFrame."""
         if len(customers) == 0:
             # Return DataFrame with proper schema
@@ -77,7 +177,7 @@ class Customer:
         all_goods: set[str] = set()
         for customer in customers:
             all_goods.update(customer.demands.keys())
-        all_goods_list = sorted(all_goods)
+        all_goods_list = sorted(list(all_goods))
 
         data = []
         for customer in customers:
@@ -85,30 +185,21 @@ class Customer:
                 "Customer_ID": customer.customer_id,
                 "Latitude": customer.location[0],
                 "Longitude": customer.location[1],
+                "Service_Time": customer.service_time,
             }
             # Add demand columns
             for good in all_goods_list:
-                col_name = f"{good.title()}_Demand"
+                col_name = f"{good}_Demand"
                 row[col_name] = customer.demands.get(good, 0.0)
+                
+            # Add pseudo-customer specific fields if applicable
+            if customer.is_pseudo_customer():
+                row["Origin_ID"] = customer.get_origin_id()
+                row["Subset"] = "|".join(customer.get_goods_subset())
+                
             data.append(row)
 
         return pd.DataFrame(data)
-
-
-@dataclass
-class PseudoCustomer:
-    """Represents a pseudo-customer for split-stop capability.
-
-    A pseudo-customer represents a subset of goods that a physical customer needs,
-    allowing the physical customer to be served by multiple vehicles.
-    """
-
-    customer_id: str  # Format: "original_id::good1-good2-..."
-    origin_id: str  # Original physical customer ID
-    subset: tuple[str, ...]  # Tuple of goods this pseudo-customer represents
-    demands: dict[str, float]  # Demand vector (only for goods in subset)
-    location: tuple[float, float]  # Same location as original customer
-    service_time: float = 25.0  # Service time in minutes
 
 
 def empty_dataframe_factory():

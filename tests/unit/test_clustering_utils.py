@@ -12,7 +12,11 @@ from fleetmix.core_types import ClusteringContext, DepotLocation, VehicleConfigu
 def make_customers(coords, demands, goods):
     # coords: list of (lat, lon), demands: list of dicts g->d
     df = pd.DataFrame(
-        {"Latitude": [c[0] for c in coords], "Longitude": [c[1] for c in coords]}
+        {
+            "Customer_ID": [f"C{i+1}" for i in range(len(coords))],
+            "Latitude": [c[0] for c in coords], 
+            "Longitude": [c[1] for c in coords]
+        }
     )
     for i, d in enumerate(demands):
         for g in goods:
@@ -45,10 +49,10 @@ def test_compute_composite_distance_symmetry_and_zero_diag():
 
 
 def test_estimate_num_initial_clusters_by_capacity():
-    goods = ["Dry"]  # only dry demand
-    # Create 5 customers each with Dry_Demand=2
+    goods = ["dry"]  # only dry demand - use lowercase for consistency
+    # Create 5 customers each with dry demand=2
     coords = [(0, 0)] * 5
-    demands = [{"Dry": 2} for _ in coords]
+    demands = [{"dry": 2} for _ in coords]
     df = make_customers(coords, demands, goods)
 
     # Build dummy config and clustering context using VehicleConfiguration
@@ -57,7 +61,7 @@ def test_estimate_num_initial_clusters_by_capacity():
         vehicle_type="TestVehicle",
         capacity=3,
         fixed_cost=100,
-        compartments={"Dry": True, "Chilled": False, "Frozen": False},
+        compartments={"dry": True, "chilled": False, "frozen": False},
         avg_speed=1,
         service_time=0,
         max_route_time=100,

@@ -11,7 +11,7 @@ from collections.abc import Mapping
 
 import pandas as pd
 
-from fleetmix.core_types import PseudoCustomer
+from fleetmix.core_types import Customer, CustomerBase, PseudoCustomer
 from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
@@ -88,6 +88,36 @@ def explode_customer(
     return pseudo_customers
 
 
+def explode_customers(customers: list[CustomerBase]) -> list[CustomerBase]:
+    """
+    Explode regular customers into pseudo-customers while preserving existing pseudo-customers.
+    
+    Args:
+        customers: List of CustomerBase objects (mix of Customer and PseudoCustomer)
+        
+    Returns:
+        List of CustomerBase objects with regular customers exploded into pseudo-customers
+    """
+    result = []
+    
+    for customer in customers:
+        if customer.is_pseudo_customer():
+            # Already a pseudo-customer, keep as-is
+            result.append(customer)
+        else:
+            # Regular customer, explode into pseudo-customers
+            pseudo_customers = explode_customer(
+                customer_id=customer.customer_id,
+                demands=customer.demands,
+                location=customer.location,
+                service_time=customer.service_time,
+            )
+            result.extend(pseudo_customers)
+    
+    logger.debug(f"Exploded {len(customers)} customers into {len(result)} pseudo-customers")
+    return result
+
+
 def maybe_explode(customers_df: pd.DataFrame, allow_split_stops: bool) -> pd.DataFrame:
     """
     Conditionally explode customers into pseudo-customers based on split-stop setting.
@@ -107,50 +137,15 @@ def maybe_explode(customers_df: pd.DataFrame, allow_split_stops: bool) -> pd.Dat
         f"Split-stops enabled, exploding {len(customers_df)} customers into pseudo-customers"
     )
 
-    # Get demand columns
-    demand_cols = [col for col in customers_df.columns if col.endswith("_Demand")]
-    goods = [col.replace("_Demand", "").lower() for col in demand_cols]
-
-    pseudo_customers_data = []
-
-    for _, row in customers_df.iterrows():
-        # Extract demand mapping
-        demands = {}
-        for good in goods:
-            col_name = f"{good.title()}_Demand"
-            demands[good] = row[col_name] if col_name in row else 0.0
-
-        # Extract location and service time
-        location = (row.get("Latitude", 0.0), row.get("Longitude", 0.0))
-        service_time = row.get("Service_Time", 25.0)  # Default service time
-
-        # Explode customer into pseudo-customers
-        pseudo_customers = explode_customer(
-            customer_id=row["Customer_ID"],
-            demands=demands,
-            location=location,
-            service_time=service_time,
-        )
-
-        # Convert pseudo-customers to DataFrame rows
-        for pseudo in pseudo_customers:
-            pseudo_row = {
-                "Customer_ID": pseudo.customer_id,
-                "Origin_ID": pseudo.origin_id,
-                "Subset": "|".join(pseudo.subset),  # Store as pipe-separated string
-                "Latitude": pseudo.location[0],
-                "Longitude": pseudo.location[1],
-                "Service_Time": pseudo.service_time,
-            }
-
-            # Add demand columns
-            for good in goods:
-                col_name = f"{good.title()}_Demand"
-                pseudo_row[col_name] = pseudo.demands.get(good, 0.0)
-
-            pseudo_customers_data.append(pseudo_row)
-
-    result_df = pd.DataFrame(pseudo_customers_data)
+    # Convert DataFrame to CustomerBase objects
+    customers = Customer.from_dataframe(customers_df)
+    
+    # Explode customers into pseudo-customers
+    exploded_customers = explode_customers(customers)
+    
+    # Convert back to DataFrame
+    result_df = Customer.to_dataframe(exploded_customers)
+    
     logger.info(
         f"Created {len(result_df)} pseudo-customers from {len(customers_df)} original customers"
     )
@@ -158,20 +153,30 @@ def maybe_explode(customers_df: pd.DataFrame, allow_split_stops: bool) -> pd.Dat
     return result_df
 
 
+# Legacy utility functions - DEPRECATED - Use CustomerBase methods instead
 def is_pseudo_customer(customer_id: str) -> bool:
-    """Check if a customer ID represents a pseudo-customer (contains '::')."""
+    """Check if a customer ID represents a pseudo-customer (contains '::').
+    
+    DEPRECATED: Use customer.is_pseudo_customer() method instead.
+    """
     return "::" in customer_id
 
 
 def get_origin_id(customer_id: str) -> str:
-    """Extract the original customer ID from a pseudo-customer ID."""
+    """Extract the original customer ID from a pseudo-customer ID.
+    
+    DEPRECATED: Use customer.get_origin_id() method instead.
+    """
     if is_pseudo_customer(customer_id):
         return customer_id.split("::")[0]
     return customer_id
 
 
 def get_subset_from_id(customer_id: str) -> tuple[str, ...]:
-    """Extract the goods subset from a pseudo-customer ID."""
+    """Extract the goods subset from a pseudo-customer ID.
+    
+    DEPRECATED: Use customer.get_goods_subset() method instead.
+    """
     if is_pseudo_customer(customer_id):
         subset_str = customer_id.split("::")[1]
         return tuple(subset_str.split("-"))

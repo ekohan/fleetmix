@@ -52,6 +52,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import (
     Cluster,
     Customer,
+    CustomerBase,
     FleetmixSolution,
     VehicleConfiguration,
 )
@@ -89,7 +90,7 @@ def _configs_to_dataframe(configurations: list[VehicleConfiguration]) -> pd.Data
 def solve_fsm_problem(
     clusters: list[Cluster],
     configurations: list[VehicleConfiguration],
-    customers: list[Customer],
+    customers: list[CustomerBase],
     parameters: Parameters,
     solver=None,
     verbose: bool = False,
@@ -200,31 +201,27 @@ def _solve_internal(
                 if not has_feasible_vehicle:
                     clusters_without_vehicles.append(cluster_id)
 
-            error_msg = "Optimization problem is infeasible!\n"
+            error_msg = "Optimization problem is infeasible!"
 
             if clusters_without_vehicles:
-                error_msg += f"\nClusters without feasible vehicles: {clusters_without_vehicles}\n"
-                error_msg += "Possible causes:\n"
-                error_msg += "- Vehicle capacities are too small for cluster demands\n"
-                error_msg += "- No vehicles have the right compartment mix\n"
-                error_msg += "- Consider adding larger vehicles or more compartment configurations\n"
+                error_msg += f"\nClusters without feasible vehicles: {clusters_without_vehicles}"
+                error_msg += "\nPossible causes:"
+                error_msg += "\n- Vehicle capacities are too small for cluster demands"
+                error_msg += "\n- No vehicles have the right compartment mix"
+                error_msg += "\n- Consider adding larger vehicles or more compartment configurations"
             else:
                 error_msg += (
-                    "\nAll clusters have feasible vehicles, but constraints conflict.\n"
+                    "\nAll clusters have feasible vehicles, but constraints conflict."
                 )
-                error_msg += "Possible causes:\n"
-                error_msg += "- Not enough vehicles (check max_vehicles parameter)\n"
-                error_msg += "- Customer coverage constraints cannot be satisfied\n"
-                error_msg += "- Try relaxing penalties or adding more vehicle types\n"
+                error_msg += "\nPossible causes:"
+                error_msg += "\n- Not enough vehicles (check max_vehicles parameter)"
+                error_msg += "\n- Customer coverage constraints cannot be satisfied"
+                error_msg += "\n- Try relaxing penalties or adding more vehicle types"
 
-            print(error_msg)
-            sys.exit(1)
+            raise ValueError(error_msg)
         else:
-            print(f"Optimization status: {status_name}")
-            print(
-                "The model is infeasible. Please check for customers not included in any cluster or other constraint issues."
-            )
-            sys.exit(1)
+            error_msg = f"Optimization failed with status: {status_name}"
+            raise RuntimeError(error_msg)
 
     # Extract and validate solution
     selected_clusters = _extract_solution(clusters_df, y_vars, x_vars)

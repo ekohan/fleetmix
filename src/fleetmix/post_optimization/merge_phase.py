@@ -43,7 +43,12 @@ import pandas as pd
 from haversine import Unit, haversine_vector
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
+from fleetmix.core_types import (
+    Customer,
+    CustomerBase,
+    FleetmixSolution,
+    VehicleConfiguration,
+)
 from fleetmix.registry import ROUTE_TIME_ESTIMATOR_REGISTRY
 from fleetmix.utils.logging import FleetmixLogger, Symbols
 from fleetmix.utils.route_time import (
@@ -113,7 +118,7 @@ def _get_merged_route_time(
 def improve_solution(
     initial_solution: FleetmixSolution,
     configurations: list[VehicleConfiguration],
-    customers: list[Customer],
+    customers: list[CustomerBase],
     params: Parameters,
 ) -> FleetmixSolution:
     """Iteratively merge small clusters to lower total cost.
@@ -128,7 +133,7 @@ def improve_solution(
             :func:`fleetmix.optimization.solve_fsm_problem`.
         configurations: List of vehicle configurations, each containing
             capacity, fixed cost, and compartment information.
-        customers: List of Customer objects; required for route-time
+        customers: List of CustomerBase objects; required for route-time
             recalculation and centroid updates when evaluating merges.
         params: Parameter object controlling thresholds such as
             ``small_cluster_size``, ``max_improvement_iterations``, etc.

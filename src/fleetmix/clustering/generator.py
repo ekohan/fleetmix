@@ -56,26 +56,7 @@ def generate_clusters_for_configurations(
     Returns:
         List of Cluster objects containing all generated clusters
     """
-    # Call internal implementation
-    return _generate_clusters(customers, configurations, params)
 
-
-def _generate_clusters(
-    customers: list[CustomerBase],
-    configurations: list[VehicleConfiguration],
-    params: Parameters,
-) -> list[Cluster]:
-    """
-    Internal implementation - generate clusters for each vehicle configuration in parallel.
-
-    Args:
-        customers: List of CustomerBase objects containing customer data
-        configurations: List of vehicle configurations
-        params: Parameters object containing vehicle configuration parameters
-
-    Returns:
-        List of Cluster objects containing all generated clusters
-    """
     logger.info("--- Starting Cluster Generation Process ---")
     if not customers or not configurations:
         logger.warning(

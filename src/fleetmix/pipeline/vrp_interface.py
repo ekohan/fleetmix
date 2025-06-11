@@ -5,10 +5,10 @@ from enum import Enum
 import pandas as pd
 
 from fleetmix.benchmarking.converters.vrp import convert_vrp_to_fsm
-from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.optimization import optimize_fleet
 from fleetmix.preprocess.demand import maybe_explode
 from fleetmix.utils.logging import log_detail, log_progress
 from fleetmix.utils.time_measurement import TimeRecorder
@@ -50,12 +50,12 @@ def run_optimization(
             configs = generate_vehicle_configurations(params.vehicles, params.goods)
 
         with time_recorder.measure("clustering"):
-            clusters = generate_clusters_for_configurations(
+            clusters = generate_feasible_clusters(
                 customers=customers, configurations=configs, params=params
             )
 
         with time_recorder.measure("fsm_initial"):
-            solution = solve_fsm_problem(
+            solution = optimize_fleet(
                 clusters=clusters,
                 configurations=configs,
                 customers=customers,

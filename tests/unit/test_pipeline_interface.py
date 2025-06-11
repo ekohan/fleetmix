@@ -30,12 +30,12 @@ def stub_everything(monkeypatch):
         lambda *args, **kw: pd.DataFrame(),
     )
     monkeypatch.setattr(
-        "fleetmix.pipeline.vrp_interface.generate_clusters_for_configurations",
+        "fleetmix.pipeline.vrp_interface.generate_feasible_clusters",
         lambda *args, **kw: pd.DataFrame(),
     )
     # Stub solver in pipeline
     monkeypatch.setattr(
-        "fleetmix.pipeline.vrp_interface.solve_fsm_problem",
+        "fleetmix.pipeline.vrp_interface.optimize_fleet",
         lambda *args, **kw: FleetmixSolution(
             total_cost=0,
             vehicles_used={},

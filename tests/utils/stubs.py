@@ -70,7 +70,7 @@ def stub_clustering(monkeypatch):
     """Stub clustering to return one trivial cluster."""
     monkeypatch.setattr(
         clustering_module,
-        "generate_clusters_for_configurations",
+        "generate_feasible_clusters",
         lambda *args, **kwargs: pd.DataFrame(
             [
                 {
@@ -92,7 +92,7 @@ def stub_clustering(monkeypatch):
 def stub_solver(monkeypatch):
     """Stub FSM solver to return empty but valid solution."""
 
-    def mock_solve_fsm_problem(*args, **kwargs):
+    def mock_optimize_fleet(*args, **kwargs):
         # Return a FleetmixSolution instance
         return FleetmixSolution(
             total_cost=0,
@@ -113,7 +113,7 @@ def stub_solver(monkeypatch):
         )
 
     monkeypatch.setattr(
-        optimization_module, "solve_fsm_problem", mock_solve_fsm_problem
+        optimization_module, "optimize_fleet", mock_optimize_fleet
     )
     yield
 

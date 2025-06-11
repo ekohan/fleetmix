@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.optimization import optimize_fleet
 from fleetmix.preprocess.demand import maybe_explode
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.logging import FleetmixLogger, log_warning
@@ -163,7 +163,7 @@ def optimize(
         # Step 4: Generate clusters
         try:
             with time_recorder.measure("clustering"):
-                clusters = generate_clusters_for_configurations(
+                clusters = generate_feasible_clusters(
                     customers=customers, configurations=configs, params=params
                 )
         except Exception as e:
@@ -187,7 +187,7 @@ def optimize(
         # Step 5: Solve optimization problem
         try:
             with time_recorder.measure("fsm_initial"):
-                solution = solve_fsm_problem(
+                solution = optimize_fleet(
                     clusters=clusters,
                     configurations=configs,
                     customers=customers,

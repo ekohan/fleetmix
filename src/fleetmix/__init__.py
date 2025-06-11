@@ -4,7 +4,7 @@
 from .api import optimize
 
 # Export canonical clustering function
-from .clustering import generate_clusters_for_configurations
+from .clustering import generate_feasible_clusters
 
 # Export domain objects
 from .core_types import Cluster, Customer
@@ -27,7 +27,7 @@ __all__ = [
     "clustering",
     "config",
     "convert_to_fsm",
-    "generate_clusters_for_configurations",
+    "generate_feasible_clusters",
     "optimization",
     "optimize",
     "post_optimization",

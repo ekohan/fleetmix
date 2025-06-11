@@ -12,9 +12,9 @@ import pandas as pd
 import pytest
 import yaml
 
-from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
-from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.optimization.core import optimize_fleet
 from fleetmix.post_optimization.merge_phase import improve_solution
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 from fleetmix.utils.route_time import (
@@ -298,7 +298,7 @@ class TestCoreAlgorithms:
         # Convert DataFrame to list of Customer objects for new API
         customers_list = Customer.from_dataframe(realistic_customers)
 
-        clusters = generate_clusters_for_configurations(
+        clusters = generate_feasible_clusters(
             customers=customers_list, configurations=configs, params=realistic_config
         )
 
@@ -451,12 +451,12 @@ class TestCoreAlgorithms:
         # Convert DataFrame to list of Customer objects for new API
         customers_list = Customer.from_dataframe(realistic_customers)
 
-        clusters = generate_clusters_for_configurations(
+        clusters = generate_feasible_clusters(
             customers=customers_list, configurations=configs, params=realistic_config
         )
 
         # Solve the FSM problem using the new API
-        solution = solve_fsm_problem(
+        solution = optimize_fleet(
             clusters=clusters,
             configurations=configs,
             customers=customers_list,
@@ -480,11 +480,11 @@ class TestCoreAlgorithms:
         # Convert DataFrame to list of Customer objects for new API
         customers_list = Customer.from_dataframe(realistic_customers)
 
-        clusters = generate_clusters_for_configurations(
+        clusters = generate_feasible_clusters(
             customers=customers_list, configurations=configs, params=realistic_config
         )
 
-        solution = solve_fsm_problem(
+        solution = optimize_fleet(
             clusters=clusters,
             configurations=configs,
             customers=customers_list,
@@ -542,7 +542,7 @@ class TestCoreAlgorithms:
         # Convert DataFrame to list of Customer objects for new API
         customers_list = Customer.from_dataframe(large_customers)
 
-        clusters = generate_clusters_for_configurations(
+        clusters = generate_feasible_clusters(
             customers=customers_list, configurations=configs, params=realistic_config
         )
 
@@ -585,7 +585,7 @@ class TestCoreAlgorithms:
         # Convert DataFrame to list of Customer objects for new API
         customers_list = Customer.from_dataframe(single_customer)
 
-        clusters = generate_clusters_for_configurations(
+        clusters = generate_feasible_clusters(
             customers=customers_list, configurations=configs, params=realistic_config
         )
 
@@ -615,7 +615,7 @@ class TestCoreAlgorithms:
 
         # Time the clustering phase
         start_time = time.time()
-        clusters = generate_clusters_for_configurations(
+        clusters = generate_feasible_clusters(
             customers=customers_list, configurations=configs, params=realistic_config
         )
         clustering_time = time.time() - start_time

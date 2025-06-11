@@ -12,7 +12,7 @@ from fleetmix.core_types import (
 
 from .generator import (
     _is_customer_feasible,
-    generate_clusters_for_configurations,
+    generate_feasible_clusters,
 )
 from .heuristics import (
     compute_composite_distance,
@@ -29,6 +29,6 @@ __all__ = [
     "_is_customer_feasible",
     "compute_composite_distance",
     "estimate_num_initial_clusters",
-    "generate_clusters_for_configurations",
+    "generate_feasible_clusters",
     "get_cached_demand",
 ]

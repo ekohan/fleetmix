@@ -1,2 +1,0 @@
-coverage-report:
-	pytest 

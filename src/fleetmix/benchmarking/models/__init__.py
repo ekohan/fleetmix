@@ -1,9 +1,5 @@
 """Models for benchmarking functionality."""
 
-from .models import MCVRPInstance, CVRPInstance, CVRPSolution
+from .models import CVRPInstance, CVRPSolution, MCVRPInstance
 
-__all__ = [
-    "MCVRPInstance",
-    "CVRPInstance",
-    "CVRPSolution"
-]
+__all__ = ["CVRPInstance", "CVRPSolution", "MCVRPInstance"]

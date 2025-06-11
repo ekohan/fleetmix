@@ -5,15 +5,18 @@ Converter for MCVRP instances into FSM format.
 __all__ = ["convert_mcvrp_to_fsm"]
 
 from pathlib import Path
-from typing import Union
 
 import pandas as pd
+
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import VehicleSpec, DepotLocation
+from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
-def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) -> tuple:
+
+def convert_mcvrp_to_fsm(
+    instance_name: str, custom_instance_path: Path | None = None
+) -> tuple:
     """Convert an MCVRP *.dat* file to Fleetmix inputs.
 
     Parameters
@@ -40,10 +43,14 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
     if custom_instance_path:
         file_path = custom_instance_path
     else:
-        file_path = Path(__file__).parent.parent / 'datasets' / 'mcvrp' / f'{instance_name}.dat'
+        file_path = (
+            Path(__file__).parent.parent / "datasets" / "mcvrp" / f"{instance_name}.dat"
+        )
 
     if not file_path.exists():
-        raise FileNotFoundError(f"MCVRP instance file not found: {file_path} for instance '{instance_name}'. Provide custom_instance_path if using non-standard location.")
+        raise FileNotFoundError(
+            f"MCVRP instance file not found: {file_path} for instance '{instance_name}'. Provide custom_instance_path if using non-standard location."
+        )
 
     # Parse the MCVRP instance
     instance = parse_mcvrp(file_path)
@@ -58,14 +65,16 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
         if node_id == instance.depot_id:
             continue
         dry, chilled, frozen = instance.demands[node_id]
-        customers.append({
-            'Customer_ID': str(node_id),
-            'Latitude': lat,
-            'Longitude': lon,
-            'Dry_Demand': dry,
-            'Chilled_Demand': chilled,
-            'Frozen_Demand': frozen
-        })
+        customers.append(
+            {
+                "Customer_ID": str(node_id),
+                "Latitude": lat,
+                "Longitude": lon,
+                "Dry_Demand": dry,
+                "Chilled_Demand": chilled,
+                "Frozen_Demand": frozen,
+            }
+        )
     customers_df = pd.DataFrame(customers)
 
     # Create parameters clone
@@ -73,17 +82,19 @@ def convert_mcvrp_to_fsm(instance_name: str, custom_instance_path: Path = None) 
     # Set depot location
     depot_lat, depot_lon = geo_coords[instance.depot_id]
     params.depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
-    # No max route time by default
-    params.max_route_time = float('inf')
     # Single multi-compartment vehicle
     params.vehicles = {
-        'MCVRP': VehicleSpec(
+        "MCVRP": VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
-            compartments={'Dry': True, 'Chilled': True, 'Frozen': True}
+            compartments={"Dry": True, "Chilled": True, "Frozen": True},
+            extra={},
+            avg_speed=30.0,
+            service_time=25.0,
+            max_route_time=24 * 7,  # 1 week ~ no time limit
         )
     }
     # Expected vehicles from instance
     params.expected_vehicles = instance.vehicles
 
-    return customers_df, params 
+    return customers_df, params

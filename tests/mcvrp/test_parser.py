@@ -1,5 +1,7 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from fleetmix.benchmarking import parse_mcvrp
 from fleetmix.benchmarking.models import MCVRPInstance
 
@@ -22,11 +24,14 @@ def test_parse_sample():
     assert inst.coords[2] == (25.44, 95.54)
     assert inst.demands[4] == (0, 0, 112)
 
-@pytest.mark.parametrize("bad_header, bad_value, message",
-                         [
-                             ("PRODUCT TYPES", "2", "Expected 3 product types"),
-                             ("COMPARTMENTS", "2", "Expected 3 compartments"),
-                         ])
+
+@pytest.mark.parametrize(
+    "bad_header, bad_value, message",
+    [
+        ("PRODUCT TYPES", "2", "Expected 3 product types"),
+        ("COMPARTMENTS", "2", "Expected 3 compartments"),
+    ],
+)
 def test_invalid_product_or_compartments(bad_header, bad_value, message, tmp_path):
     sample = Path(__file__).parent.parent / "_assets" / "mcvrp" / "sample.dat"
     data = sample.read_text().splitlines()
@@ -77,4 +82,4 @@ def test_mismatched_counts(tmp_path):
     bad_file.write_text("\n".join(new_data))
     with pytest.raises(ValueError) as ei:
         parse_mcvrp(bad_file)
-    assert "does not match dimension" in str(ei.value) 
+    assert "does not match dimension" in str(ei.value)

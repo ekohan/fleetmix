@@ -12,7 +12,4 @@ Utility helpers for Fleetmix (dependency-free).
 
 from .project_root import PROJECT_ROOT, get_project_root
 
-__all__ = [
-    "PROJECT_ROOT", 
-    "get_project_root"
-]
+__all__ = ["PROJECT_ROOT", "get_project_root"]

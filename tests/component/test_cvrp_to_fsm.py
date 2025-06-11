@@ -1,17 +1,23 @@
-import pytest
-from pathlib import Path
 import pandas as pd
+import pytest
 
-import fleetmix
+from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType, convert_cvrp_to_fsm
 from fleetmix.benchmarking.parsers.cvrp import CVRPParser
-from fleetmix.benchmarking.converters.cvrp import convert_cvrp_to_fsm, CVRPBenchmarkType
 
-@ pytest.mark.parametrize("btype, extra_kwargs, mult", [
-    (CVRPBenchmarkType.NORMAL, {}, 1),
-    (CVRPBenchmarkType.SPLIT, {"split_ratios": {"dry": 0.6, "chilled": 0.4}}, 1),
-    (CVRPBenchmarkType.SCALED, {"num_goods": 2}, 2),
-    (CVRPBenchmarkType.COMBINED, {"instance_names": ["X-n101-k25", "X-n101-k25"]}, 2),
-])
+
+@pytest.mark.parametrize(
+    "btype, extra_kwargs, mult",
+    [
+        (CVRPBenchmarkType.NORMAL, {}, 1),
+        (CVRPBenchmarkType.SPLIT, {"split_ratios": {"dry": 0.6, "chilled": 0.4}}, 1),
+        (CVRPBenchmarkType.SCALED, {"num_goods": 2}, 2),
+        (
+            CVRPBenchmarkType.COMBINED,
+            {"instance_names": ["X-n101-k25", "X-n101-k25"]},
+            2,
+        ),
+    ],
+)
 def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_path):
     # Parse baseline instance
     parser = CVRPParser(str(small_vrp_path))
@@ -25,9 +31,13 @@ def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_p
 
     # Call converter with correct parameters
     if btype == CVRPBenchmarkType.SPLIT:
-        df, params = convert_cvrp_to_fsm(names, btype, split_ratios=extra_kwargs["split_ratios"])
+        df, params = convert_cvrp_to_fsm(
+            names, btype, split_ratios=extra_kwargs["split_ratios"]
+        )
     elif btype == CVRPBenchmarkType.SCALED:
-        df, params = convert_cvrp_to_fsm(names, btype, num_goods=extra_kwargs["num_goods"])
+        df, params = convert_cvrp_to_fsm(
+            names, btype, num_goods=extra_kwargs["num_goods"]
+        )
     else:
         # NORMAL and COMBINED
         df, params = convert_cvrp_to_fsm(names, btype)
@@ -42,13 +52,19 @@ def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_p
         assert len(df) == (inst.dimension - 1)
 
     # Core columns exist
-    for col in ["Latitude", "Longitude", "Dry_Demand", "Chilled_Demand", "Frozen_Demand"]:
+    for col in [
+        "Latitude",
+        "Longitude",
+        "Dry_Demand",
+        "Chilled_Demand",
+        "Frozen_Demand",
+    ]:
         assert col in df.columns
 
     # Types
     assert isinstance(df, pd.DataFrame)
-    assert hasattr(params, 'expected_vehicles')
+    assert hasattr(params, "expected_vehicles")
 
     # Check expected_vehicles is positive and integer
     assert isinstance(params.expected_vehicles, int)
-    assert params.expected_vehicles >= mult 
+    assert params.expected_vehicles >= mult

@@ -1,50 +1,48 @@
 """Solver utilities for FleetMix."""
+
+import importlib.util
 import os
+
 import pulp
 import pulp.apis
 
-from fleetmix.registry import register_solver_adapter, SOLVER_ADAPTER_REGISTRY
+from fleetmix.registry import SOLVER_ADAPTER_REGISTRY, register_solver_adapter
 
 
-@register_solver_adapter('gurobi')
+@register_solver_adapter("gurobi")
 class GurobiAdapter:
     """Adapter for Gurobi solver."""
-    
+
     def get_pulp_solver(self, verbose: bool = False) -> pulp.LpSolver:
         """Return configured Gurobi solver instance."""
         msg = 1 if verbose else 0
         return pulp.GUROBI_CMD(msg=msg)
-    
+
     @property
     def name(self) -> str:
         """Solver name for logging."""
         return "Gurobi"
-    
+
     @property
     def available(self) -> bool:
         """Check if Gurobi is available."""
-        try:
-            # Check availability without creating a full solver instance
-            import gurobipy
-            return True
-        except ImportError:
-            return False
+        return importlib.util.find_spec("gurobipy") is not None
 
 
-@register_solver_adapter('cbc')
+@register_solver_adapter("cbc")
 class CbcAdapter:
     """Adapter for CBC solver."""
-    
+
     def get_pulp_solver(self, verbose: bool = False) -> pulp.LpSolver:
         """Return configured CBC solver instance."""
         msg = 1 if verbose else 0
         return pulp.PULP_CBC_CMD(msg=msg)
-    
+
     @property
     def name(self) -> str:
         """Solver name for logging."""
         return "CBC"
-    
+
     @property
     def available(self) -> bool:
         """Check if CBC is available."""
@@ -62,20 +60,20 @@ def pick_solver(verbose: bool = False):
     choice = os.getenv("FSM_SOLVER", "auto").lower()
 
     if choice == "gurobi":
-        adapter = SOLVER_ADAPTER_REGISTRY['gurobi']()
+        adapter = SOLVER_ADAPTER_REGISTRY["gurobi"]()
         return adapter.get_pulp_solver(verbose)
     if choice == "cbc":
-        adapter = SOLVER_ADAPTER_REGISTRY['cbc']()
+        adapter = SOLVER_ADAPTER_REGISTRY["cbc"]()
         return adapter.get_pulp_solver(verbose)
 
     # auto: try Gurobi, fallback to CBC on instantiation errors
-    gurobi_adapter = SOLVER_ADAPTER_REGISTRY['gurobi']()
+    gurobi_adapter = SOLVER_ADAPTER_REGISTRY["gurobi"]()
     if gurobi_adapter.available:
         try:
             return gurobi_adapter.get_pulp_solver(verbose)
         except (pulp.PulpError, OSError):
             # Fall back to CBC if Gurobi fails
             pass
-    
-    cbc_adapter = SOLVER_ADAPTER_REGISTRY['cbc']()
-    return cbc_adapter.get_pulp_solver(verbose) 
+
+    cbc_adapter = SOLVER_ADAPTER_REGISTRY["cbc"]()
+    return cbc_adapter.get_pulp_solver(verbose)

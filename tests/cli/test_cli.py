@@ -1,12 +1,10 @@
 """
 Integration tests for the Fleetmix CLI.
 """
+
 import subprocess
 import sys
 from pathlib import Path
-import pytest
-import tempfile
-import pandas as pd
 
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
@@ -18,7 +16,8 @@ def test_cli_version():
     result = subprocess.run(
         [sys.executable, "-m", "fleetmix", "version"],
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
     assert result.returncode == 0
     assert __version__ in result.stdout
@@ -29,19 +28,28 @@ def test_cli_optimize_basic():
     # Just test that the command structure works by showing the error
     result = subprocess.run(
         [
-            sys.executable, "-m", "fleetmix", "optimize",
-            "--demand", "test.csv",
-            "--config", "test.yaml"
+            sys.executable,
+            "-m",
+            "fleetmix",
+            "optimize",
+            "--demand",
+            "test.csv",
+            "--config",
+            "test.yaml",
         ],
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
-    
+
     # Should fail but with our error message
     assert result.returncode == 1
-    assert "Demand file not found" in result.stderr or "Config file not found" in result.stderr
+    assert (
+        "Demand file not found" in result.stderr
+        or "Config file not found" in result.stderr
+    )
     return  # Skip the rest for now
-    
+
     # Create a simple config file
     config_file = tmp_path / "config.yaml"
     config_content = """
@@ -74,24 +82,31 @@ format: excel
 post_optimization: false
 """
     config_file.write_text(config_content)
-    
+
     # Run the CLI command
     result = subprocess.run(
         [
-            sys.executable, "-m", "fleetmix", "optimize",
-            "--demand", str(demand_file),
-            "--config", str(config_file),
-            "--output", str(tmp_path / "results")
+            sys.executable,
+            "-m",
+            "fleetmix",
+            "optimize",
+            "--demand",
+            str(demand_file),
+            "--config",
+            str(config_file),
+            "--output",
+            str(tmp_path / "results"),
         ],
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
-    
+
     assert result.returncode == 0
     assert "Optimization Results" in result.stdout
     assert "Total Cost" in result.stdout
     assert "Results saved to" in result.stdout
-    
+
     # Check that results file was created
     results_dir = tmp_path / "results"
     assert results_dir.exists()
@@ -102,14 +117,12 @@ post_optimization: false
 def test_cli_optimize_missing_file():
     """Test error handling for missing demand file."""
     result = subprocess.run(
-        [
-            sys.executable, "-m", "fleetmix", "optimize",
-            "--demand", "nonexistent.csv"
-        ],
+        [sys.executable, "-m", "fleetmix", "optimize", "--demand", "nonexistent.csv"],
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
-    
+
     assert result.returncode == 1
     assert "Demand file not found" in result.stderr
 
@@ -121,9 +134,10 @@ def test_cli_benchmark_mcvrp():
     result = subprocess.run(
         [sys.executable, "-m", "fleetmix", "benchmark", "--help"],
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
-    
+
     assert result.returncode == 0
     assert "benchmark" in result.stdout
     assert "suite" in result.stdout
@@ -135,23 +149,23 @@ def test_api_optimize():
     smoke_dir = Path(__file__).parent.parent / "_assets" / "smoke"
     demand_file = smoke_dir / "mini_demand.csv"
     config_file = smoke_dir / "mini.yaml"
-    
+
     # Check files exist
     assert demand_file.exists(), f"Demand file not found: {demand_file}"
     assert config_file.exists(), f"Config file not found: {config_file}"
-    
+
     # Test the API
     solution = api_optimize(
         demand=str(demand_file),
         config=str(config_file),
         output_dir=None,  # Don't save for test
-        format="json"
+        format="json",
     )
-    
+
     assert isinstance(solution, FleetmixSolution)
     assert solution.total_cost is not None
     assert solution.total_fixed_cost is not None
     assert solution.total_variable_cost is not None
     assert solution.vehicles_used is not None
     assert solution.missing_customers is not None
-    assert solution.solver_status is not None 
+    assert solution.solver_status is not None

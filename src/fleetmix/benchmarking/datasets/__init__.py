@@ -15,9 +15,9 @@ This package contains two sets of standard Vehicle Routing Problem (VRP) benchma
    - Various topologies and demand patterns to test robustness
 
 References:
-- Henke, T., Speranza, M. G., & Wäscher, G. (2015). The multi-compartment vehicle routing 
+- Henke, T., Speranza, M. G., & Wäscher, G. (2015). The multi-compartment vehicle routing
   problem with flexible compartment sizes. European Journal of Operational Research, 246(3):730-743.
-- Uchoa, E., Pecin, D., Pessoa, A., Poggi, M., Vidal, T., & Subramanian, A. (2017). 
-  New benchmark instances for the Capacitated Vehicle Routing Problem. 
+- Uchoa, E., Pecin, D., Pessoa, A., Poggi, M., Vidal, T., & Subramanian, A. (2017).
+  New benchmark instances for the Capacitated Vehicle Routing Problem.
   European Journal of Operational Research, 257(3), 845-858.
-""" 
+"""

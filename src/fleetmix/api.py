@@ -219,3 +219,6 @@ def optimize(
             log_warning(f"Failed to save results: {e!s}")
 
     return solution
+
+
+__all__ = ["optimize"]

@@ -202,3 +202,6 @@ class Parameters:
 
         with open(output_path, "w") as f:
             yaml.dump(data_to_save, f, sort_keys=False)
+
+
+__all__ = ["Parameters"]

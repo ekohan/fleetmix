@@ -37,3 +37,6 @@ def generate_vehicle_configurations(
             config_id += 1
 
     return configurations
+
+
+__all__ = ["generate_vehicle_configurations"]

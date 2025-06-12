@@ -793,3 +793,12 @@ def _setup_logging_from_flags(
 
 if __name__ == "__main__":
     app()
+
+
+__all__ = [
+    "optimize", 
+    "benchmark", 
+    "convert", 
+    "gui", 
+    "version"
+]

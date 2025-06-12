@@ -36,7 +36,7 @@ def test_create_model_counts_traditional_mode(toy_fsm_core_data):
     params.allow_split_stops = False
 
     configurations = dataframe_to_configurations(config_df)
-    model, y_vars, x_vars, c_vk = optimization._create_model(
+    model, y_vars, x_vars, c_vk = optimization.core._create_model(
         clusters_df, configurations, params
     )
     # Exactly one cluster variable and one assignment x-var
@@ -68,7 +68,7 @@ def test_create_model_counts_split_stop_mode(toy_fsm_core_data):
     config_df.at[0, "Chilled"] = 1  # Enable chilled compartment
 
     configurations = dataframe_to_configurations(config_df)
-    model, y_vars, x_vars, c_vk = optimization._create_model(
+    model, y_vars, x_vars, c_vk = optimization.core._create_model(
         clusters_df, configurations, params
     )
     # Exactly one cluster variable and one assignment x-var
@@ -99,7 +99,7 @@ def test_create_model_counts(toy_fsm_core_data):
     params.allow_split_stops = False
 
     configurations = dataframe_to_configurations(config_df)
-    model, y_vars, x_vars, c_vk = optimization._create_model(
+    model, y_vars, x_vars, c_vk = optimization.core._create_model(
         clusters_df, configurations, params
     )
     # Exactly one cluster variable and one assignment x-var
@@ -128,7 +128,7 @@ def test_extract_solution():
     xA1.varValue = 1
     xB2.varValue = 1
     x_vars = {(10, 1): xA1, (20, 2): xB2}
-    selected = optimization._extract_solution(clusters_df, y_vars, x_vars)
+    selected = optimization.core._extract_solution(clusters_df, y_vars, x_vars)
     # Only cluster 1 should be selected, with Config_ID mapped to 10
     assert list(selected["Cluster_ID"]) == [1]
     assert list(selected["Config_ID"]) == [10]
@@ -146,7 +146,7 @@ def test_capacity_violation_model_warning_traditional_mode(toy_fsm_core_data, ca
     # Capture warnings/debug from model construction for the specific logger
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
     # Create model
-    model, y_vars, x_vars, c_vk = optimization._create_model(
+    model, y_vars, x_vars, c_vk = optimization.core._create_model(
         clusters_df, configurations, params
     )
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
@@ -164,7 +164,7 @@ def test_capacity_violation_model_warning_traditional_mode(toy_fsm_core_data, ca
 
     # Use pytest's raises to catch the expected RuntimeError for "Not Solved" status
     with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
-        optimization._solve_internal(clusters_df, configurations, customers_df, params)
+        optimization.core._solve_internal(clusters_df, configurations, customers_df, params)
 
 
 def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, caplog):
@@ -179,7 +179,7 @@ def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, cap
     # Capture warnings/debug from model construction for the specific logger
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
     # Create model
-    model, y_vars, x_vars, c_vk = optimization._create_model(
+    model, y_vars, x_vars, c_vk = optimization.core._create_model(
         clusters_df, configurations, params
     )
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
@@ -197,7 +197,7 @@ def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, cap
 
     # In split-stop mode, the optimization should succeed but return an empty solution
     # rather than raising an exception (this is the correct behavior)
-    solution = optimization._solve_internal(
+    solution = optimization.core._solve_internal(
         clusters_df, configurations, customers_df, params
     )
 
@@ -223,7 +223,7 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     # Capture warnings/debug from model construction for the specific logger
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
     # Create model
-    model, y_vars, x_vars, c_vk = optimization._create_model(
+    model, y_vars, x_vars, c_vk = optimization.core._create_model(
         clusters_df, configurations, params
     )
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
@@ -241,7 +241,7 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
 
     # Use pytest's raises to catch the expected RuntimeError for "Not Solved" status
     with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
-        optimization._solve_internal(clusters_df, configurations, customers_df, params)
+        optimization.core._solve_internal(clusters_df, configurations, customers_df, params)
 
     # Check stdout for the infeasible message
     # We don't need to check logs as the warning is printed to stdout, not logged

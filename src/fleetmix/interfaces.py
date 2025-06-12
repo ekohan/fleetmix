@@ -50,3 +50,10 @@ class SolverAdapter(Protocol):
     def available(self) -> bool:
         """Check if this solver is available in the environment."""
         ...
+
+
+__all__ = [
+    "Clusterer",
+    "RouteTimeEstimator", 
+    "SolverAdapter",
+]

@@ -74,3 +74,10 @@ def run_optimization(
     log_detail(f"Expected Vehicles: {params.expected_vehicles}")
 
     return solution, configs
+
+
+__all__ = [
+    "VRPType",
+    "convert_to_fsm", 
+    "run_optimization"
+]

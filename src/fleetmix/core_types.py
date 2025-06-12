@@ -499,3 +499,26 @@ class DepotLocation:
 
     def to_dict(self) -> dict[str, float]:
         return asdict(self)
+
+
+__all__ = [
+    # Core dataclasses
+    "FleetmixSolution",
+    "VehicleConfiguration", 
+    "VehicleSpec",
+    "Cluster",
+    "Customer",
+    "CustomerBase",
+    "PseudoCustomer",
+    "DepotLocation",
+    
+    # Context classes
+    "ClusteringContext",
+    "RouteTimeContext",
+    "VehicleOperationContext",
+    
+    # Other types
+    "VRPSolution", 
+    "BenchmarkType",
+    "TimeMeasurement",
+]

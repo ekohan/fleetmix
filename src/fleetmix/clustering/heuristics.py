@@ -494,6 +494,8 @@ def create_cluster(
     method_name: str,
 ) -> Cluster:
     """Create a Cluster object from customer data."""
+    # Keep all pseudo-customers; overlaps will be handled by the MILP model.
+
     # Get demand from cache
     total_demand = get_cached_demand(
         cluster_customers, clustering_context.goods, demand_cache

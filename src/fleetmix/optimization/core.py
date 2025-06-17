@@ -404,38 +404,33 @@ def _create_model(
 
     # 1. Customer Allocation Constraint (Exact Assignment or Split-Stop Exclusivity)
     if parameters.allow_split_stops:
-        # Build mapping tables for split-stop constraints
-        origin_id = {customer_id: get_origin_id(customer_id) for customer_id in N}
-        subset = {customer_id: get_subset_from_id(customer_id) for customer_id in N}
+        # Build mapping tables for split-stop constraints (physical customer, good → clusters)
+        origin_id = {cust_id: get_origin_id(cust_id) for cust_id in N}
+        subset_map = {cust_id: get_subset_from_id(cust_id) for cust_id in N}
 
-        # Get all physical customers and their goods
-        physical_customers = set(origin_id.values())
-        goods_by_physical: dict[str, set[str]] = {}
-        for physical_customer in physical_customers:
-            goods_by_physical[physical_customer] = set()
-            for customer_id in N:
-                if origin_id[customer_id] == physical_customer:
-                    goods_by_physical[physical_customer].update(subset[customer_id])
+        # For each physical-customer / good pair compute the set of clusters that contain **at least one**
+        # pseudo-customer covering that good.  A cluster will be counted once via its y_k binary, so the
+        # presence of multiple overlapping pseudo-customers inside the same cluster does **not** lead to
+        # coefficients greater than 1.
+        pg_to_clusters: dict[tuple[str, str], set] = {}
 
-        # Exclusivity constraints: each physical customer's each good must be served exactly once
-        for physical_customer in physical_customers:
-            for good in goods_by_physical[physical_customer]:
-                model += (
-                    pulp.lpSum(
-                        x_vars[v, k]
-                        for customer_id in N
-                        if origin_id[customer_id] == physical_customer
-                        and good in subset[customer_id]
-                        for k in K_i[customer_id]
-                        for v in V_k[k]
-                        if v != "NoVehicle"
-                    )
-                    == 1,
-                    f"Cover_{physical_customer}_{good}",
-                )
+        for cust_id in N:
+            phys = origin_id[cust_id]
+            for good in subset_map[cust_id]:
+                key = (phys, good)
+                if key not in pg_to_clusters:
+                    pg_to_clusters[key] = set()
+                pg_to_clusters[key].update(K_i[cust_id])
+
+        # Add the exclusivity constraints: each (physical customer, good) must be covered by exactly one cluster
+        for (phys, good), clusters_covering in pg_to_clusters.items():
+            model += (
+                pulp.lpSum(y_vars[k] for k in clusters_covering) == 1,
+                f"Cover_{phys}_{good}",
+            )
 
         logger.info(
-            f"Added split-stop exclusivity constraints for {len(physical_customers)} physical customers"
+            f"Added split-stop exclusivity constraints for {len(set(p for p, _ in pg_to_clusters))} physical customers"
         )
     else:
         # Standard customer coverage constraint: each customer served exactly once

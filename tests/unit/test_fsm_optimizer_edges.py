@@ -35,7 +35,9 @@ def test_create_model_constraints(toy_fsm_edge_data):
     params.allow_split_stops = False
 
     configurations = dataframe_to_configurations(config_df)
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+    from fleetmix.core_types import Cluster
+    clusters_list = Cluster.from_dataframe(clusters_df)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_list, configurations, params)
     # Each customer coverage constraint exists
     for cid in ["C1", "C2"]:
         cname = f"Customer_Coverage_{cid}"
@@ -50,12 +52,14 @@ def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
     params.allow_split_stops = False
 
     configurations = dataframe_to_configurations(config_df)
+    from fleetmix.core_types import Cluster
+    clusters_list = Cluster.from_dataframe(clusters_df)
     # small cluster demand -> light-load penalty applies
     params.light_load_penalty = 100
     costs = []
     for thr in [0.0, 0.5, 0.9]:
         params.light_load_threshold = thr
-        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+        model, y_vars, x_vars, c_vk = _create_model(clusters_list, configurations, params)
         costs.append(c_vk[(1, 1)])
     # Objective cost non-decreasing as threshold increases
     assert costs[0] <= costs[1] <= costs[2]
@@ -71,7 +75,9 @@ def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
     clusters_df.at[0, "Total_Demand"] = {"Dry": 100, "Chilled": 0, "Frozen": 0}
     # Set caplog to capture DEBUG messages from the specific logger
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+    from fleetmix.core_types import Cluster
+    clusters_list = Cluster.from_dataframe(clusters_df)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_list, configurations, params)
     # 'NoVehicle' var should be present and y_1==0 forced
     assert any(v == "NoVehicle" for (v, k) in x_vars)
     # There should be an unserviceable-cluster constraint
@@ -99,7 +105,9 @@ def test_extract_and_validate_solution(toy_fsm_edge_data):
     x = pulp.LpVariable("x_1_1", cat="Binary")
     x.varValue = 1
     x_vars = {(1, 1): x}
-    selected = _extract_solution(clusters_df, y_vars, x_vars)
+    from fleetmix.core_types import Cluster, Customer
+    clusters_list = Cluster.from_dataframe(clusters_df)
+    selected = _extract_solution(clusters_list, y_vars, x_vars)
     # The selected DataFrame should have Config_ID=1
     assert list(selected["Config_ID"]) == [1]
     # Validate solution: no missing customers
@@ -119,5 +127,6 @@ def test_extract_and_validate_solution(toy_fsm_edge_data):
             },
         ]
     )
-    missing = _validate_solution(selected, customers_df, configurations, params)
+    customers_list = Customer.from_dataframe(customers_df)
+    missing = _validate_solution(selected, customers_list, configurations, params)
     assert missing == set()

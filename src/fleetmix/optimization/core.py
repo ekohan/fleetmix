@@ -45,7 +45,7 @@ import sys
 import time
 from typing import Any
 
-import pandas as pd
+import pandas as pd  # Kept only for I/O compatibility functions
 import pulp
 
 from fleetmix.config.parameters import Parameters
@@ -133,15 +133,11 @@ def optimize_fleet(
         refined by :func:`fleetmix.post_optimization.improve_solution` before being
         returned.
     """
-    # Convert to DataFrames for internal processing
-    clusters_df = Cluster.to_dataframe(clusters)
-    customers_df = Customer.to_dataframe(customers)
-
-    # Call internal implementation
+    # Call internal implementation directly with dataclass lists
     return _solve_internal(
-        clusters_df,
+        clusters,
         configurations,
-        customers_df,
+        customers,
         parameters,
         solver,
         verbose,
@@ -150,17 +146,17 @@ def optimize_fleet(
 
 
 def _solve_internal(
-    clusters_df: pd.DataFrame,
+    clusters: list[Cluster],
     configurations: list[VehicleConfiguration],
-    customers_df: pd.DataFrame,
+    customers: list[CustomerBase],
     parameters: Parameters,
     solver=None,
     verbose: bool = False,
     time_recorder=None,
 ) -> FleetmixSolution:
-    """Internal implementation that processes DataFrames."""
+    """Internal implementation that processes dataclass lists."""
     # Create optimization model
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, parameters)
+    model, y_vars, x_vars, c_vk = _create_model(clusters, configurations, parameters)
 
     # Select solver: use provided or pick based on FSM_SOLVER env
     solver = solver or pick_solver(verbose)
@@ -183,15 +179,15 @@ def _solve_internal(
             clusters_without_vehicles = []
             has_novehicle_vars = False
 
-            for _, cluster in clusters_df.iterrows():
-                cluster_id = cluster["Cluster_ID"]
+            for cluster in clusters:
+                cluster_id = cluster.cluster_id
                 has_feasible_vehicle = False
 
                 for config in configurations:
                     # Check if vehicle can serve cluster
-                    total_demand = sum(cluster["Total_Demand"].values())
+                    total_demand = sum(cluster.total_demand.values())
                     goods_required = set(
-                        g for g in parameters.goods if cluster["Total_Demand"][g] > 0
+                        g for g in parameters.goods if cluster.total_demand.get(g, 0) > 0
                     )
 
                     if total_demand <= config.capacity:
@@ -241,9 +237,9 @@ def _solve_internal(
             raise RuntimeError(error_msg)
 
     # Extract and validate solution
-    selected_clusters = _extract_solution(clusters_df, y_vars, x_vars)
+    selected_clusters = _extract_solution(clusters, y_vars, x_vars)
     missing_customers = _validate_solution(
-        selected_clusters, customers_df, configurations, parameters
+        selected_clusters, customers, configurations, parameters
     )
 
     # Add goods columns from configurations before calculating statistics
@@ -267,21 +263,18 @@ def _solve_internal(
     # Improvement phase
     post_optimization_time = None
     if parameters.post_optimization:
-        # Convert customers_df back to list of Customer objects for post-optimization
-        customers_list = Customer.from_dataframe(customers_df)
-
         if time_recorder:
             with time_recorder.measure("fsm_post_optimization"):
                 post_start = time.time()
                 solution = improve_solution(
-                    solution, configurations, customers_list, parameters
+                    solution, configurations, customers, parameters
                 )
                 post_end = time.time()
                 post_optimization_time = post_end - post_start
         else:
             post_start = time.time()
             solution = improve_solution(
-                solution, configurations, customers_list, parameters
+                solution, configurations, customers, parameters
             )
             post_end = time.time()
             post_optimization_time = post_end - post_start
@@ -293,7 +286,7 @@ def _solve_internal(
 
 
 def _create_model(
-    clusters_df: pd.DataFrame,
+    clusters: list[Cluster],
     configurations: list[VehicleConfiguration],
     parameters: Parameters,
 ) -> tuple[
@@ -311,8 +304,10 @@ def _create_model(
     model = pulp.LpProblem("FSM-MCV_Model2", pulp.LpMinimize)
 
     # Sets
-    N = set(clusters_df["Customers"].explode().unique())  # Customers
-    K = set(clusters_df["Cluster_ID"])  # Clusters
+    N = set()  # Customers
+    for cluster in clusters:
+        N.update(cluster.customers)
+    K = set(cluster.cluster_id for cluster in clusters)  # Clusters
 
     # Initialize decision variables dictionaries
     x_vars = {}
@@ -320,22 +315,23 @@ def _create_model(
     c_vk = {}
 
     # K_i: clusters containing customer i
-    K_i = {
-        i: set(
-            clusters_df[clusters_df["Customers"].apply(lambda x: i in x)]["Cluster_ID"]
-        )
-        for i in N
-    }
+    K_i: dict[Any, set[Any]] = {i: set() for i in N}
+    for cluster in clusters:
+        cluster_id = cluster.cluster_id
+        for customer_id in cluster.customers:
+            K_i[customer_id].add(cluster_id)
 
     # V_k: vehicle configurations that can serve cluster k
     V_k: dict[Any, set[Any]] = {}
+    cluster_lookup = {cluster.cluster_id: cluster for cluster in clusters}
+    
     for k in K:
         V_k[k] = set()
-        cluster = clusters_df.loc[clusters_df["Cluster_ID"] == k].iloc[0]
+        cluster = cluster_lookup[k]
         cluster_goods_required = set(
-            g for g in parameters.goods if cluster["Total_Demand"][g] > 0
+            g for g in parameters.goods if cluster.total_demand.get(g, 0) > 0
         )
-        q_k = sum(cluster["Total_Demand"].values())
+        q_k = sum(cluster.total_demand.values())
 
         for config in configurations:
             v = config.config_id
@@ -367,12 +363,12 @@ def _create_model(
 
     # Parameters
     for k in K:
-        cluster = clusters_df.loc[clusters_df["Cluster_ID"] == k].iloc[0]
+        cluster = cluster_lookup[k]
         for v in V_k[k]:
             if v != "NoVehicle":
                 config = _find_config_by_id(configurations, v)
                 # Calculate load percentage
-                total_demand = sum(cluster["Total_Demand"][g] for g in parameters.goods)
+                total_demand = sum(cluster.total_demand.get(g, 0) for g in parameters.goods)
                 capacity = float(config.capacity)
                 load_percentage = total_demand / capacity
 
@@ -464,9 +460,10 @@ def _create_model(
 
 
 def _extract_solution(
-    clusters_df: pd.DataFrame, y_vars: dict, x_vars: dict
+    clusters: list[Cluster], y_vars: dict, x_vars: dict
 ) -> pd.DataFrame:
-    """Extract the selected clusters and their assigned configurations."""
+    """Extract the selected clusters and their assigned configurations. 
+    For UI / export only; core algorithms run on dataclass lists."""
     selected_cluster_ids = [
         cid for cid, var in y_vars.items() if var.varValue and var.varValue > 0.5
     ]
@@ -476,23 +473,29 @@ def _extract_solution(
         if var.varValue and var.varValue > 0.5 and k in selected_cluster_ids:
             cluster_config_map[k] = v
 
-    # Get selected clusters with ALL columns from input DataFrame
-    # This preserves the goods columns that were set during merging
-    selected_clusters = clusters_df[
-        clusters_df["Cluster_ID"].isin(selected_cluster_ids)
-    ].copy()
+    # Get selected clusters from list
+    selected_clusters = [
+        cluster for cluster in clusters if cluster.cluster_id in selected_cluster_ids
+    ]
 
-    # Update Config_ID while keeping existing columns
-    selected_clusters["Config_ID"] = selected_clusters["Cluster_ID"].map(
-        cluster_config_map
-    )
+    # Update Config_ID and convert to DataFrame for compatibility with downstream code
+    selected_clusters_df = Cluster.to_dataframe(selected_clusters)
+    
+    # Handle empty DataFrame case
+    if len(selected_clusters_df) > 0:
+        selected_clusters_df["Config_ID"] = selected_clusters_df["Cluster_ID"].map(
+            cluster_config_map
+        )
+    else:
+        # Ensure Config_ID column exists even for empty DataFrame
+        selected_clusters_df["Config_ID"] = pd.Series(dtype=object)
 
-    return selected_clusters
+    return selected_clusters_df
 
 
 def _validate_solution(
     selected_clusters: pd.DataFrame,
-    customers_df: pd.DataFrame,
+    customers: list[CustomerBase],
     configurations: list[VehicleConfiguration],
     parameters: Parameters,
 ) -> set:
@@ -502,7 +505,7 @@ def _validate_solution(
     # In split-stop mode, MILP ensures per-good coverage; skip validation of pseudo-customers
     if parameters.allow_split_stops:
         return set()
-    all_customers_set = set(customers_df["Customer_ID"])
+    all_customers_set = set(customer.customer_id for customer in customers)
     served_customers = set()
     for _, cluster in selected_clusters.iterrows():
         served_customers.update(cluster["Customers"])
@@ -514,18 +517,18 @@ def _validate_solution(
         )
 
         # Print unserved customer demands
-        unserved = customers_df[customers_df["Customer_ID"].isin(missing_customers)]
+        unserved_customers = [c for c in customers if c.customer_id in missing_customers]
         logger.warning(
             f"{Colors.YELLOW}→ Unserved Customers:{Colors.RESET}\n"
             f"{Colors.GRAY}  Customer ID  Dry  Chilled  Frozen{Colors.RESET}"
         )
 
-        for _, customer in unserved.iterrows():
+        for customer in unserved_customers:
             logger.warning(
-                f"{Colors.YELLOW}  {customer['Customer_ID']:>10}  "
-                f"{customer['Dry_Demand']:>3.0f}  "
-                f"{customer['Chilled_Demand']:>7.0f}  "
-                f"{customer['Frozen_Demand']:>6.0f}{Colors.RESET}"
+                f"{Colors.YELLOW}  {customer.customer_id:>10}  "
+                f"{customer.demands.get('Dry', 0):>3.0f}  "
+                f"{customer.demands.get('Chilled', 0):>7.0f}  "
+                f"{customer.demands.get('Frozen', 0):>6.0f}{Colors.RESET}"
             )
 
     return missing_customers
@@ -576,10 +579,14 @@ def _calculate_solution_statistics(
     )
 
     # Calculate base costs (without penalties)
-    total_fixed_cost = selected_clusters["Fixed_Cost"].sum()
-    total_variable_cost = (
-        selected_clusters["Route_Time"] * parameters.variable_cost_per_hour
-    ).sum()
+    if len(selected_clusters) > 0:
+        total_fixed_cost = selected_clusters["Fixed_Cost"].sum()
+        total_variable_cost = (
+            selected_clusters["Route_Time"] * parameters.variable_cost_per_hour
+        ).sum()
+    else:
+        total_fixed_cost = 0.0
+        total_variable_cost = 0.0
 
     # Total cost from optimization
     total_cost = sum(selected_assignments.values())
@@ -603,13 +610,13 @@ def _calculate_solution_statistics(
         vehicles_used=selected_clusters["Vehicle_Type"]
         .value_counts()
         .sort_index()
-        .to_dict(),
+        .to_dict() if len(selected_clusters) > 0 else {},
         total_vehicles=len(selected_clusters),
     )
 
 
 def _calculate_cluster_cost(
-    cluster: pd.Series, config: VehicleConfiguration, parameters: Parameters
+    cluster: Cluster, config: VehicleConfiguration, parameters: Parameters
 ) -> float:
     """
     Calculate the base cost for serving a cluster with a vehicle configuration.
@@ -620,7 +627,7 @@ def _calculate_cluster_cost(
 
     Note: Light load penalties are handled separately in the model creation.
     Args:
-        cluster: The cluster data as a Pandas Series.
+        cluster: The cluster data as a Cluster object.
         config: The vehicle configuration data as a VehicleConfiguration object.
         parameters: Parameters object containing optimization parameters.
 
@@ -629,7 +636,7 @@ def _calculate_cluster_cost(
     """
     # Base costs
     fixed_cost = float(config.fixed_cost)
-    route_time = float(cluster["Route_Time"])
+    route_time = float(cluster.route_time)
     variable_cost = float(parameters.variable_cost_per_hour) * route_time
 
     # Compartment setup cost

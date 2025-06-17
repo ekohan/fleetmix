@@ -123,6 +123,7 @@ def explode_customers(customers: list[CustomerBase]) -> list[CustomerBase]:
 def maybe_explode(customers_df: pd.DataFrame, allow_split_stops: bool) -> pd.DataFrame:
     """
     Conditionally explode customers into pseudo-customers based on split-stop setting.
+    For UI / export only; core algorithms run on dataclass lists.
 
     Args:
         customers_df: DataFrame with customer data (Customer_ID, demands, location)

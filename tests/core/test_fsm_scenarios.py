@@ -479,9 +479,12 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
 
     if exp["missing_customers"]:
         # Infeasible: model should inject NoVehicle and warn
-        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
-        selected = _extract_solution(clusters_df, y_vars, x_vars)
-        missing = _validate_solution(selected, customers_df, configurations, params)
+        from fleetmix.core_types import Cluster, Customer
+        clusters_list = Cluster.from_dataframe(clusters_df)
+        customers_list = Customer.from_dataframe(customers_df)
+        model, y_vars, x_vars, c_vk = _create_model(clusters_list, configurations, params)
+        selected = _extract_solution(clusters_list, y_vars, x_vars)
+        missing = _validate_solution(selected, customers_list, configurations, params)
         assert missing == exp["missing_customers"]
     else:
         # Convert DataFrames to lists for new API

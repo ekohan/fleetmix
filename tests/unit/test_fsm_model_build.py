@@ -35,8 +35,12 @@ def test_create_model_basic(toy_fsm_model_build_data):
 
     # Convert DataFrame to List[VehicleConfiguration]
     configurations = dataframe_to_configurations(configurations_df)
+    
+    # Convert DataFrame to list of Cluster objects
+    from fleetmix.core_types import Cluster
+    clusters_list = Cluster.from_dataframe(clusters_df)
 
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_list, configurations, params)
 
     # Model should be a pulp problem
     assert isinstance(model, pulp.LpProblem)

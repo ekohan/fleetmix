@@ -204,11 +204,15 @@ def _improve_internal(
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
 
-        # Use the internal solver that accepts DataFrames
+        # Convert DataFrames to lists for the core solver
+        from fleetmix.core_types import Cluster
         from fleetmix.optimization.core import _solve_internal
 
+        combined_clusters_list = Cluster.from_dataframe(combined_clusters)
+        customers_list = Customer.from_dataframe(customers_df)
+
         trial_solution = _solve_internal(
-            combined_clusters, configurations, customers_df, internal_params
+            combined_clusters_list, configurations, customers_list, internal_params
         )
         trial_cost = (
             trial_solution.total_cost

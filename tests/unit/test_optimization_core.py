@@ -172,8 +172,13 @@ def test_optimize_fleet_with_post_optimization(
 def test_create_model(simple_clusters_df, simple_configs_df, simple_params):
     """Test model creation."""
     configurations = dataframe_to_configurations(simple_configs_df)
+    
+    # Convert DataFrame to list of Cluster objects
+    from fleetmix.core_types import Cluster
+    clusters_list = Cluster.from_dataframe(simple_clusters_df)
+    
     model, y_vars, x_vars, c_vk = _create_model(
-        clusters_df=simple_clusters_df,
+        clusters=clusters_list,
         configurations=configurations,
         parameters=simple_params,
     )
@@ -187,6 +192,10 @@ def test_create_model(simple_clusters_df, simple_configs_df, simple_params):
 
 def test_extract_solution(simple_clusters_df):
     """Test solution extraction."""
+    # Convert DataFrame to list of Cluster objects
+    from fleetmix.core_types import Cluster
+    clusters_list = Cluster.from_dataframe(simple_clusters_df)
+    
     # Create mock variables
     y_vars = {
         "C1": type("MockVar", (), {"varValue": 1})(),
@@ -198,7 +207,7 @@ def test_extract_solution(simple_clusters_df):
         ("V1", "C2"): type("MockVar", (), {"varValue": 0})(),
     }
 
-    selected_clusters = _extract_solution(simple_clusters_df, y_vars, x_vars)
+    selected_clusters = _extract_solution(clusters_list, y_vars, x_vars)
 
     # Check that only selected clusters are returned
     assert len(selected_clusters) == 1
@@ -216,8 +225,13 @@ def test_validate_solution(simple_customers_df, simple_configs_df, simple_params
         }
     )
 
+    # Convert DataFrame to list of Customer objects
+    from fleetmix.core_types import Customer
+    customers_list = Customer.from_dataframe(simple_customers_df)
+    configurations = dataframe_to_configurations(simple_configs_df)
+
     missing_customers = _validate_solution(
-        selected_clusters, simple_customers_df, simple_configs_df, simple_params
+        selected_clusters, customers_list, configurations, simple_params
     )
 
     # Check that missing customer is detected
@@ -227,8 +241,18 @@ def test_validate_solution(simple_customers_df, simple_configs_df, simple_params
 
 def test_calculate_cluster_cost(simple_params):
     """Test cluster cost calculation."""
-    cluster = pd.Series(
-        {"Route_Time": 2.0, "Total_Demand": {"Dry": 20, "Chilled": 10, "Frozen": 0}}
+    # Create a Cluster object instead of pd.Series
+    from fleetmix.core_types import Cluster
+    cluster = Cluster(
+        cluster_id="C1",
+        customers=["Cust1"],
+        config_id="V1",
+        total_demand={"Dry": 20, "Chilled": 10, "Frozen": 0},
+        centroid_latitude=40.0,
+        centroid_longitude=-74.0,
+        goods_in_config=["Dry", "Chilled"],
+        route_time=2.0,
+        method="test"
     )
 
     config = VehicleConfiguration(

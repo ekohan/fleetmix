@@ -168,7 +168,8 @@ class Customer(CustomerBase):
 
     @staticmethod
     def to_dataframe(customers: list["CustomerBase"]) -> pd.DataFrame:
-        """Convert list of Customer objects to DataFrame."""
+        """Convert list of Customer objects to DataFrame.
+        For UI / export only; core algorithms run on dataclass lists."""
         if len(customers) == 0:
             # Return DataFrame with proper schema
             return pd.DataFrame(columns=["Customer_ID", "Latitude", "Longitude"])
@@ -322,7 +323,8 @@ class Cluster:
 
     @staticmethod
     def to_dataframe(clusters: list["Cluster"]) -> pd.DataFrame:
-        """Convert list of Cluster objects to DataFrame."""
+        """Convert list of Cluster objects to DataFrame.
+        For UI / export only; core algorithms run on dataclass lists."""
         if len(clusters) == 0:
             return pd.DataFrame()
 

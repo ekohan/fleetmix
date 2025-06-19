@@ -264,8 +264,24 @@ def get_cached_route_time(
     if cached_result is not None:
         return cached_result
 
+    # ------------------------------------------------------------------
+    # Route-time estimation should not penalise a cluster just because it
+    # happens to contain several pseudo-customers of the *same* physical
+    # location.  They share coordinates; the truck will stop once and load
+    # all required goods.
+    # Therefore we retain at most one representative per physical customer
+    # when building the temporary DataFrame for distance / TSP estimation.
+    # ------------------------------------------------------------------
+    unique_customers: list[CustomerBase] = []
+    seen_origins: set[str] = set()
+    for cust in customers:
+        origin = cust.get_origin_id() if cust.is_pseudo_customer() else cust.customer_id
+        if origin not in seen_origins:
+            unique_customers.append(cust)
+            seen_origins.add(origin)
+
     # Convert to DataFrame for route time estimation (temporary until we refactor route time estimators)
-    customers_df = Customer.to_dataframe(customers)
+    customers_df = Customer.to_dataframe(unique_customers)
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(

@@ -420,13 +420,29 @@ def _create_model(
         # Exclusivity constraints: each physical customer's each good must be served exactly once
         for physical_customer in physical_customers:
             for good in goods_by_physical[physical_customer]:
+                # DEBUG: List all customer IDs considered for this (physical_customer, good) constraint
+                customer_ids_for_good = [
+                    cid
+                    for cid in N
+                    if origin_id[cid] == physical_customer and good in subset[cid]
+                ]
+                logger.debug(
+                    f"Physical customer {physical_customer}, good {good}: "
+                    f"customer_ids considered → {', '.join(sorted(customer_ids_for_good))}"
+                )
+
+                # Deduplicate cluster IDs to ensure each x_{v,k} appears at most once
+                clusters_covering = {
+                    k
+                    for customer_id in N
+                    if origin_id[customer_id] == physical_customer and good in subset[customer_id]
+                    for k in K_i[customer_id]
+                }
+
                 model += (
                     pulp.lpSum(
                         x_vars[v, k]
-                        for customer_id in N
-                        if origin_id[customer_id] == physical_customer
-                        and good in subset[customer_id]
-                        for k in K_i[customer_id]
+                        for k in clusters_covering
                         for v in V_k[k]
                         if v != "NoVehicle"
                     )

@@ -237,125 +237,108 @@ def estimate_route_time(
     return estimator.estimate_route_time(cluster_customers, context)
 
 
+# Helper --------------------------------------------------------------------
+
+def _unique_physical_stops(customers_df: pd.DataFrame) -> pd.DataFrame:
+    """Return a DataFrame with one row per physical customer.
+
+    If the input contains an ``Origin_ID`` column (present for pseudo-customers)
+    we drop duplicates on that column and keep the first occurrence, because
+    all rows share the same coordinates anyway.  Otherwise the original frame
+    is returned unchanged.
+    """
+    if "Origin_ID" in customers_df.columns:
+        return customers_df.drop_duplicates(subset="Origin_ID", keep="first")
+    return customers_df
+
+
 @register_route_time_estimator("Legacy")
 class LegacyEstimator:
-    """Original simple estimation method."""
+    """Original simple estimation method (1 h travel + service time)."""
 
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
         context: RouteTimeContext,
     ) -> tuple[float, list[str]]:
-        """Legacy estimation: 1 hour travel + service time."""
-        num_customers = len(cluster_customers)
-        # Convert minutes to hours for service_time component
+        """Legacy estimation using unique physical stops."""
+        uniq = _unique_physical_stops(cluster_customers)
+        num_stops = len(uniq)
         time = 1 + calculate_total_service_time_hours(
-            num_customers, context.service_time
+            num_stops, context.service_time
         )
-        return time, []  # Return empty sequence
+        return time, []
 
 
 @register_route_time_estimator("BHH")
 class BHHEstimator:
-    """Beardwood-Halton-Hammersley estimation method."""
+    """Beardwood–Halton–Hammersley estimation using unique physical stops."""
 
     # Constants for the BHH formula
-    SETUP_TIME = 0.0  # α_vk: Setup time to dispatch vehicle configuration (hours)
-    BETA = 0.765  # β: Non-negative constant for BHH approximation
+    SETUP_TIME = 0.0  # α_vk
+    BETA = 0.765
 
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
         context: RouteTimeContext,
     ) -> tuple[float, list[str]]:
-        """BHH estimation: t_vk ≈ α_vk + 2·δ_vk + β·√(n·A) + γ·n
-
-        Where:
-        - α_vk: Setup time to dispatch vehicle configuration
-        - δ_vk: Line-haul travel time between depot and cluster centroid
-        - β: Non-negative constant (0.765)
-        - γ: Customer service time
-        - n: Number of customers
-        - A: Service area
-        """
-        if len(cluster_customers) <= 1:
-            # For 0 or 1 customer, service time is the primary component.
-            # Assuming service_time is per customer.
+        """Compute BHH estimate on deduplicated physical stops."""
+        customers = _unique_physical_stops(cluster_customers)
+        n = len(customers)
+        if n <= 1:
             return calculate_total_service_time_hours(
-                len(cluster_customers), context.service_time
+                n, context.service_time
             ), []
 
-        # Calculate service time component (γ·n)
+        # Service time component (γ·n)
         service_time_total = calculate_total_service_time_hours(
-            len(cluster_customers), context.service_time
+            n, context.service_time
         )
 
-        # Calculate depot travel component (2·δ_vk)
-        centroid_lat = cluster_customers["Latitude"].mean()
-        centroid_lon = cluster_customers["Longitude"].mean()
-        depot_to_centroid = haversine(
+        # Depot travel component (2·δ_vk)
+        centroid_lat = customers["Latitude"].mean()
+        centroid_lon = customers["Longitude"].mean()
+        depot_travel_km = haversine(
             (context.depot.latitude, context.depot.longitude),
             (centroid_lat, centroid_lon),
         )
-        depot_travel_time = (
-            2 * depot_to_centroid / context.avg_speed
-        )  # Round trip hours
+        depot_travel_time = 2 * depot_travel_km / context.avg_speed
 
-        # Calculate intra-cluster travel component using BHH formula (β·√(n·A))
+        # Intra-cluster component β·√(n·A)
         cluster_radius = max(
             haversine((centroid_lat, centroid_lon), (lat, lon))
             for lat, lon in zip(
-                cluster_customers["Latitude"],
-                cluster_customers["Longitude"],
-                strict=False,
+                customers["Latitude"], customers["Longitude"], strict=False
             )
         )
         cluster_area = np.pi * (cluster_radius**2)
-        intra_cluster_distance = (
-            self.BETA * np.sqrt(len(cluster_customers)) * np.sqrt(cluster_area)
-        )
-        intra_cluster_time = intra_cluster_distance / context.avg_speed
+        intra_dist = self.BETA * np.sqrt(n) * np.sqrt(cluster_area)
+        intra_time = intra_dist / context.avg_speed
 
-        # Total time: α_vk + 2·δ_vk + β·√(n·A) + γ·n
-        time = (
-            self.SETUP_TIME
-            + service_time_total
-            + depot_travel_time
-            + intra_cluster_time
-        )
-        return time, []  # Return empty sequence
+        total = self.SETUP_TIME + service_time_total + depot_travel_time + intra_time
+        return total, []
 
 
 @register_route_time_estimator("TSP")
 class TSPEstimator:
-    """TSP-based route time estimation using PyVRP."""
+    """TSP-based route time estimation using PyVRP (deduplicated stops)."""
 
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
         context: RouteTimeContext,
     ) -> tuple[float, list[str]]:
-        """Estimate route time by solving a TSP for the cluster using PyVRP."""
-        # Prune TSP computation based on BHH estimate if requested
-        if context.prune_tsp and context.max_route_time is not None:
-            logger.warning(
-                f"Prune TSP: {context.prune_tsp}, Max Route Time: {context.max_route_time}"
-            )
-            # Use BHH estimator for pruning
-            bhh_estimator = BHHEstimator()
-            bhh_time, _ = bhh_estimator.estimate_route_time(cluster_customers, context)
-            # Add a 20% margin to account for BHH underestimation
-            if bhh_time > context.max_route_time * 1.2:
-                logger.warning(
-                    f"Cluster skipped TSP computation: BHH estimate {bhh_time:.2f}h greatly exceeds max_route_time {context.max_route_time}h"
-                )
-                return (
-                    context.max_route_time * 1.01,
-                    [],
-                )  # Slightly over max, empty sequence
+        customers = _unique_physical_stops(cluster_customers)
 
-        # Call the implementation
-        return self._pyvrp_tsp_estimation(cluster_customers, context)
+        # Pruning using BHH must now work on the deduplicated set
+        if context.prune_tsp and context.max_route_time is not None:
+            bhh_estimator = BHHEstimator()
+            bhh_time, _ = bhh_estimator.estimate_route_time(customers, context)
+            if bhh_time > context.max_route_time * 1.2:
+                return context.max_route_time * 1.01, []
+
+        return self._pyvrp_tsp_estimation(customers, context)
 
     def _pyvrp_tsp_estimation(
         self,

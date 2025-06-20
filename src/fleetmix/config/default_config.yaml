@@ -69,4 +69,4 @@ max_improvement_iterations: 20  # max iterations for iterative post-optimization
 allow_split_stops: true  # Allow customers to be served by multiple vehicles (per-good atomicity)
 
 # Output format
-format: 'excel'  # Output format (excel or json)
+format: 'json'  # Output format (excel or json)

@@ -162,6 +162,83 @@ def generate_clusters_for_configurations(
     )
     unique_clusters = _deduplicate_clusters(all_clusters)
 
+    # ------------------------------------------------------------------
+    # NEW: Add merged clusters per physical customer (origin) so that the
+    #      optimisation model can decide between split-stop and single
+    #      multi-compartment service.  These clusters combine **all**
+    #      pseudo-customers that share the same Origin_ID and are feasible
+    #      for at least one vehicle configuration.
+    # ------------------------------------------------------------------
+
+    if params.allow_split_stops:
+        logger.info("🔧 Creating per-origin merged clusters (split-stop helper)…")
+
+        next_id = max(c.cluster_id for c in unique_clusters) + 1 if unique_clusters else 0
+
+        merged = _create_origin_mega_clusters(
+            customers,
+            configurations,
+            params,
+            start_cluster_id=next_id,
+        )
+
+        if merged:
+            logger.info(f"➕ Added {len(merged)} per-origin merged clusters")
+            unique_clusters.extend(merged)
+            # De-duplicate again in case any customer sets overlap
+            unique_clusters = _deduplicate_clusters(unique_clusters)
+
+    # ------------------------------------------------------------------
+    # NEW: Generate larger merged clusters (neighbouring clusters merge)
+    #       BEFORE the optimisation phase, reusing the logic from the
+    #       post-optimisation merge phase.  This extends the candidate pool
+    #       with combinations that may cut the fleet size.
+    # ------------------------------------------------------------------
+
+    try:
+        from fleetmix.post_optimization.merge_phase import generate_merge_phase_clusters
+
+        customers_df = Customer.to_dataframe(customers)
+        base_df = Cluster.to_dataframe(unique_clusters)
+
+        # Ensure goods indicator columns exist to satisfy downstream logic
+        config_lookup = {str(cfg.config_id): cfg for cfg in configurations}
+        for good in params.goods:
+            base_df[good] = base_df["Config_ID"].map(
+                lambda x: config_lookup[str(x)][good] if str(x) in config_lookup else 0
+            )
+        if "Capacity" not in base_df.columns:
+            base_df["Capacity"] = base_df["Config_ID"].map(
+                lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
+            )
+
+        merged_df = generate_merge_phase_clusters(
+            selected_clusters=base_df,
+            configurations=configurations,
+            customers_df=customers_df,
+            params=params,
+        )
+
+        if not merged_df.empty:
+            logger.info(
+                f"➕ Added {len(merged_df)} merged neighbour clusters (pre-MILP)"
+            )
+
+            # Ensure unique Cluster_IDs
+            next_id = max(c.cluster_id for c in unique_clusters) + 1
+            merged_clusters: list[Cluster] = Cluster.from_dataframe(merged_df)
+            for cl in merged_clusters:
+                cl.cluster_id = next_id
+                next_id += 1
+            unique_clusters.extend(merged_clusters)
+
+            # Final deduplication
+            unique_clusters = _deduplicate_clusters(unique_clusters)
+    except ImportError as exc:
+        logger.warning(
+            f"Could not import merge_phase generator for pre-MILP merging: {exc}"
+        )
+
     # Validate cluster coverage
     validate_cluster_coverage(unique_clusters, customers)
 
@@ -359,3 +436,99 @@ def _get_clustering_context_list(
         f"Generated {len(context_list)} distinct clustering context configurations."
     )
     return context_list
+
+
+# ----------------------------------------------------------------------
+# Helper: create one cluster per physical customer that merges all its
+# pseudo-customers.  This gives the MILP the option to serve all goods in
+# one go if a suitable multi-compartment vehicle exists.
+# ----------------------------------------------------------------------
+
+
+def _create_origin_mega_clusters(
+    customers: list[CustomerBase],
+    configurations: list[VehicleConfiguration],
+    params: Parameters,
+    start_cluster_id: int = 0,
+) -> list[Cluster]:
+    """Generate merged clusters per *Origin_ID* (physical customer).
+
+    Only pseudo-customers are considered.  For each physical customer we
+    aggregate demand across all its goods subsets.  For every vehicle
+    configuration that can carry all those goods and whose capacity and
+    route-time constraints are respected we create *one* cluster.
+    """
+
+    from fleetmix.utils.route_time import estimate_route_time
+
+    # Group pseudo-customers by origin_id
+    grouped: dict[str, list[CustomerBase]] = {}
+    for cust in customers:
+        if not cust.is_pseudo_customer():
+            continue  # Only relevant for split-stop
+        grouped.setdefault(cust.get_origin_id(), []).append(cust)
+
+    if not grouped:
+        return []
+
+    clusters: list[Cluster] = []
+    cid_counter = start_cluster_id
+
+    for origin_id, pseudo_list in grouped.items():
+        # Combine demand vectors and gather coordinates
+        total_dem: dict[str, float] = {g: 0.0 for g in params.goods}
+        lats, lons = [], []
+        for pc in pseudo_list:
+            lats.append(pc.location[0])
+            lons.append(pc.location[1])
+            for g in params.goods:
+                total_dem[g] += pc.demands.get(g, 0.0)
+
+        centroid_lat = sum(lats) / len(lats)
+        centroid_lon = sum(lons) / len(lons)
+
+        # Build DataFrame of pseudo customers for route-time estimation
+        pseudo_df = Customer.to_dataframe(pseudo_list)
+
+        # Try every configuration; build cluster if feasible
+        for cfg in configurations:
+            # Check compartments compatibility
+            if any(total_dem[g] > 0 and not cfg.compartments.get(g, False) for g in params.goods):
+                continue
+
+            # Capacity – use max per good because model (FSM) constrains per load percentage only after they sum? Actually capacity is total demand.
+            if sum(total_dem.values()) > cfg.capacity:
+                continue
+
+            # Route-time estimation
+            depot_dict = {"latitude": params.depot["latitude"], "longitude": params.depot["longitude"]}
+            rt_hours, _ = estimate_route_time(
+                pseudo_df,
+                depot_dict,
+                cfg.service_time,
+                cfg.avg_speed,
+                method=params.clustering["route_time_estimation"],
+                max_route_time=cfg.max_route_time,
+                prune_tsp=params.prune_tsp,
+            )
+
+            if rt_hours > cfg.max_route_time:
+                continue
+
+            # Build cluster object
+            cluster = Cluster(
+                cluster_id=cid_counter,
+                config_id=cfg.config_id,
+                customers=[pc.customer_id for pc in pseudo_list],
+                total_demand=total_dem,
+                centroid_latitude=centroid_lat,
+                centroid_longitude=centroid_lon,
+                goods_in_config=[g for g in params.goods if cfg.compartments.get(g, False)],
+                route_time=rt_hours,
+                method="origin_merge",
+            )
+
+            clusters.append(cluster)
+            cid_counter += 1
+
+    return clusters

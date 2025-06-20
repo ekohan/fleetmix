@@ -263,10 +263,18 @@ class LegacyEstimator:
     ) -> tuple[float, list[str]]:
         """Legacy estimation using unique physical stops."""
         uniq = _unique_physical_stops(cluster_customers)
-        num_stops = len(uniq)
-        time = 1 + calculate_total_service_time_hours(
-            num_stops, context.service_time
+        num_phys = len(uniq)
+        num_pseudo = len(cluster_customers)
+
+        # Service time must reflect *all* pseudo-customers even if they share a
+        # location with another good.
+        service_time_total = calculate_total_service_time_hours(
+            num_pseudo, context.service_time
         )
+
+        # Legacy model assumes a fixed 1 h travel component irrespective of the
+        # number of physical stops.
+        time = 1 + service_time_total
         return time, []
 
 
@@ -285,15 +293,19 @@ class BHHEstimator:
     ) -> tuple[float, list[str]]:
         """Compute BHH estimate on deduplicated physical stops."""
         customers = _unique_physical_stops(cluster_customers)
-        n = len(customers)
-        if n <= 1:
+        n_phys = len(customers)
+
+        # Total pseudo-customers (duplicates allowed) for service-time component
+        n_pseudo = len(cluster_customers)
+
+        if n_phys <= 1:
             return calculate_total_service_time_hours(
-                n, context.service_time
+                n_pseudo, context.service_time
             ), []
 
-        # Service time component (γ·n)
+        # Service-time component uses *all* pseudo-customers
         service_time_total = calculate_total_service_time_hours(
-            n, context.service_time
+            n_pseudo, context.service_time
         )
 
         # Depot travel component (2·δ_vk)
@@ -313,7 +325,7 @@ class BHHEstimator:
             )
         )
         cluster_area = np.pi * (cluster_radius**2)
-        intra_dist = self.BETA * np.sqrt(n) * np.sqrt(cluster_area)
+        intra_dist = self.BETA * np.sqrt(n_phys) * np.sqrt(cluster_area)
         intra_time = intra_dist / context.avg_speed
 
         total = self.SETUP_TIME + service_time_total + depot_travel_time + intra_time
@@ -331,14 +343,29 @@ class TSPEstimator:
     ) -> tuple[float, list[str]]:
         customers = _unique_physical_stops(cluster_customers)
 
-        # Pruning using BHH must now work on the deduplicated set
+        # Keep a copy with unique physical stops for distance calculation
+        customers_phys = _unique_physical_stops(cluster_customers)
+
+        # --- Optional pruning ------------------------------------------------
         if context.prune_tsp and context.max_route_time is not None:
             bhh_estimator = BHHEstimator()
-            bhh_time, _ = bhh_estimator.estimate_route_time(customers, context)
+            # Pass *full* cluster_customers so BHH counts service time for all
+            bhh_time, _ = bhh_estimator.estimate_route_time(cluster_customers, context)
             if bhh_time > context.max_route_time * 1.2:
                 return context.max_route_time * 1.01, []
 
-        return self._pyvrp_tsp_estimation(customers, context)
+        # Solve TSP on physical stops only
+        base_time, sequence = self._pyvrp_tsp_estimation(customers_phys, context)
+
+        # Add service time for additional pseudo-customers mapped to the same
+        # physical locations (those were not included in the TSP calculation).
+        extra_pseudo = len(cluster_customers) - len(customers_phys)
+        if extra_pseudo > 0:
+            base_time += calculate_total_service_time_hours(
+                extra_pseudo, context.service_time
+            )
+
+        return base_time, sequence
 
     def _pyvrp_tsp_estimation(
         self,

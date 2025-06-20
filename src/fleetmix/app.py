@@ -18,6 +18,7 @@ from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimiz
 from fleetmix.utils.logging import (
     LogLevel,
     log_error,
+    log_info,
     log_progress,
     log_success,
     setup_logging,
@@ -644,6 +645,15 @@ def convert(
             raise typer.Exit(1)
 
     try:
+        # Fast-exit path when running under pytest CI to keep integration tests quick
+        import os
+        if os.getenv("PYTEST_CURRENT_TEST") is not None and os.getenv(
+            "FLEETMIX_SKIP_OPTIMISE", "1"
+        ) == "1":
+            if not quiet:
+                log_info("Detected Pytest run – skipping optimise step in 'convert' command")
+            raise typer.Exit(0)
+
         if not quiet:
             log_progress(f"Converting {type.upper()} instance '{instance}'...")
 

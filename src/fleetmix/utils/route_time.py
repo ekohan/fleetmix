@@ -239,6 +239,7 @@ def estimate_route_time(
 
 # Helper --------------------------------------------------------------------
 
+
 def _unique_physical_stops(customers_df: pd.DataFrame) -> pd.DataFrame:
     """Return a DataFrame with one row per physical customer.
 

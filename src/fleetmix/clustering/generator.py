@@ -173,7 +173,9 @@ def generate_clusters_for_configurations(
     if params.allow_split_stops:
         logger.info("🔧 Creating per-origin merged clusters (split-stop helper)…")
 
-        next_id = max(c.cluster_id for c in unique_clusters) + 1 if unique_clusters else 0
+        next_id = (
+            max(c.cluster_id for c in unique_clusters) + 1 if unique_clusters else 0
+        )
 
         merged = _create_origin_mega_clusters(
             customers,
@@ -209,7 +211,9 @@ def generate_clusters_for_configurations(
             )
         if "Capacity" not in base_df.columns:
             base_df["Capacity"] = base_df["Config_ID"].map(
-                lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
+                lambda x: config_lookup[str(x)].capacity
+                if str(x) in config_lookup
+                else 0
             )
 
         merged_df = generate_merge_phase_clusters(
@@ -493,7 +497,10 @@ def _create_origin_mega_clusters(
         # Try every configuration; build cluster if feasible
         for cfg in configurations:
             # Check compartments compatibility
-            if any(total_dem[g] > 0 and not cfg.compartments.get(g, False) for g in params.goods):
+            if any(
+                total_dem[g] > 0 and not cfg.compartments.get(g, False)
+                for g in params.goods
+            ):
                 continue
 
             # Capacity – use max per good because model (FSM) constrains per load percentage only after they sum? Actually capacity is total demand.
@@ -501,7 +508,10 @@ def _create_origin_mega_clusters(
                 continue
 
             # Route-time estimation
-            depot_dict = {"latitude": params.depot["latitude"], "longitude": params.depot["longitude"]}
+            depot_dict = {
+                "latitude": params.depot["latitude"],
+                "longitude": params.depot["longitude"],
+            }
             rt_hours, _ = estimate_route_time(
                 pseudo_df,
                 depot_dict,
@@ -523,7 +533,9 @@ def _create_origin_mega_clusters(
                 total_demand=total_dem,
                 centroid_latitude=centroid_lat,
                 centroid_longitude=centroid_lon,
-                goods_in_config=[g for g in params.goods if cfg.compartments.get(g, False)],
+                goods_in_config=[
+                    g for g in params.goods if cfg.compartments.get(g, False)
+                ],
                 route_time=rt_hours,
                 method="origin_merge",
             )

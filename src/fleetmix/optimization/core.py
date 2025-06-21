@@ -435,7 +435,8 @@ def _create_model(
                 clusters_covering = {
                     k
                     for customer_id in N
-                    if origin_id[customer_id] == physical_customer and good in subset[customer_id]
+                    if origin_id[customer_id] == physical_customer
+                    and good in subset[customer_id]
                     for k in K_i[customer_id]
                 }
 

@@ -67,7 +67,31 @@ def save_optimization_results(
 
     # Calculate metrics and prepare data
     if "Customers" in solution.selected_clusters.columns:
-        customers_per_cluster = solution.selected_clusters["Customers"].apply(len)
+        # When split-stops are enabled the optimisation works with *pseudo* customers
+        # (e.g. ``3::Dry`` and ``3::Frozen``) which means the raw list can contain
+        # several entries for what is, conceptually, the *same* physical customer.
+        # For reporting purposes we want to treat each origin customer only once so
+        # that the "Customers per Cluster" statistics and the JSON/Excel exports
+        # stay human-readable.
+        if parameters.allow_split_stops:
+
+            def _n_unique_origins(customers: list[str] | tuple[str, ...] | str) -> int:
+                """Return the number of *origin* customers, ignoring goods suffixes."""
+                if not isinstance(customers, (list, tuple)):
+                    # If optimisation returned a single customer as a plain string
+                    # we still count it as one origin.
+                    return 1
+                seen: set[str] = set()
+                for cid in customers:
+                    origin = cid.split("::")[0] if "::" in str(cid) else str(cid)
+                    seen.add(origin)
+                return len(seen)
+
+            customers_per_cluster = solution.selected_clusters["Customers"].apply(
+                _n_unique_origins
+            )
+        else:
+            customers_per_cluster = solution.selected_clusters["Customers"].apply(len)
     else:
         # For benchmark results, use Num_Customers column
         customers_per_cluster = solution.selected_clusters["Num_Customers"]
@@ -165,6 +189,26 @@ def save_optimization_results(
     # Prepare cluster details
     cluster_details = solution.selected_clusters.copy()
     if "Customers" in cluster_details.columns:
+        # Deduplicate customer IDs for clearer reporting when split-stops are enabled
+        if parameters.allow_split_stops:
+
+            def _deduplicate_customer_ids(customers):
+                """Return a list with at most one entry per *origin* customer."""
+                if not isinstance(customers, (list, tuple)):
+                    return customers
+                unique: list[str] = []
+                seen: set[str] = set()
+                for cid in customers:
+                    origin = cid.split("::")[0] if "::" in str(cid) else str(cid)
+                    if origin not in seen:
+                        unique.append(origin)
+                        seen.add(origin)
+                return unique
+
+            cluster_details["Customers"] = cluster_details["Customers"].apply(
+                _deduplicate_customer_ids
+            )
+
         cluster_details["Num_Customers"] = cluster_details["Customers"].apply(len)
         cluster_details["Customers"] = cluster_details["Customers"].apply(str)
     if "TSP_Sequence" in cluster_details.columns:

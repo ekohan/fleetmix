@@ -300,3 +300,8 @@ def log_error(message: str, symbol: str = Symbols.CROSS):
 def log_debug(message: str, logger_name: str = "fleetmix.debug"):
     """Log a debug message."""
     FleetmixLogger.debug(message, logger_name)
+
+
+def log_info(message: str, symbol: str = Symbols.INFO):
+    """Log an informational message (alias for log_progress)."""
+    FleetmixLogger.progress(message, symbol)

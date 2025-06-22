@@ -26,12 +26,32 @@ def parse_vrp_results(vrp_type: str):
 
         used = int(summary.get("Total Vehicles", 0))
         expected = int(summary.get("Expected Vehicles", 0))
+        
+        # Extract cost information - convert string costs to float
+        def parse_cost(cost_str):
+            """Parse cost string like '2,120.01' to float 2120.01"""
+            if not cost_str or cost_str == "N/A":
+                return 0.0
+            try:
+                return float(str(cost_str).replace(",", ""))
+            except (ValueError, AttributeError):
+                return 0.0
+        
+        total_cost = parse_cost(summary.get("Total Cost ($)", "0"))
+        fixed_cost = parse_cost(summary.get("Fixed Cost ($)", "0"))
+        variable_cost = parse_cost(summary.get("Variable Cost ($)", "0"))
+        total_penalties = parse_cost(summary.get("Total Penalties ($)", "0"))
+        
         rows.append(
             {
                 "Instance": instance,
                 "Vehicles Used": used,
                 "Expected Vehicles": expected,
                 "Vehicles Difference": used - expected,
+                "Total Cost ($)": total_cost,
+                "Fixed Cost ($)": fixed_cost,
+                "Variable Cost ($)": variable_cost,
+                "Total Penalties ($)": total_penalties,
             }
         )
 
@@ -53,6 +73,10 @@ def main():
                     "Vehicles Used",
                     "Expected Vehicles",
                     "Vehicles Difference",
+                    "Total Cost ($)",
+                    "Fixed Cost ($)",
+                    "Variable Cost ($)",
+                    "Total Penalties ($)",
                 ],
             )
             writer.writeheader()
@@ -73,6 +97,10 @@ def main():
                     "Vehicles Used",
                     "Expected Vehicles",
                     "Vehicles Difference",
+                    "Total Cost ($)",
+                    "Fixed Cost ($)",
+                    "Variable Cost ($)",
+                    "Total Penalties ($)",
                 ],
             )
             writer.writeheader()

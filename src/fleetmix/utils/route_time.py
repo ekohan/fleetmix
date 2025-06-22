@@ -267,10 +267,10 @@ class LegacyEstimator:
         num_phys = len(uniq)
         num_pseudo = len(cluster_customers)
 
-        # Service time must reflect *all* pseudo-customers even if they share a
-        # location with another good.
+        # Service time should reflect unique physical stops only, since each
+        # location is visited once regardless of how many goods are delivered.
         service_time_total = calculate_total_service_time_hours(
-            num_pseudo, context.service_time
+            num_phys, context.service_time
         )
 
         # Legacy model assumes a fixed 1 h travel component irrespective of the
@@ -296,17 +296,17 @@ class BHHEstimator:
         customers = _unique_physical_stops(cluster_customers)
         n_phys = len(customers)
 
-        # Total pseudo-customers (duplicates allowed) for service-time component
+        # Service time should use unique physical stops only
         n_pseudo = len(cluster_customers)
 
         if n_phys <= 1:
             return calculate_total_service_time_hours(
-                n_pseudo, context.service_time
+                n_phys, context.service_time
             ), []
 
-        # Service-time component uses *all* pseudo-customers
+        # Service-time component uses unique physical stops only
         service_time_total = calculate_total_service_time_hours(
-            n_pseudo, context.service_time
+            n_phys, context.service_time
         )
 
         # Depot travel component (2·δ_vk)
@@ -350,22 +350,17 @@ class TSPEstimator:
         # --- Optional pruning ------------------------------------------------
         if context.prune_tsp and context.max_route_time is not None:
             bhh_estimator = BHHEstimator()
-            # Pass *full* cluster_customers so BHH counts service time for all
+            # Pass *full* cluster_customers so BHH counts service time correctly
             bhh_time, _ = bhh_estimator.estimate_route_time(cluster_customers, context)
             if bhh_time > context.max_route_time * 1.2:
                 return context.max_route_time * 1.01, []
 
-        # Solve TSP on physical stops only
+        # Solve TSP on physical stops only - this already includes correct service time
+        # since PyVRP uses the service_duration we set for each client
         base_time, sequence = self._pyvrp_tsp_estimation(customers_phys, context)
 
-        # Add service time for additional pseudo-customers mapped to the same
-        # physical locations (those were not included in the TSP calculation).
-        extra_pseudo = len(cluster_customers) - len(customers_phys)
-        if extra_pseudo > 0:
-            base_time += calculate_total_service_time_hours(
-                extra_pseudo, context.service_time
-            )
-
+        # No need to add extra service time since TSP already accounts for service
+        # time at each physical location through PyVRP's service_duration parameter
         return base_time, sequence
 
     def _pyvrp_tsp_estimation(

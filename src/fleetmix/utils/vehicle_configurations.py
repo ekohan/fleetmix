@@ -1,27 +1,31 @@
 import itertools
+import pandas as pd
+from typing import List, Dict, Any
+from fleetmix.core_types import VehicleSpec, VehicleConfiguration
 
-from fleetmix.core_types import VehicleConfiguration, VehicleSpec
-
-
-def generate_vehicle_configurations(
-    vehicle_types: dict[str, VehicleSpec], goods: list[str]
-) -> list[VehicleConfiguration]:
+def generate_vehicle_configurations(vehicle_types: Dict[str, VehicleSpec], goods: List[str]) -> List[VehicleConfiguration]:
     """
     Enumerate every feasible vehicle–compartment combination (paper §4.4).
     """
+    # Hardcoded parameter for maximum number of compartments
+    MAX_COMPARTMENTS = 1
+    
     compartment_options = list(itertools.product([0, 1], repeat=len(goods)))
-    configurations: list[VehicleConfiguration] = []
+    configurations: List[VehicleConfiguration] = []
     config_id = 1
-
+    
     for vt_name, vt_info in vehicle_types.items():
         for option in compartment_options:
-            # Skip configuration if no compartments are selected
-            if sum(option) == 0:
+            # Count the number of enabled compartments
+            num_enabled_compartments = sum(option)
+            
+            # Skip configuration if no compartments are selected or exceeds MAX_COMPARTMENTS
+            if num_enabled_compartments == 0 or num_enabled_compartments > MAX_COMPARTMENTS:
                 continue
-
+            
             # Create compartments dictionary
             compartments = {good: bool(option[i]) for i, good in enumerate(goods)}
-
+            
             # Create VehicleConfiguration object with timing attributes from VehicleSpec
             config = VehicleConfiguration(
                 config_id=config_id,
@@ -31,7 +35,7 @@ def generate_vehicle_configurations(
                 compartments=compartments,
                 avg_speed=vt_info.avg_speed,
                 service_time=vt_info.service_time,
-                max_route_time=vt_info.max_route_time,
+                max_route_time=vt_info.max_route_time
             )
             configurations.append(config)
             config_id += 1

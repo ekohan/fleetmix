@@ -387,10 +387,6 @@ def _create_model(
                 )
 
                 c_vk[v, k] = float(base_cost + penalty_amount)
-                logger.debug(
-                    f"Cluster {k}, vehicle {v}: Load Percentage = {load_percentage:.2f}, "
-                    f"Penalty = {penalty_amount}"
-                )
             else:
                 c_vk[v, k] = 0.0  # Cost is zero for placeholder
 
@@ -426,10 +422,6 @@ def _create_model(
                     for cid in N
                     if origin_id[cid] == physical_customer and good in subset[cid]
                 ]
-                logger.debug(
-                    f"Physical customer {physical_customer}, good {good}: "
-                    f"customer_ids considered → {', '.join(sorted(customer_ids_for_good))}"
-                )
 
                 # Deduplicate cluster IDs to ensure each x_{v,k} appears at most once
                 clusters_covering = {

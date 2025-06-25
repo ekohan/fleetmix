@@ -34,6 +34,8 @@ class Parameters:
     max_improvement_iterations: int = 4
     prune_tsp: bool = False
     allow_split_stops: bool = False
+    pre_small_cluster_size: int = 5
+    pre_nearest_merge_candidates: int = 3
 
     config_file_path: Path | None = field(default=None, repr=False)
     results_dir: Path = field(

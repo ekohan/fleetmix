@@ -34,7 +34,7 @@ def test_pick_solver_gurobi(mock_gurobi):
     solver = pick_solver(verbose=False)
 
     # Should call GUROBI_CMD
-    mock_gurobi.assert_called_once_with(msg=0)
+    mock_gurobi.assert_called_once_with(msg=0, gapRel=0.01)
     assert solver == mock_solver
 
 
@@ -53,8 +53,8 @@ def test_pick_solver_auto_fallback(mock_cbc, mock_gurobi):
     solver = pick_solver(verbose=True)
 
     # Should try Gurobi first, then fall back to CBC
-    mock_gurobi.assert_called_once_with(msg=1)
-    mock_cbc.assert_called_once_with(msg=1)
+    mock_gurobi.assert_called_once_with(msg=1, gapRel=0.01)
+    mock_cbc.assert_called_once_with(msg=1, gapRel=0.01)
     assert solver == mock_cbc_solver
 
 

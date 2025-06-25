@@ -22,6 +22,7 @@ from fleetmix.utils.logging import (
     log_progress,
     log_success,
     setup_logging,
+    log_debug,
 )
 from fleetmix.utils.save_results import save_optimization_results
 
@@ -248,9 +249,11 @@ def _run_single_instance(
         if output_dir:
             params.results_dir = output_dir
 
-        # Override allow_split_stops if specified
+        # Ignore split-stop flag for single-product CVRP NORMAL benchmarks
         if allow_split_stops:
-            params.allow_split_stops = allow_split_stops
+            log_debug(
+                "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmark (single-product instance).[/yellow]"
+            )
 
         # Use the unified pipeline interface for optimization
         solution, configs = run_optimization(
@@ -396,9 +399,11 @@ def _run_all_cvrp_instances(
             if output_dir:
                 params.results_dir = output_dir
 
-            # Override allow_split_stops if specified
+            # Ignore split-stop flag for CVRP NORMAL benchmarks (single product)
             if allow_split_stops:
-                params.allow_split_stops = allow_split_stops
+                log_debug(
+                    "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmarks (single-product instances).[/yellow]"
+                )
 
             # Use the unified pipeline interface for optimization
             solution, configs = run_optimization(

@@ -8,12 +8,12 @@ import pytest
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
-from fleetmix.post_optimization.merge_phase import (
+from fleetmix.merging.core import (
     _get_merged_route_time,
     generate_merge_phase_clusters,
-    improve_solution,
     validate_merged_cluster,
 )
+from fleetmix.post_optimization.merge_phase import improve_solution
 
 
 def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
@@ -317,7 +317,7 @@ def test_validate_merged_cluster_capacity_exceeded(simple_params):
 
 def test_get_merged_route_time_caching(simple_params):
     """Test that merged route time caching works correctly."""
-    from fleetmix.post_optimization.merge_phase import _merged_route_time_cache
+    from fleetmix.merging.core import _merged_route_time_cache
 
     # Clear cache
     _merged_route_time_cache.clear()

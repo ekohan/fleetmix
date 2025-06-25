@@ -111,9 +111,6 @@ def save_optimization_results(
             total_utilization = (sum(total_demand.values()) / config.capacity) * 100
 
         load_percentages.append(total_utilization)
-        logger.debug(
-            f"Cluster {cluster['Cluster_ID']}: Load Percentage = {total_utilization}"
-        )
 
     load_percentages = pd.Series(load_percentages)
 

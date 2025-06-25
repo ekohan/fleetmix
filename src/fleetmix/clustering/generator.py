@@ -23,6 +23,7 @@ from fleetmix.core_types import (
     VehicleConfiguration,
 )
 from fleetmix.utils.logging import FleetmixLogger
+from fleetmix.merging.core import generate_merge_phase_clusters
 
 from .heuristics import (
     create_initial_clusters,
@@ -163,11 +164,11 @@ def generate_clusters_for_configurations(
     unique_clusters = _deduplicate_clusters(all_clusters)
 
     # ------------------------------------------------------------------
-    # NEW: Add merged clusters per physical customer (origin) so that the
-    #      optimisation model can decide between split-stop and single
-    #      multi-compartment service.  These clusters combine **all**
-    #      pseudo-customers that share the same Origin_ID and are feasible
-    #      for at least one vehicle configuration.
+    # Merge all pseudo-customers that belong to the same physical customer
+    # (identified by Origin_ID) into a single "mega cluster". This gives
+    # the optimiser the option of serving the entire site in a single
+    # visit (using a multi-compartment vehicle) instead of multiple
+    # split-stops.
     # ------------------------------------------------------------------
 
     if params.allow_split_stops:
@@ -191,57 +192,55 @@ def generate_clusters_for_configurations(
             unique_clusters = _deduplicate_clusters(unique_clusters)
 
     # ------------------------------------------------------------------
-    # NEW: Generate larger merged clusters (neighbouring clusters merge)
-    #       BEFORE the optimisation phase, reusing the logic from the
-    #       post-optimisation merge phase.  This extends the candidate pool
-    #       with combinations that may cut the fleet size.
+    # Generate additional candidate clusters by merging neighbouring base
+    # clusters ahead of the MILP optimisation. The same routine that is
+    # normally applied after the MILP is reused here so that the solver
+    # can already consider larger cluster combinations that may reduce
+    # the required fleet size.
     # ------------------------------------------------------------------
 
-    try:
-        from fleetmix.post_optimization.merge_phase import generate_merge_phase_clusters
+    customers_df = Customer.to_dataframe(customers)
+    base_df = Cluster.to_dataframe(unique_clusters)
 
-        customers_df = Customer.to_dataframe(customers)
-        base_df = Cluster.to_dataframe(unique_clusters)
-
-        # Ensure goods indicator columns exist to satisfy downstream logic
-        config_lookup = {str(cfg.config_id): cfg for cfg in configurations}
-        for good in params.goods:
-            base_df[good] = base_df["Config_ID"].map(
-                lambda x: config_lookup[str(x)][good] if str(x) in config_lookup else 0
-            )
-        if "Capacity" not in base_df.columns:
-            base_df["Capacity"] = base_df["Config_ID"].map(
-                lambda x: config_lookup[str(x)].capacity
-                if str(x) in config_lookup
-                else 0
-            )
-
-        merged_df = generate_merge_phase_clusters(
-            selected_clusters=base_df,
-            configurations=configurations,
-            customers_df=customers_df,
-            params=params,
+    # Ensure goods indicator columns exist to satisfy downstream logic
+    config_lookup = {str(cfg.config_id): cfg for cfg in configurations}
+    for good in params.goods:
+        base_df[good] = base_df["Config_ID"].map(
+            lambda x: config_lookup[str(x)][good] if str(x) in config_lookup else 0
+        )
+    if "Capacity" not in base_df.columns:
+        base_df["Capacity"] = base_df["Config_ID"].map(
+            lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
         )
 
-        if not merged_df.empty:
-            logger.info(
-                f"➕ Added {len(merged_df)} merged neighbour clusters (pre-MILP)"
-            )
+    # TODO: tidy up parameter hand-off
+    pre_params = replace(
+        params,
+        nearest_merge_candidates=params.pre_nearest_merge_candidates,
+        small_cluster_size=params.pre_small_cluster_size,
+        post_optimization=False,
+    )
 
-            # Ensure unique Cluster_IDs
-            next_id = max(c.cluster_id for c in unique_clusters) + 1
-            merged_clusters: list[Cluster] = Cluster.from_dataframe(merged_df)
-            for cl in merged_clusters:
-                cl.cluster_id = next_id
-                next_id += 1
-            unique_clusters.extend(merged_clusters)
+    merged_df = generate_merge_phase_clusters(
+        selected_clusters=base_df,
+        configurations=configurations,
+        customers_df=customers_df,
+        params=pre_params,
+    )
 
-            # Final deduplication
-            unique_clusters = _deduplicate_clusters(unique_clusters)
-    except ImportError as exc:
-        logger.warning(
-            f"Could not import merge_phase generator for pre-MILP merging: {exc}"
-        )
+    if not merged_df.empty:
+        logger.info(f"➕ Added {len(merged_df)} merged neighbour clusters (pre-MILP)")
+
+        # Ensure unique Cluster_IDs
+        next_id = max(c.cluster_id for c in unique_clusters) + 1
+        merged_clusters: list[Cluster] = Cluster.from_dataframe(merged_df)
+        for cl in merged_clusters:
+            cl.cluster_id = next_id
+            next_id += 1
+        unique_clusters.extend(merged_clusters)
+
+        # Final deduplication
+        unique_clusters = _deduplicate_clusters(unique_clusters)
 
     # Validate cluster coverage
     validate_cluster_coverage(unique_clusters, customers)

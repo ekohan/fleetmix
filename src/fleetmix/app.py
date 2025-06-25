@@ -176,35 +176,16 @@ def _run_single_instance(
         table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
 
         # Add cluster load percentages if available
-        if not solution.selected_clusters.empty:
-            for i, (_, cluster) in enumerate(solution.selected_clusters.iterrows()):
-                # Try to get load percentage from different possible columns
-                load_pct = None
-                if "Load_total_pct" in cluster:
-                    load_pct = cluster["Load_total_pct"] * 100  # Convert to percentage
-                elif "Vehicle_Utilization" in cluster:
-                    load_pct = (
-                        cluster["Vehicle_Utilization"] * 100
-                    )  # Convert to percentage
-                elif "Total_Demand" in cluster and "Config_ID" in cluster:
-                    # Calculate load percentage from total demand and vehicle capacity
-                    config = _find_config_by_id(configs, str(cluster["Config_ID"]))
-                    if isinstance(cluster["Total_Demand"], dict):
-                        total_demand = sum(cluster["Total_Demand"].values())
-                    elif isinstance(cluster["Total_Demand"], str):
-                        import ast
+        if solution.selected_clusters:
+            for i, cluster in enumerate(solution.selected_clusters):
+                # Calculate load percentage from total demand and vehicle capacity
+                config = _find_config_by_id(configs, str(cluster.config_id))
+                total_demand = sum(cluster.total_demand.values())
+                load_pct = (total_demand / config.capacity) * 100
 
-                        total_demand = sum(
-                            ast.literal_eval(cluster["Total_Demand"]).values()
-                        )
-                    else:
-                        total_demand = cluster["Total_Demand"]
-                    load_pct = (total_demand / config.capacity) * 100
-
-                if load_pct is not None:
-                    table.add_row(
-                        f"Cluster {cluster['Cluster_ID']} Load %", f"{load_pct:.1f}%"
-                    )
+                table.add_row(
+                    f"Cluster {cluster.cluster_id} Load %", f"{load_pct:.1f}%"
+                )
 
         console.print(table)
         log_success(f"Results saved to {output_path.name}")
@@ -289,35 +270,16 @@ def _run_single_instance(
         table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
 
         # Add cluster load percentages if available
-        if not solution.selected_clusters.empty:
-            for i, (_, cluster) in enumerate(solution.selected_clusters.iterrows()):
-                # Try to get load percentage from different possible columns
-                load_pct = None
-                if "Load_total_pct" in cluster:
-                    load_pct = cluster["Load_total_pct"] * 100  # Convert to percentage
-                elif "Vehicle_Utilization" in cluster:
-                    load_pct = (
-                        cluster["Vehicle_Utilization"] * 100
-                    )  # Convert to percentage
-                elif "Total_Demand" in cluster and "Config_ID" in cluster:
-                    # Calculate load percentage from total demand and vehicle capacity
-                    config = _find_config_by_id(configs, str(cluster["Config_ID"]))
-                    if isinstance(cluster["Total_Demand"], dict):
-                        total_demand = sum(cluster["Total_Demand"].values())
-                    elif isinstance(cluster["Total_Demand"], str):
-                        import ast
+        if solution.selected_clusters:
+            for i, cluster in enumerate(solution.selected_clusters):
+                # Calculate load percentage from total demand and vehicle capacity
+                config = _find_config_by_id(configs, str(cluster.config_id))
+                total_demand = sum(cluster.total_demand.values())
+                load_pct = (total_demand / config.capacity) * 100
 
-                        total_demand = sum(
-                            ast.literal_eval(cluster["Total_Demand"]).values()
-                        )
-                    else:
-                        total_demand = cluster["Total_Demand"]
-                    load_pct = (total_demand / config.capacity) * 100
-
-                if load_pct is not None:
-                    table.add_row(
-                        f"Cluster {cluster['Cluster_ID']} Load %", f"{load_pct:.1f}%"
-                    )
+                table.add_row(
+                    f"Cluster {cluster.cluster_id} Load %", f"{load_pct:.1f}%"
+                )
 
         console.print(table)
         log_success(f"Results saved to {output_path.name}")

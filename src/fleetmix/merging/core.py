@@ -77,6 +77,7 @@ def _get_merged_route_time(
     return time, sequence
 
 
+# TODO: check DataFrame usage
 def generate_merge_phase_clusters(
     selected_clusters: pd.DataFrame,
     configurations: list[VehicleConfiguration],

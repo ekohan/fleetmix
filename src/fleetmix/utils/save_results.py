@@ -33,6 +33,7 @@ from fleetmix.core_types import (
     VehicleConfiguration,
     VRPSolution,
 )
+from fleetmix.utils.cluster_conversion import clusters_to_dataframe
 from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
@@ -65,8 +66,11 @@ def save_optimization_results(
     # Create a lookup dictionary for configurations
     config_lookup = {str(config.config_id): config for config in configurations}
 
+    # Convert clusters to DataFrame for easier processing
+    clusters_df = clusters_to_dataframe(solution.selected_clusters)
+    
     # Calculate metrics and prepare data
-    if "Customers" in solution.selected_clusters.columns:
+    if "Customers" in clusters_df.columns:
         # When split-stops are enabled the optimisation works with *pseudo* customers
         # (e.g. ``3::Dry`` and ``3::Frozen``) which means the raw list can contain
         # several entries for what is, conceptually, the *same* physical customer.
@@ -87,18 +91,18 @@ def save_optimization_results(
                     seen.add(origin)
                 return len(seen)
 
-            customers_per_cluster = solution.selected_clusters["Customers"].apply(
+            customers_per_cluster = clusters_df["Customers"].apply(
                 _n_unique_origins
             )
         else:
-            customers_per_cluster = solution.selected_clusters["Customers"].apply(len)
+            customers_per_cluster = clusters_df["Customers"].apply(len)
     else:
         # For benchmark results, use Num_Customers column
-        customers_per_cluster = solution.selected_clusters["Num_Customers"]
+        customers_per_cluster = clusters_df["Num_Customers"]
 
     # Calculate load percentages
     load_percentages = []
-    for _, cluster in solution.selected_clusters.iterrows():
+    for _, cluster in clusters_df.iterrows():
         if "Vehicle_Utilization" in cluster:
             total_utilization = cluster["Vehicle_Utilization"]
         else:
@@ -184,7 +188,7 @@ def save_optimization_results(
                 )
 
     # Prepare cluster details
-    cluster_details = solution.selected_clusters.copy()
+    cluster_details = clusters_df.copy()
     if "Customers" in cluster_details.columns:
         # Deduplicate customer IDs for clearer reporting when split-stops are enabled
         if parameters.allow_split_stops:
@@ -371,7 +375,7 @@ def save_optimization_results(
         if not is_benchmark:
             depot_coords = (parameters.depot["latitude"], parameters.depot["longitude"])
             visualize_clusters(
-                solution.selected_clusters, depot_coords, str(output_filename)
+                clusters_df, depot_coords, str(output_filename)
             )
 
     except Exception as e:

@@ -42,6 +42,7 @@ import pandas as pd
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import (
+    Cluster,
     Customer,
     CustomerBase,
     FleetmixSolution,
@@ -50,6 +51,11 @@ from fleetmix.core_types import (
 from fleetmix.merging.core import (
     _create_config_lookup,
     generate_merge_phase_clusters,
+)
+from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.utils.cluster_conversion import (
+    clusters_to_dataframe,
+    dataframe_to_clusters,
 )
 from fleetmix.utils.logging import FleetmixLogger, Symbols
 from fleetmix.utils.solver import pick_solver
@@ -89,21 +95,6 @@ def improve_solution(
         >>> improved.total_cost <= sol.total_cost
         True
     """
-    # Convert to DataFrame for internal processing
-    customers_df = Customer.to_dataframe(customers)
-
-    # Call internal implementation
-    return _improve_internal(initial_solution, configurations, customers_df, params)
-
-
-def _improve_internal(
-    initial_solution: FleetmixSolution,
-    configurations: list[VehicleConfiguration],
-    customers_df: pd.DataFrame,
-    params: Parameters,
-) -> FleetmixSolution:
-    """Internal implementation that processes DataFrames."""
-
     best_solution = initial_solution
     best_cost = (
         best_solution.total_cost
@@ -111,55 +102,70 @@ def _improve_internal(
         else float("inf")
     )
     reason = ""
+
+    # Convert customers to DataFrame for merging operations
+    customers_df = Customer.to_dataframe(customers)
+
     # Iterate with explicit counter to correctly log attempts
     for iters in range(1, params.max_improvement_iterations + 1):
         logger.debug(
             f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.max_improvement_iterations}"
         )
+        
         selected_clusters = best_solution.selected_clusters
-        if selected_clusters.empty:
+        if not selected_clusters:
             logger.info(
                 "Initial solution has no selected clusters. Skipping merge phase."
             )
             reason = "initial solution empty"
             break
 
+        # Convert to DataFrame for merging operations
+        selected_clusters_df = clusters_to_dataframe(selected_clusters)
+        
         # Ensure goods columns exist
         config_lookup = _create_config_lookup(configurations)
         for good in params.goods:
-            if good not in selected_clusters.columns:
-                selected_clusters[good] = selected_clusters["Config_ID"].map(
+            if good not in selected_clusters_df.columns:
+                selected_clusters_df[good] = selected_clusters_df["Config_ID"].map(
                     lambda x: config_lookup[str(x)][good]
                 )
-        merged_clusters = generate_merge_phase_clusters(
-            selected_clusters, configurations, customers_df, params
+
+        merged_clusters_df = generate_merge_phase_clusters(
+            selected_clusters_df, configurations, customers_df, params
         )
-        if merged_clusters.empty:
+        if merged_clusters_df.empty:
             logger.debug("→ No valid merged clusters generated")
             reason = "no candidate merges"
             break
 
-        logger.debug(f"→ Generated {len(merged_clusters)} merged cluster options")
-        combined_clusters = pd.concat(
-            [selected_clusters, merged_clusters], ignore_index=True
+        logger.debug(f"→ Generated {len(merged_clusters_df)} merged cluster options")
+        
+        # Combine original and merged clusters
+        combined_clusters_df = pd.concat(
+            [selected_clusters_df, merged_clusters_df], ignore_index=True
         )
+        
+        # Convert back to list[Cluster]
+        combined_clusters = dataframe_to_clusters(combined_clusters_df)
+
         # Call solver without triggering another merge phase
         internal_params = replace(params, post_optimization=False)
 
         # Use the internal solver that accepts DataFrames. Force exact optimality
         # (gap = 0) in the improvement iterations to avoid early convergence
         # due to tolerance.
-        from fleetmix.optimization.core import _solve_internal
-
         exact_solver = pick_solver(verbose=True, gap_rel=0.0)
-        trial_solution = _solve_internal(
+
+        trial_solution = solve_fsm_problem(
             combined_clusters,
             configurations,
-            customers_df,
+            customers,
             internal_params,
             solver=exact_solver,
             verbose=True,
         )
+
         trial_cost = (
             trial_solution.total_cost
             if trial_solution.total_cost is not None
@@ -169,11 +175,11 @@ def _improve_internal(
 
         same_choice = False
         if (
-            not trial_solution.selected_clusters.empty
-            and not best_solution.selected_clusters.empty
+            trial_solution.selected_clusters
+            and best_solution.selected_clusters
         ):
-            trial_ids = set(trial_solution.selected_clusters["Cluster_ID"])
-            best_ids = set(best_solution.selected_clusters["Cluster_ID"])
+            trial_ids = {c.cluster_id for c in trial_solution.selected_clusters}
+            best_ids = {c.cluster_id for c in best_solution.selected_clusters}
             same_choice = trial_ids == best_ids
 
         logger.debug(

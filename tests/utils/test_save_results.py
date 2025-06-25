@@ -12,6 +12,7 @@ import pandas as pd
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import (
     BenchmarkType,
+    Cluster,
     DepotLocation,
     FleetmixSolution,
     VehicleConfiguration,
@@ -31,23 +32,35 @@ class TestSaveOptimizationResults(unittest.TestCase):
 
     def setUp(self):
         """Set up test data."""
+        # Create Cluster objects for testing
+        clusters = [
+            Cluster(
+                cluster_id="CL1",
+                config_id="C1",
+                customers=["A", "B"],
+                total_demand={"Dry": 100, "Chilled": 50, "Frozen": 0},
+                centroid_latitude=4.5,
+                centroid_longitude=-74.0,
+                goods_in_config=["Dry", "Chilled"],
+                route_time=3.5,
+                method="kmeans",
+            ),
+            Cluster(
+                cluster_id="CL2",
+                config_id="C2",
+                customers=["C", "D"],
+                total_demand={"Dry": 200, "Chilled": 0, "Frozen": 100},
+                centroid_latitude=4.6,
+                centroid_longitude=-74.1,
+                goods_in_config=["Dry", "Frozen"],
+                route_time=4.2,
+                method="hierarchical",
+            ),
+        ]
+        
         # Create a FleetmixSolution instance for testing
         self.solution = FleetmixSolution(
-            selected_clusters=pd.DataFrame(
-                {
-                    "Cluster_ID": ["CL1", "CL2"],
-                    "Config_ID": ["C1", "C2"],
-                    "Method": ["kmeans", "hierarchical"],
-                    "Customers": [["A", "B"], ["C", "D"]],
-                    "Total_Demand": [
-                        {"Dry": 100, "Chilled": 50, "Frozen": 0},
-                        {"Dry": 200, "Chilled": 0, "Frozen": 100},
-                    ],
-                    "Route_Time": [3.5, 4.2],
-                    "Centroid_Latitude": [4.5, 4.6],
-                    "Centroid_Longitude": [-74.0, -74.1],
-                }
-            ),
+            selected_clusters=clusters,
             total_fixed_cost=300.0,
             total_variable_cost=150.0,
             total_light_load_penalties=20.0,

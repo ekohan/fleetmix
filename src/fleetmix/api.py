@@ -195,6 +195,14 @@ def optimize(
                     verbose=verbose,
                     time_recorder=time_recorder,
                 )
+            
+            # Step 6: Post-optimization improvement if enabled
+            if params.post_optimization:
+                from fleetmix.post_optimization import improve_solution
+                with time_recorder.measure("fsm_post_optimization"):
+                    solution = improve_solution(
+                        solution, configs, customers, params
+                    )
         except Exception as e:
             raise ValueError(
                 f"Error during optimization:\n{e!s}\n"
@@ -205,7 +213,7 @@ def optimize(
     # Add time measurements to solution
     solution.time_measurements = time_recorder.measurements
 
-    # Step 6: Save results if output directory is specified
+    # Step 7: Save results if output directory is specified
     if output_dir:
         try:
             save_optimization_results(

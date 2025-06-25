@@ -152,7 +152,7 @@ def test_multi_compartment_selected_when_cheaper():
     assert solution.total_vehicles == 1, "Expected a single vehicle to serve both goods"
 
     # The selected configuration must be the multi-compartment one (config_id=3)
-    selected_configs = set(solution.selected_clusters["Config_ID"].tolist())
+    selected_configs = set(cluster.config_id for cluster in solution.selected_clusters)
     assert selected_configs == {3}, f"Solver chose configs {selected_configs}, expected {{3}}"
 
     # Sanity-check: total cost must equal the fixed cost of the multi-compartment vehicle

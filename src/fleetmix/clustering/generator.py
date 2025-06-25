@@ -24,6 +24,7 @@ from fleetmix.core_types import (
 )
 from fleetmix.merging.core import generate_merge_phase_clusters
 from fleetmix.utils.logging import FleetmixLogger
+from fleetmix.utils.route_time import estimate_route_time
 
 from .heuristics import (
     create_initial_clusters,
@@ -447,7 +448,7 @@ def _get_clustering_context_list(
 # one go if a suitable multi-compartment vehicle exists.
 # ----------------------------------------------------------------------
 
-
+# TODO: check this logic
 def _create_origin_mega_clusters(
     customers: list[CustomerBase],
     configurations: list[VehicleConfiguration],
@@ -462,7 +463,6 @@ def _create_origin_mega_clusters(
     route-time constraints are respected we create *one* cluster.
     """
 
-    from fleetmix.utils.route_time import estimate_route_time
 
     # Group pseudo-customers by origin_id
     grouped: dict[str, list[CustomerBase]] = {}
@@ -502,7 +502,6 @@ def _create_origin_mega_clusters(
             ):
                 continue
 
-            # Capacity – use max per good because model (FSM) constrains per load percentage only after they sum? Actually capacity is total demand.
             if sum(total_dem.values()) > cfg.capacity:
                 continue
 
@@ -511,6 +510,8 @@ def _create_origin_mega_clusters(
                 "latitude": params.depot["latitude"],
                 "longitude": params.depot["longitude"],
             }
+
+            # TODO: again, check this logic
             rt_hours, _ = estimate_route_time(
                 pseudo_df,
                 depot_dict,

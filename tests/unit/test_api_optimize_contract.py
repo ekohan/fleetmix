@@ -32,7 +32,12 @@ def params() -> Parameters:
 
 class DummySolution(FleetmixSolution):
     def __init__(self):
-        super().__init__(total_cost=123.0, total_vehicles=1)
+        super().__init__(
+            total_fixed_cost=100.0,
+            total_variable_cost=23.0,
+            total_penalties=0.0,
+            total_vehicles=1
+        )
 
 
 # ----------------------- successful path -----------------------

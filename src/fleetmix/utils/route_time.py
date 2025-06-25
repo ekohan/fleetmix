@@ -252,7 +252,7 @@ def _unique_physical_stops(customers_df: pd.DataFrame) -> pd.DataFrame:
         return customers_df.drop_duplicates(subset="Origin_ID", keep="first")
     return customers_df
 
-
+# TODO: check pseudo-customers logic
 @register_route_time_estimator("Legacy")
 class LegacyEstimator:
     """Original simple estimation method (1 h travel + service time)."""
@@ -278,21 +278,29 @@ class LegacyEstimator:
         time = 1 + service_time_total
         return time, []
 
-
+# TODO: check pseudo-customers logic
 @register_route_time_estimator("BHH")
 class BHHEstimator:
-    """Beardwood–Halton–Hammersley estimation using unique physical stops."""
+    """Beardwood–Halton–Hammersley estimation method."""
 
     # Constants for the BHH formula
-    SETUP_TIME = 0.0  # α_vk
-    BETA = 0.765
+    SETUP_TIME = 0.0  # α_vk: Setup time to dispatch vehicle configuration (hours)
+    BETA = 0.765  # β: Non-negative constant for BHH approximation
 
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
         context: RouteTimeContext,
     ) -> tuple[float, list[str]]:
-        """Compute BHH estimate on deduplicated physical stops."""
+        """BHH estimation: t_vk ≈ α_vk + 2·δ_vk + β·√(n·A) + γ·n
+        Where:
+        - α_vk: Setup time to dispatch vehicle configuration
+        - δ_vk: Line-haul travel time between depot and cluster centroid
+        - β: Non-negative constant (0.765)
+        - γ: Customer service time
+        - n: Number of customers
+        - A: Service area
+        """
         customers = _unique_physical_stops(cluster_customers)
         n_phys = len(customers)
 
@@ -333,9 +341,10 @@ class BHHEstimator:
         return total, []
 
 
+# TODO: check pseudo-customers logic
 @register_route_time_estimator("TSP")
 class TSPEstimator:
-    """TSP-based route time estimation using PyVRP (deduplicated stops)."""
+    """TSP-based route time estimation using PyVRP."""
 
     def estimate_route_time(
         self,
@@ -352,6 +361,7 @@ class TSPEstimator:
             bhh_estimator = BHHEstimator()
             # Pass *full* cluster_customers so BHH counts service time for all
             bhh_time, _ = bhh_estimator.estimate_route_time(cluster_customers, context)
+            # Add a 20% margin to account for BHH underestimation
             if bhh_time > context.max_route_time * 1.2:
                 return context.max_route_time * 1.01, []
 

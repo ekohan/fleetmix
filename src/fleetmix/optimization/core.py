@@ -29,7 +29,7 @@ Solver interface
 ----------------
 • Defaults to CBC via ``pulp`` but can fall back to Gurobi/CPLEX if the corresponding environment
   variables are set (see ``utils/solver.py``).
-• Post-solution **improvement phase** is optionally triggered (Section 4.4) via
+• Post-solution **improvement phase** (Section 4.4) can be applied separately via
   :func:`post_optimization.improve_solution`.
 
 Typical usage
@@ -56,8 +56,8 @@ from fleetmix.core_types import (
     FleetmixSolution,
     VehicleConfiguration,
 )
-from fleetmix.post_optimization import improve_solution
 from fleetmix.preprocess.demand import get_origin_id, get_subset_from_id
+from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
 from fleetmix.utils.solver import pick_solver
 
@@ -129,9 +129,9 @@ def solve_fsm_problem(
         10543.75
 
     Note:
-        If ``parameters.post_optimization`` is *True* the solution may be further
-        refined by :func:`fleetmix.post_optimization.improve_solution` before being
-        returned.
+        This function only performs the core MILP optimization. For post-optimization
+        improvement, call :func:`fleetmix.post_optimization.improve_solution` separately
+        on the returned solution.
     """
     # Convert to DataFrames for internal processing
     clusters_df = Cluster.to_dataframe(clusters)
@@ -264,31 +264,6 @@ def _solve_internal(
     solution.solver_status = pulp.LpStatus[model.status]
     solution.solver_runtime_sec = solver_time
 
-    # Improvement phase
-    post_optimization_time = None
-    if parameters.post_optimization:
-        # Convert customers_df back to list of Customer objects for post-optimization
-        customers_list = Customer.from_dataframe(customers_df)
-
-        if time_recorder:
-            with time_recorder.measure("fsm_post_optimization"):
-                post_start = time.time()
-                solution = improve_solution(
-                    solution, configurations, customers_list, parameters
-                )
-                post_end = time.time()
-                post_optimization_time = post_end - post_start
-        else:
-            post_start = time.time()
-            solution = improve_solution(
-                solution, configurations, customers_list, parameters
-            )
-            post_end = time.time()
-            post_optimization_time = post_end - post_start
-
-    # Record post-optimization runtime
-    solution.post_optimization_runtime_sec = post_optimization_time
-
     return solution
 
 
@@ -416,13 +391,6 @@ def _create_model(
         # Exclusivity constraints: each physical customer's each good must be served exactly once
         for physical_customer in physical_customers:
             for good in goods_by_physical[physical_customer]:
-                # DEBUG: List all customer IDs considered for this (physical_customer, good) constraint
-                customer_ids_for_good = [
-                    cid
-                    for cid in N
-                    if origin_id[cid] == physical_customer and good in subset[cid]
-                ]
-
                 # Deduplicate cluster IDs to ensure each x_{v,k} appears at most once
                 clusters_covering = {
                     k
@@ -601,8 +569,11 @@ def _calculate_solution_statistics(
     # Total penalties
     total_penalties = total_light_load_penalties + total_compartment_penalties
 
+    # Convert DataFrame to list[Cluster] before returning
+    selected_clusters_list = dataframe_to_clusters(selected_clusters)
+
     return FleetmixSolution(
-        selected_clusters=selected_clusters,
+        selected_clusters=selected_clusters_list,
         total_fixed_cost=total_fixed_cost,
         total_variable_cost=total_variable_cost,
         total_light_load_penalties=total_light_load_penalties,

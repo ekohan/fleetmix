@@ -123,8 +123,8 @@ class TestSplitStopsIntegration:
 
         # In single-stop mode, each physical customer should appear at most once
         served_customers = set()
-        for _, cluster in solution.selected_clusters.iterrows():
-            for customer_id in cluster["Customers"]:
+        for cluster in solution.selected_clusters:
+            for customer_id in cluster.customers:
                 # Should not contain pseudo-customer IDs (no '::')
                 assert "::" not in customer_id
                 served_customers.add(customer_id)
@@ -156,8 +156,8 @@ class TestSplitStopsIntegration:
         served_pseudo_customers = set()
         has_pseudo_customers = False
 
-        for _, cluster in solution.selected_clusters.iterrows():
-            for customer_id in cluster["Customers"]:
+        for cluster in solution.selected_clusters:
+            for customer_id in cluster.customers:
                 served_pseudo_customers.add(customer_id)
                 if "::" in customer_id:
                     has_pseudo_customers = True
@@ -229,6 +229,6 @@ class TestSplitStopsIntegration:
 
         # Neither should have pseudo-customers
         for solution in [solution1, solution2]:
-            for _, cluster in solution.selected_clusters.iterrows():
-                for customer_id in cluster["Customers"]:
+            for cluster in solution.selected_clusters:
+                for customer_id in cluster.customers:
                     assert "::" not in customer_id

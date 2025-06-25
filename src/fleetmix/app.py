@@ -17,12 +17,12 @@ from fleetmix.core_types import VehicleConfiguration
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.logging import (
     LogLevel,
+    log_debug,
     log_error,
     log_info,
     log_progress,
     log_success,
     setup_logging,
-    log_debug,
 )
 from fleetmix.utils.save_results import save_optimization_results
 

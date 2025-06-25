@@ -22,8 +22,8 @@ from fleetmix.core_types import (
     DepotLocation,
     VehicleConfiguration,
 )
-from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.merging.core import generate_merge_phase_clusters
+from fleetmix.utils.logging import FleetmixLogger
 
 from .heuristics import (
     create_initial_clusters,

@@ -374,9 +374,7 @@ class FleetmixSolution:
     Represents the solution of a fleet optimization problem.
     """
 
-    selected_clusters: list[Cluster] = field(
-        default_factory=empty_list_factory
-    )
+    selected_clusters: list[Cluster] = field(default_factory=empty_list_factory)
     total_fixed_cost: float = 0.0
     total_variable_cost: float = 0.0
     total_penalties: float = 0.0
@@ -395,9 +393,7 @@ class FleetmixSolution:
     def __post_init__(self):
         """Calculate total cost after initialization."""
         self.total_cost = (
-            self.total_fixed_cost
-            + self.total_variable_cost
-            + self.total_penalties
+            self.total_fixed_cost + self.total_variable_cost + self.total_penalties
         )
 
 

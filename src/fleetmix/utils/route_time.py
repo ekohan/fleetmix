@@ -252,6 +252,7 @@ def _unique_physical_stops(customers_df: pd.DataFrame) -> pd.DataFrame:
         return customers_df.drop_duplicates(subset="Origin_ID", keep="first")
     return customers_df
 
+
 # TODO: check pseudo-customers logic
 @register_route_time_estimator("Legacy")
 class LegacyEstimator:
@@ -277,6 +278,7 @@ class LegacyEstimator:
         # number of physical stops.
         time = 1 + service_time_total
         return time, []
+
 
 # TODO: check pseudo-customers logic
 @register_route_time_estimator("BHH")

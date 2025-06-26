@@ -448,6 +448,7 @@ def _get_clustering_context_list(
 # one go if a suitable multi-compartment vehicle exists.
 # ----------------------------------------------------------------------
 
+
 # TODO: check this logic
 def _create_origin_mega_clusters(
     customers: list[CustomerBase],
@@ -462,7 +463,6 @@ def _create_origin_mega_clusters(
     configuration that can carry all those goods and whose capacity and
     route-time constraints are respected we create *one* cluster.
     """
-
 
     # Group pseudo-customers by origin_id
     grouped: dict[str, list[CustomerBase]] = {}

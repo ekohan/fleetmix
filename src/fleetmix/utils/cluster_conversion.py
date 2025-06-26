@@ -14,10 +14,10 @@ from fleetmix.core_types import Cluster
 
 def clusters_to_dataframe(clusters: list[Cluster]) -> pd.DataFrame:
     """Convert list of Cluster objects to DataFrame.
-    
+
     Args:
         clusters: List of Cluster objects to convert
-        
+
     Returns:
         DataFrame with columns matching the Cluster dataclass fields
     """
@@ -47,10 +47,10 @@ def clusters_to_dataframe(clusters: list[Cluster]) -> pd.DataFrame:
 
 def dataframe_to_clusters(df: pd.DataFrame) -> list[Cluster]:
     """Convert DataFrame to list of Cluster objects.
-    
+
     Args:
         df: DataFrame with cluster data
-        
+
     Returns:
         List of Cluster objects
     """
@@ -60,7 +60,11 @@ def dataframe_to_clusters(df: pd.DataFrame) -> list[Cluster]:
         tsp_sequence = []
         if "TSP_Sequence" in df.columns and row.get("TSP_Sequence") is not None:
             value = row.get("TSP_Sequence")
-            if pd.notna(value) if not isinstance(value, (list, np.ndarray)) else len(value) > 0:
+            if (
+                pd.notna(value)
+                if not isinstance(value, (list, np.ndarray))
+                else len(value) > 0
+            ):
                 tsp_sequence = (
                     row["TSP_Sequence"] if isinstance(row["TSP_Sequence"], list) else []
                 )
@@ -69,7 +73,11 @@ def dataframe_to_clusters(df: pd.DataFrame) -> list[Cluster]:
         goods_in_config = []
         if "Goods_In_Config" in df.columns and row.get("Goods_In_Config") is not None:
             value = row.get("Goods_In_Config")
-            if pd.notna(value) if not isinstance(value, (list, np.ndarray)) else len(value) > 0:
+            if (
+                pd.notna(value)
+                if not isinstance(value, (list, np.ndarray))
+                else len(value) > 0
+            ):
                 goods_in_config = (
                     row["Goods_In_Config"]
                     if isinstance(row["Goods_In_Config"], list)
@@ -82,9 +90,7 @@ def dataframe_to_clusters(df: pd.DataFrame) -> list[Cluster]:
 
         cluster = Cluster(
             cluster_id=row["Cluster_ID"],
-            config_id=row.get(
-                "Config_ID", "unassigned"
-            ),  # Handle missing Config_ID
+            config_id=row.get("Config_ID", "unassigned"),  # Handle missing Config_ID
             customers=row["Customers"]
             if isinstance(row.get("Customers"), list)
             else [],
@@ -103,4 +109,4 @@ def dataframe_to_clusters(df: pd.DataFrame) -> list[Cluster]:
             tsp_sequence=tsp_sequence,
         )
         clusters.append(cluster)
-    return clusters 
+    return clusters

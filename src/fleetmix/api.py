@@ -195,14 +195,13 @@ def optimize(
                     verbose=verbose,
                     time_recorder=time_recorder,
                 )
-            
+
             # Step 6: Post-optimization improvement if enabled
             if params.post_optimization:
                 from fleetmix.post_optimization import improve_solution
+
                 with time_recorder.measure("fsm_post_optimization"):
-                    solution = improve_solution(
-                        solution, configs, customers, params
-                    )
+                    solution = improve_solution(solution, configs, customers, params)
         except Exception as e:
             raise ValueError(
                 f"Error during optimization:\n{e!s}\n"

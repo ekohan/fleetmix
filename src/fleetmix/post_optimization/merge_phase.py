@@ -111,7 +111,7 @@ def improve_solution(
         logger.debug(
             f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.max_improvement_iterations}"
         )
-        
+
         selected_clusters = best_solution.selected_clusters
         if not selected_clusters:
             logger.info(
@@ -122,7 +122,7 @@ def improve_solution(
 
         # Convert to DataFrame for merging operations
         selected_clusters_df = clusters_to_dataframe(selected_clusters)
-        
+
         # Ensure goods columns exist
         config_lookup = _create_config_lookup(configurations)
         for good in params.goods:
@@ -140,12 +140,12 @@ def improve_solution(
             break
 
         logger.debug(f"→ Generated {len(merged_clusters_df)} merged cluster options")
-        
+
         # Combine original and merged clusters
         combined_clusters_df = pd.concat(
             [selected_clusters_df, merged_clusters_df], ignore_index=True
         )
-        
+
         # Convert back to list[Cluster]
         combined_clusters = dataframe_to_clusters(combined_clusters_df)
 
@@ -174,10 +174,7 @@ def improve_solution(
         cost_better = trial_cost < best_cost - 1e-6
 
         same_choice = False
-        if (
-            trial_solution.selected_clusters
-            and best_solution.selected_clusters
-        ):
+        if trial_solution.selected_clusters and best_solution.selected_clusters:
             trial_ids = {c.cluster_id for c in trial_solution.selected_clusters}
             best_ids = {c.cluster_id for c in best_solution.selected_clusters}
             same_choice = trial_ids == best_ids

@@ -68,7 +68,7 @@ def save_optimization_results(
 
     # Convert clusters to DataFrame for easier processing
     clusters_df = clusters_to_dataframe(solution.selected_clusters)
-    
+
     # Calculate metrics and prepare data
     if "Customers" in clusters_df.columns:
         # When split-stops are enabled the optimisation works with *pseudo* customers
@@ -91,9 +91,7 @@ def save_optimization_results(
                     seen.add(origin)
                 return len(seen)
 
-            customers_per_cluster = clusters_df["Customers"].apply(
-                _n_unique_origins
-            )
+            customers_per_cluster = clusters_df["Customers"].apply(_n_unique_origins)
         else:
             customers_per_cluster = clusters_df["Customers"].apply(len)
     else:
@@ -374,9 +372,7 @@ def save_optimization_results(
         # Only create visualization for optimization results
         if not is_benchmark:
             depot_coords = (parameters.depot["latitude"], parameters.depot["longitude"])
-            visualize_clusters(
-                clusters_df, depot_coords, str(output_filename)
-            )
+            visualize_clusters(clusters_df, depot_coords, str(output_filename))
 
     except Exception as e:
         print(f"Error saving results to {output_filename}: {e!s}")

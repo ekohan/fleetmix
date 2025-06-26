@@ -16,6 +16,8 @@ from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
+from fleetmix.post_optimization import improve_solution
+
 
 logger = FleetmixLogger.get_logger("fleetmix.api")
 
@@ -198,8 +200,6 @@ def optimize(
 
             # Step 6: Post-optimization improvement if enabled
             if params.post_optimization:
-                from fleetmix.post_optimization import improve_solution
-
                 with time_recorder.measure("fsm_post_optimization"):
                     solution = improve_solution(solution, configs, customers, params)
         except Exception as e:

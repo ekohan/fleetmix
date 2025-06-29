@@ -309,7 +309,10 @@ def test_solve_with_infeasible_clusters():
     clusters_list = Cluster.from_dataframe(clusters_df)
     customers_list = Customer.from_dataframe(customers_df)
 
-    with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
+    # Different solvers report infeasibility differently:
+    # - CBC reports "Infeasible" (raises ValueError)
+    # - Gurobi reports "Not Solved" (raises RuntimeError)
+    with pytest.raises((ValueError, RuntimeError), match=r"Optimization failed with status: (Infeasible|Not Solved)"):
         solve_fsm_problem(
             clusters=clusters_list,
             configurations=configurations,

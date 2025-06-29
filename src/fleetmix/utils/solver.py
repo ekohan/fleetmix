@@ -41,6 +41,7 @@ class GurobiAdapter:
 
         # Enhanced Gurobi parameters to help escape local optima
         # when dealing with multi-vehicle per customer problems
+        # TODO: delete or review this
         """
         if os.getenv("FLEETMIX_ENHANCED_MIP", "1") == "1":
             # Create options list for Gurobi parameters

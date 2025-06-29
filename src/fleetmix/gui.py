@@ -244,7 +244,17 @@ def collect_parameters_from_ui() -> Parameters:
         params_dict["vehicles"] = vehicles_converted
 
     # Create and return Parameters object
-    return Parameters(**params_dict)
+    new_params = Parameters(**params_dict)
+
+    # Persist the updated parameters in the session state so that subsequent
+    # reruns (triggered automatically by Streamlit) remember the user's
+    # selections instead of reverting to the original defaults.  This solves
+    # issues where some changes – e.g. per-vehicle average speed – appeared to
+    # have no effect because the old configuration was silently restored on
+    # rerun.
+    st.session_state.parameters = new_params
+
+    return new_params
 
 
 def display_results(solution: dict[str, Any], output_dir: Path):
@@ -471,9 +481,15 @@ def main():
                 vehicles[vehicle_type] = {
                     "capacity": capacity,
                     "fixed_cost": fixed_cost,
-                    "avg_speed": avg_speed,
-                    "service_time": service_time,
-                    "max_route_time": max_route_time,
+                    "avg_speed": float(avg_speed),
+                    "service_time": float(service_time),
+                    "max_route_time": float(max_route_time),
+                    # Preserve any existing compartment layout so downstream logic is unaffected
+                    "compartments": (
+                        vehicle_data.compartments
+                        if hasattr(vehicle_data, "compartments")
+                        else vehicle_data.get("compartments", {})
+                    ),
                 }
             st.session_state["param_vehicles"] = vehicles
 

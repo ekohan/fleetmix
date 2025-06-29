@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from enum import Enum
@@ -371,9 +373,7 @@ class FleetmixSolution:
     Represents the solution of a fleet optimization problem.
     """
 
-    selected_clusters: pd.DataFrame = field(
-        default_factory=empty_dataframe_factory
-    )  # TODO: convert into type
+    selected_clusters: list[Cluster] = field(default_factory=empty_list_factory)
     total_fixed_cost: float = 0.0
     total_variable_cost: float = 0.0
     total_penalties: float = 0.0
@@ -390,18 +390,10 @@ class FleetmixSolution:
     time_measurements: list[TimeMeasurement] | None = None
 
     def __post_init__(self):
-        """
-        Post-initialization to calculate derived fields or perform validation.
-        For example, ensuring total_cost is consistent.
-        """
-        if (
-            self.total_fixed_cost != 0.0
-            or self.total_variable_cost != 0.0
-            or self.total_penalties != 0.0
-        ) and self.total_cost == 0.0:
-            self.total_cost = (
-                self.total_fixed_cost + self.total_variable_cost + self.total_penalties
-            )
+        """Calculate total cost after initialization."""
+        self.total_cost = (
+            self.total_fixed_cost + self.total_variable_cost + self.total_penalties
+        )
 
 
 @dataclass

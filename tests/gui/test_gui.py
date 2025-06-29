@@ -341,6 +341,54 @@ class TestCollectParametersFromUI(unittest.TestCase):
         self.assertIsInstance(result, Parameters)
         self.assertEqual(result.clustering["method"], "kmedoids")
 
+    def test_collect_parameters_vehicle_updates_and_persistence(self):
+        """Ensure that vehicle timing updates are converted and persisted."""
+
+        mock_params = Parameters.from_yaml()
+
+        # Prepare a modified vehicles dictionary mimicking UI input
+        updated_vehicles = {
+            "A": {
+                "capacity": 3000,
+                "fixed_cost": 150,
+                "avg_speed": 42,  # changed value
+                "service_time": 28,
+                "max_route_time": 11,
+                "compartments": {"Dry": True, "Chilled": False, "Frozen": False},
+            }
+        }
+
+        # Create mock session state
+        mock_state = MagicMock()
+        # seed with original params
+        mock_state.parameters = mock_params
+
+        session_items = {
+            "parameters": mock_params,
+            "param_vehicles": updated_vehicles,
+        }
+
+        mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
+        mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
+        # __setitem__ should update the underlying mapping to allow persistence check
+        def setitem_side_effect(key, value):
+            session_items[key] = value
+            setattr(mock_state, key, value)
+
+        mock_state.__setitem__.side_effect = setitem_side_effect
+
+        with patch("streamlit.session_state", mock_state):
+            new_params = gui.collect_parameters_from_ui()
+
+        # Verify that vehicles dict was converted to VehicleSpec with updated values
+        self.assertIn("A", new_params.vehicles)
+        veh_spec = new_params.vehicles["A"]
+        self.assertEqual(veh_spec.avg_speed, 42)
+        self.assertEqual(veh_spec.capacity, 3000)
+
+        # Ensure that the Parameters object is persisted back to session state
+        self.assertIs(mock_state.parameters, new_params)
+
 
 @pytest.mark.skipif(not STREAMLIT_AVAILABLE, reason="Streamlit not installed")
 class TestDisplayResults(unittest.TestCase):

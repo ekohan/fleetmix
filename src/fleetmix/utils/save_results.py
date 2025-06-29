@@ -33,6 +33,7 @@ from fleetmix.core_types import (
     VehicleConfiguration,
     VRPSolution,
 )
+from fleetmix.utils.cluster_conversion import clusters_to_dataframe
 from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
@@ -65,16 +66,41 @@ def save_optimization_results(
     # Create a lookup dictionary for configurations
     config_lookup = {str(config.config_id): config for config in configurations}
 
+    # Convert clusters to DataFrame for easier processing
+    clusters_df = clusters_to_dataframe(solution.selected_clusters)
+
     # Calculate metrics and prepare data
-    if "Customers" in solution.selected_clusters.columns:
-        customers_per_cluster = solution.selected_clusters["Customers"].apply(len)
+    if "Customers" in clusters_df.columns:
+        # When split-stops are enabled the optimisation works with *pseudo* customers
+        # (e.g. ``3::Dry`` and ``3::Frozen``) which means the raw list can contain
+        # several entries for what is, conceptually, the *same* physical customer.
+        # For reporting purposes we want to treat each origin customer only once so
+        # that the "Customers per Cluster" statistics and the JSON/Excel exports
+        # stay human-readable.
+        if parameters.allow_split_stops:
+
+            def _n_unique_origins(customers: list[str] | tuple[str, ...] | str) -> int:
+                """Return the number of *origin* customers, ignoring goods suffixes."""
+                if not isinstance(customers, (list, tuple)):
+                    # If optimisation returned a single customer as a plain string
+                    # we still count it as one origin.
+                    return 1
+                seen: set[str] = set()
+                for cid in customers:
+                    origin = cid.split("::")[0] if "::" in str(cid) else str(cid)
+                    seen.add(origin)
+                return len(seen)
+
+            customers_per_cluster = clusters_df["Customers"].apply(_n_unique_origins)
+        else:
+            customers_per_cluster = clusters_df["Customers"].apply(len)
     else:
         # For benchmark results, use Num_Customers column
-        customers_per_cluster = solution.selected_clusters["Num_Customers"]
+        customers_per_cluster = clusters_df["Num_Customers"]
 
     # Calculate load percentages
     load_percentages = []
-    for _, cluster in solution.selected_clusters.iterrows():
+    for _, cluster in clusters_df.iterrows():
         if "Vehicle_Utilization" in cluster:
             total_utilization = cluster["Vehicle_Utilization"]
         else:
@@ -87,9 +113,6 @@ def save_optimization_results(
             total_utilization = (sum(total_demand.values()) / config.capacity) * 100
 
         load_percentages.append(total_utilization)
-        logger.debug(
-            f"Cluster {cluster['Cluster_ID']}: Load Percentage = {total_utilization}"
-        )
 
     load_percentages = pd.Series(load_percentages)
 
@@ -163,8 +186,28 @@ def save_optimization_results(
                 )
 
     # Prepare cluster details
-    cluster_details = solution.selected_clusters.copy()
+    cluster_details = clusters_df.copy()
     if "Customers" in cluster_details.columns:
+        # Deduplicate customer IDs for clearer reporting when split-stops are enabled
+        if parameters.allow_split_stops:
+
+            def _deduplicate_customer_ids(customers):
+                """Return a list with at most one entry per *origin* customer."""
+                if not isinstance(customers, (list, tuple)):
+                    return customers
+                unique: list[str] = []
+                seen: set[str] = set()
+                for cid in customers:
+                    origin = cid.split("::")[0] if "::" in str(cid) else str(cid)
+                    if origin not in seen:
+                        unique.append(origin)
+                        seen.add(origin)
+                return unique
+
+            cluster_details["Customers"] = cluster_details["Customers"].apply(
+                _deduplicate_customer_ids
+            )
+
         cluster_details["Num_Customers"] = cluster_details["Customers"].apply(len)
         cluster_details["Customers"] = cluster_details["Customers"].apply(str)
     if "TSP_Sequence" in cluster_details.columns:
@@ -329,9 +372,7 @@ def save_optimization_results(
         # Only create visualization for optimization results
         if not is_benchmark:
             depot_coords = (parameters.depot["latitude"], parameters.depot["longitude"])
-            visualize_clusters(
-                solution.selected_clusters, depot_coords, str(output_filename)
-            )
+            visualize_clusters(clusters_df, depot_coords, str(output_filename))
 
     except Exception as e:
         print(f"Error saving results to {output_filename}: {e!s}")

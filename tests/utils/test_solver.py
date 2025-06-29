@@ -31,7 +31,7 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_gurobi.assert_called_once_with(msg=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.PULP_CBC_CMD")
@@ -43,7 +43,7 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_cbc.assert_called_once_with(msg=0)
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0)
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -56,7 +56,7 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_gurobi.assert_called_once_with(msg=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
         mock_cbc.assert_not_called()
         self.assertEqual(result, mock_gurobi_solver)
 
@@ -72,8 +72,8 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_gurobi.assert_called_once_with(msg=0)
-        mock_cbc.assert_called_once_with(msg=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0)
         self.assertEqual(result, mock_cbc_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -86,7 +86,7 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_gurobi.assert_called_once_with(msg=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_gurobi_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -98,7 +98,7 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=True)
 
-        mock_gurobi.assert_called_once_with(msg=1)
+        mock_gurobi.assert_called_once_with(msg=1, gapRel=0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -111,7 +111,7 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_gurobi.assert_called_once_with(msg=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -127,8 +127,8 @@ class TestPickSolver(unittest.TestCase):
 
         result = pick_solver(verbose=False)
 
-        mock_gurobi.assert_called_once_with(msg=0)
-        mock_cbc.assert_called_once_with(msg=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0)
         self.assertEqual(result, mock_cbc_solver)
 
 

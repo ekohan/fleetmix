@@ -9,6 +9,7 @@ from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import solve_fsm_problem
+from fleetmix.post_optimization import improve_solution
 from fleetmix.preprocess.demand import maybe_explode
 from fleetmix.utils.logging import log_detail, log_progress
 from fleetmix.utils.time_measurement import TimeRecorder
@@ -63,6 +64,11 @@ def run_optimization(
                 verbose=verbose,
                 time_recorder=time_recorder,
             )
+
+        # Apply post-optimization if enabled
+        if params.post_optimization:
+            with time_recorder.measure("fsm_post_optimization"):
+                solution = improve_solution(solution, configs, customers, params)
 
     # Add time measurements to solution
     solution.time_measurements = time_recorder.measurements

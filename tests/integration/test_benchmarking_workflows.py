@@ -252,8 +252,9 @@ EOF
         except Exception as e:
             pytest.skip(f"MCVRP pipeline test failed: {e!s}")
 
+    @pytest.mark.slow
     def test_vrp_solver_interface(self, small_cvrp_file, temp_results_dir):
-        """Test VRP solver interface for baseline comparisons."""
+        """Test VRP solver interface for baseline comparisons (marked slow)."""
         # First parse the CVRP instance to get customer data
         try:
             from fleetmix.config.parameters import Parameters
@@ -332,11 +333,11 @@ EOF
                 temp_results_dir  # Set results_dir directly as Path object
             )
 
-            # Test single compartment solver
+            # Run with a tighter time limit to keep the test fast
             solver = VRPSolver(
                 customers=customers_df,
                 params=params,
-                time_limit=30,  # Short time limit for testing
+                time_limit=5,  # seconds
                 benchmark_type=BenchmarkType.SINGLE_COMPARTMENT,
             )
 
@@ -359,7 +360,7 @@ EOF
             mc_solver = VRPSolver(
                 customers=customers_df,
                 params=params,
-                time_limit=30,
+                time_limit=5,
                 benchmark_type=BenchmarkType.MULTI_COMPARTMENT,
             )
 

@@ -10,6 +10,7 @@ from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import solve_fsm_problem
+from fleetmix.post_optimization import improve_solution
 from fleetmix.preprocess.demand import maybe_explode
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.logging import FleetmixLogger, log_warning
@@ -18,6 +19,106 @@ from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
 logger = FleetmixLogger.get_logger("fleetmix.api")
+
+
+def _two_phase_solve(
+    customers_df: pd.DataFrame,
+    configs: list[VehicleConfiguration],
+    params: Parameters,
+    time_recorder: TimeRecorder,
+    verbose: bool = False,
+) -> FleetmixSolution:
+    """Run two-phase optimization for split-stop mode."""
+    # Phase 1: Baseline (no split stops)
+    logger.info("Phase 1: Solving baseline problem without split stops")
+    baseline_params = Parameters(**params.__dict__)
+    baseline_params.allow_split_stops = False
+
+    # For phase 1, use the original customers without explosion
+    baseline_customers_df = maybe_explode(customers_df, allow_split_stops=False)
+    baseline_customers = Customer.from_dataframe(baseline_customers_df)
+
+    with time_recorder.measure("clustering_phase1"):
+        baseline_clusters = generate_clusters_for_configurations(
+            customers=baseline_customers, configurations=configs, params=baseline_params
+        )
+
+    with time_recorder.measure("fsm_phase1"):
+        baseline_solution = solve_fsm_problem(
+            clusters=baseline_clusters,
+            configurations=configs,
+            customers=baseline_customers,
+            parameters=baseline_params,
+            verbose=verbose,
+            time_recorder=time_recorder,
+        )
+
+    # Apply post-optimization to phase 1 if enabled
+    if params.post_optimization:
+        with time_recorder.measure("fsm_post_optimization_phase1"):
+            baseline_solution = improve_solution(
+                baseline_solution, configs, baseline_customers, baseline_params
+            )
+
+    baseline_vehicles = sum(baseline_solution.vehicles_used.values())
+    logger.info(
+        f"Phase 1 complete: {baseline_vehicles} vehicles, ${baseline_solution.total_cost:,.2f}"
+    )
+
+    # Phase 2: Split-stop optimization with warm start
+    logger.info("Phase 2: Solving split-stop problem with warm start")
+
+    # Create a copy of parameters for phase 2
+    phase2_params = Parameters(**params.__dict__)
+    phase2_params.allow_split_stops = True
+
+    # For phase 2, use the exploded customers
+    phase2_customers_df = maybe_explode(customers_df, allow_split_stops=True)
+    phase2_customers = Customer.from_dataframe(phase2_customers_df)
+
+    with time_recorder.measure("clustering_phase2"):
+        phase2_clusters = generate_clusters_for_configurations(
+            customers=phase2_customers, configurations=configs, params=phase2_params
+        )
+
+    try:
+        with time_recorder.measure("fsm_phase2"):
+            phase2_solution = solve_fsm_problem(
+                clusters=phase2_clusters,
+                configurations=configs,
+                customers=phase2_customers,
+                parameters=phase2_params,
+                verbose=verbose,
+                time_recorder=time_recorder,
+                warm_start_solution=baseline_solution,
+            )
+
+        # Apply post-optimization to phase 2 if enabled
+        if params.post_optimization:
+            with time_recorder.measure("fsm_post_optimization_phase2"):
+                phase2_solution = improve_solution(
+                    phase2_solution, configs, phase2_customers, phase2_params
+                )
+
+        phase2_vehicles = sum(phase2_solution.vehicles_used.values())
+        logger.info(
+            f"Phase 2 complete: {phase2_vehicles} vehicles, ${phase2_solution.total_cost:,.2f}"
+        )
+
+        # Choose better solution
+        if (
+            phase2_solution.total_cost < baseline_solution.total_cost
+            and phase2_vehicles <= baseline_vehicles
+        ):
+            logger.info("Using Phase 2 solution (better cost and no more vehicles)")
+            return phase2_solution
+        else:
+            logger.info("Using Phase 1 solution (Phase 2 not better)")
+            return baseline_solution
+
+    except (ValueError, RuntimeError) as e:
+        logger.warning(f"Phase 2 optimization failed: {e}, using baseline solution")
+        return baseline_solution
 
 
 def optimize(
@@ -129,9 +230,6 @@ def optimize(
         if allow_split_stops != params.allow_split_stops:
             params.allow_split_stops = allow_split_stops
 
-        # Apply split-stop preprocessing if enabled
-        customers_df = maybe_explode(customers_df, params.allow_split_stops)
-
         # Validate demand DataFrame has required columns
         required_columns = ["Customer_ID", "Latitude", "Longitude"]
         demand_columns = [f"{good}_Demand" for good in params.goods]
@@ -147,9 +245,6 @@ def optimize(
                 f"Available columns are: {list(customers_df.columns)}"
             )
 
-        # Convert customers DataFrame to list of Customer objects
-        customers = Customer.from_dataframe(customers_df)
-
         # Step 3: Generate vehicle configurations
         try:
             with time_recorder.measure("vehicle_configuration"):
@@ -160,47 +255,70 @@ def optimize(
                 f"Please check your vehicle and goods definitions in the config."
             )
 
-        # Step 4: Generate clusters
-        try:
-            with time_recorder.measure("clustering"):
-                clusters = generate_clusters_for_configurations(
-                    customers=customers, configurations=configs, params=params
-                )
-        except Exception as e:
-            raise ValueError(
-                f"Error generating customer clusters:\n{e!s}\n"
-                f"This could be due to incompatible vehicle capacities, "
-                f"time constraints, or compartment configurations."
+        # Step 4: Solve optimization problem
+        # Use two-phase approach if split stops are enabled
+        if params.allow_split_stops:
+            solution = _two_phase_solve(
+                customers_df=customers_df,
+                configs=configs,
+                params=params,
+                time_recorder=time_recorder,
+                verbose=verbose,
             )
+        else:
+            # Standard single-phase optimization
+            # Apply split-stop preprocessing if needed
+            customers_df = maybe_explode(customers_df, params.allow_split_stops)
+            customers = Customer.from_dataframe(customers_df)
 
-        # Check if clustering generated any valid clusters
-        if not clusters:
-            raise ValueError(
-                "No feasible clusters could be generated!\n"
-                "Possible causes:\n"
-                "- Vehicle capacities are too small for customer demands\n"
-                "- No vehicles have the right compartment configuration for customer demands\n"
-                "- Time constraints are too restrictive\n"
-                "Please review your configuration and customer data."
-            )
-
-        # Step 5: Solve optimization problem
-        try:
-            with time_recorder.measure("fsm_initial"):
-                solution = solve_fsm_problem(
-                    clusters=clusters,
-                    configurations=configs,
-                    customers=customers,
-                    parameters=params,
-                    verbose=verbose,
-                    time_recorder=time_recorder,
+            # Step 4a: Generate clusters
+            try:
+                with time_recorder.measure("clustering"):
+                    clusters = generate_clusters_for_configurations(
+                        customers=customers, configurations=configs, params=params
+                    )
+            except Exception as e:
+                raise ValueError(
+                    f"Error generating customer clusters:\n{e!s}\n"
+                    f"This could be due to incompatible vehicle capacities, "
+                    f"time constraints, or compartment configurations."
                 )
-        except Exception as e:
-            raise ValueError(
-                f"Error during optimization:\n{e!s}\n"
-                f"This could be due to infeasible problem constraints "
-                f"or insufficient cluster coverage."
-            )
+
+            # Check if clustering generated any valid clusters
+            if not clusters:
+                raise ValueError(
+                    "No feasible clusters could be generated!\n"
+                    "Possible causes:\n"
+                    "- Vehicle capacities are too small for customer demands\n"
+                    "- No vehicles have the right compartment configuration for customer demands\n"
+                    "- Time constraints are too restrictive\n"
+                    "Please review your configuration and customer data."
+                )
+
+            # Step 4b: Solve optimization
+            try:
+                with time_recorder.measure("fsm_initial"):
+                    solution = solve_fsm_problem(
+                        clusters=clusters,
+                        configurations=configs,
+                        customers=customers,
+                        parameters=params,
+                        verbose=verbose,
+                        time_recorder=time_recorder,
+                    )
+
+                # Step 5: Post-optimization improvement if enabled
+                if params.post_optimization:
+                    with time_recorder.measure("fsm_post_optimization"):
+                        solution = improve_solution(
+                            solution, configs, customers, params
+                        )
+            except Exception as e:
+                raise ValueError(
+                    f"Error during optimization:\n{e!s}\n"
+                    f"This could be due to infeasible problem constraints "
+                    f"or insufficient cluster coverage."
+                )
 
     # Add time measurements to solution
     solution.time_measurements = time_recorder.measurements

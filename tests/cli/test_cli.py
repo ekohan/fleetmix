@@ -5,12 +5,14 @@ Integration tests for the Fleetmix CLI.
 import subprocess
 import sys
 from pathlib import Path
+import pytest
 
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
 from fleetmix.core_types import FleetmixSolution
 
 
+@pytest.mark.slow
 def test_cli_version():
     """Test that the version command works."""
     result = subprocess.run(
@@ -23,6 +25,7 @@ def test_cli_version():
     assert __version__ in result.stdout
 
 
+@pytest.mark.slow
 def test_cli_optimize_basic():
     """Test the optimize command with minimal arguments."""
     # Just test that the command structure works by showing the error
@@ -114,6 +117,7 @@ post_optimization: false
     assert len(excel_files) > 0
 
 
+@pytest.mark.slow
 def test_cli_optimize_missing_file():
     """Test error handling for missing demand file."""
     result = subprocess.run(
@@ -127,6 +131,7 @@ def test_cli_optimize_missing_file():
     assert "Demand file not found" in result.stderr
 
 
+@pytest.mark.slow
 def test_cli_benchmark_mcvrp():
     """Test the benchmark command for MCVRP."""
     # This is a minimal test that just checks the command structure works

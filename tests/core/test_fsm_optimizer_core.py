@@ -162,8 +162,11 @@ def test_capacity_violation_model_warning_traditional_mode(toy_fsm_core_data, ca
         for rec in caplog.record_tuples
     ), "Expected debug message about unserviceable cluster"
 
-    # Use pytest's raises to catch the expected RuntimeError for "Not Solved" status
-    with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
+    # Use pytest's raises to catch the expected error for infeasible status
+    # Different solvers report infeasibility differently:
+    # - CBC reports "Infeasible" (raises ValueError)
+    # - Gurobi reports "Not Solved" (raises RuntimeError)
+    with pytest.raises((ValueError, RuntimeError), match=r"Optimization failed with status: (Infeasible|Not Solved)"):
         optimization._solve_internal(clusters_df, configurations, customers_df, params)
 
 
@@ -239,8 +242,11 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
         for rec in caplog.record_tuples
     ), "Expected debug message about unserviceable cluster"
 
-    # Use pytest's raises to catch the expected RuntimeError for "Not Solved" status
-    with pytest.raises(RuntimeError, match="Optimization failed with status: Not Solved"):
+    # Use pytest's raises to catch the expected error for infeasible status
+    # Different solvers report infeasibility differently:
+    # - CBC reports "Infeasible" (raises ValueError)
+    # - Gurobi reports "Not Solved" (raises RuntimeError)
+    with pytest.raises((ValueError, RuntimeError), match=r"Optimization failed with status: (Infeasible|Not Solved)"):
         optimization._solve_internal(clusters_df, configurations, customers_df, params)
 
     # Check stdout for the infeasible message

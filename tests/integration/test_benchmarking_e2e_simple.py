@@ -227,7 +227,7 @@ EOF"""
         # Verify VRP-specific output
         assert solution is not None
 
-        assert not solution.selected_clusters.empty
+        assert len(solution.selected_clusters) > 0
 
     def test_benchmark_type_split(self, tmp_path):
         """Test CVRP with SPLIT benchmark type."""

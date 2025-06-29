@@ -65,8 +65,13 @@ small_cluster_size: 1000         # ≤ customers per "small" cluster
 nearest_merge_candidates: 1000   # max neighbour clusters to probe
 max_improvement_iterations: 20  # max iterations for iterative post-optimization
 
+# Merge phase pre-MILP
+pre_small_cluster_size: 5
+pre_nearest_merge_candidates: 50
+
+
 # Split-stop capability
-allow_split_stops: true  # Allow customers to be served by multiple vehicles (per-good atomicity)
+allow_split_stops: false  # Allow customers to be served by multiple vehicles
 
 # Output format
-format: 'excel'  # Output format (excel or json)
+format: 'json'  # Output format (excel or json)

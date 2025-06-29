@@ -7,13 +7,13 @@ import pandas as pd
 import pytest
 
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration
-from fleetmix.post_optimization.merge_phase import (
+from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Cluster
+from fleetmix.merging.core import (
     _get_merged_route_time,
     generate_merge_phase_clusters,
-    improve_solution,
     validate_merged_cluster,
 )
+from fleetmix.post_optimization.merge_phase import improve_solution
 
 
 def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
@@ -80,24 +80,25 @@ def test_improve_solution_no_clusters(simple_params):
         initial_solution_obj, configs, customers_list, simple_params
     )
     assert result.total_cost == initial_solution_obj.total_cost
-    assert result.selected_clusters.empty
+    assert len(result.selected_clusters) == 0
 
 
 def test_improve_solution_missing_goods_columns(params_with_post_opt):
     """Test improve_solution when selected clusters miss goods columns."""
     # Create selected clusters without goods columns
-    selected_clusters = pd.DataFrame(
-        {
-            "Cluster_ID": ["C1"],
-            "Customers": [["Cust1", "Cust2"]],
-            "Config_ID": ["Small"],  # Using vehicle type from config
-            "Total_Demand": [{"Dry": 20, "Chilled": 0, "Frozen": 0}],
-            "Route_Time": [2.0],
-            "Centroid_Latitude": [0.1],
-            "Centroid_Longitude": [0.1],
-            "Method": ["test"],
-        }
-    )
+    selected_clusters = [
+        Cluster(
+            cluster_id="C1",
+            config_id="Small",
+            customers=["Cust1", "Cust2"],
+            total_demand={"Dry": 20, "Chilled": 0, "Frozen": 0},
+            centroid_latitude=0.1,
+            centroid_longitude=0.1,
+            goods_in_config=["Dry"],
+            route_time=2.0,
+            method="test",
+        )
+    ]
 
     initial_solution_obj = FleetmixSolution(
         total_cost=100, selected_clusters=selected_clusters
@@ -132,7 +133,7 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
     result = improve_solution(
         initial_solution_obj, configurations, customers_list, params_with_post_opt
     )
-    assert not result.selected_clusters.empty
+    assert len(result.selected_clusters) > 0
 
 
 def test_generate_merge_phase_clusters_with_small_clusters(simple_params):
@@ -317,7 +318,7 @@ def test_validate_merged_cluster_capacity_exceeded(simple_params):
 
 def test_get_merged_route_time_caching(simple_params):
     """Test that merged route time caching works correctly."""
-    from fleetmix.post_optimization.merge_phase import _merged_route_time_cache
+    from fleetmix.merging.core import _merged_route_time_cache
 
     # Clear cache
     _merged_route_time_cache.clear()

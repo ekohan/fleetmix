@@ -11,6 +11,7 @@ class DummyParams:
         self.goods = {}
         self.expected_vehicles = 3
         self.allow_split_stops = False
+        self.post_optimization = False
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +54,11 @@ def stub_everything(monkeypatch):
             time_measurements=None,
         ),
     )
+    # Stub post-optimization in pipeline
+    monkeypatch.setattr(
+        "fleetmix.pipeline.vrp_interface.improve_solution",
+        lambda solution, *args, **kw: solution,  # Just return the same solution
+    )
     yield
 
 
@@ -82,5 +88,30 @@ def test_run_optimization_prints_and_returns(caplog):
 
     # Check that the logging message appears in the captured logs
     assert any("Optimization Results:" in record.message for record in caplog.records)
+    assert sol.total_cost == 0
+    assert isinstance(cfg, pd.DataFrame)
+
+
+def test_run_optimization_with_post_optimization(caplog, monkeypatch):
+    """Test that post-optimization is called when params.post_optimization is True"""
+    post_opt_called = False
+    
+    def mock_improve_solution(solution, *args, **kw):
+        nonlocal post_opt_called
+        post_opt_called = True
+        return solution
+    
+    monkeypatch.setattr(
+        "fleetmix.pipeline.vrp_interface.improve_solution",
+        mock_improve_solution,
+    )
+    
+    df = pd.DataFrame()
+    params = DummyParams()
+    params.post_optimization = True
+    
+    sol, cfg = run_optimization(df, params, verbose=False)
+    
+    assert post_opt_called, "Post-optimization should have been called when enabled"
     assert sol.total_cost == 0
     assert isinstance(cfg, pd.DataFrame)

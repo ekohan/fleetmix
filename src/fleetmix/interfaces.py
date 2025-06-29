@@ -38,7 +38,7 @@ class SolverAdapter(Protocol):
     """Thin wrapper around PuLP solvers to provide a consistent interface."""
 
     def get_pulp_solver(
-        self, *, verbose: bool = False, gap_rel: float | None = 0.01
+        self, *, verbose: bool = False, gap_rel: float | None = 0
     ) -> pulp.LpSolver:
         """Return the underlying PuLP solver instance configured and ready to use."""
         ...

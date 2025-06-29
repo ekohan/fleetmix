@@ -36,6 +36,7 @@ class GurobiAdapter:
             kwargs["gapRel"] = gap_rel
 
         options: list[tuple[str, int | float]] = []
+        # TODO: convert TimeLimit to parameter
         options.append(("TimeLimit", 3 * 60))
         kwargs["options"] = options
 

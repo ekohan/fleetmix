@@ -253,7 +253,6 @@ def _unique_physical_stops(customers_df: pd.DataFrame) -> pd.DataFrame:
     return customers_df
 
 
-# TODO: check pseudo-customers logic
 @register_route_time_estimator("Legacy")
 class LegacyEstimator:
     """Original simple estimation method (1 h travel + service time)."""
@@ -266,12 +265,11 @@ class LegacyEstimator:
         """Legacy estimation using unique physical stops."""
         uniq = _unique_physical_stops(cluster_customers)
         num_phys = len(uniq)
-        num_pseudo = len(cluster_customers)
 
         # Service time must reflect *all* pseudo-customers even if they share a
         # location with another good.
         service_time_total = calculate_total_service_time_hours(
-            num_pseudo, context.service_time
+            num_phys, context.service_time
         )
 
         # Legacy model assumes a fixed 1 h travel component irrespective of the
@@ -306,17 +304,14 @@ class BHHEstimator:
         customers = _unique_physical_stops(cluster_customers)
         n_phys = len(customers)
 
-        # Total pseudo-customers (duplicates allowed) for service-time component
-        n_pseudo = len(cluster_customers)
-
         if n_phys <= 1:
             return calculate_total_service_time_hours(
-                n_pseudo, context.service_time
+                n_phys, context.service_time
             ), []
 
         # Service-time component uses *all* pseudo-customers
         service_time_total = calculate_total_service_time_hours(
-            n_pseudo, context.service_time
+            n_phys, context.service_time
         )
 
         # Depot travel component (2·δ_vk)
@@ -355,9 +350,6 @@ class TSPEstimator:
     ) -> tuple[float, list[str]]:
         customers = _unique_physical_stops(cluster_customers)
 
-        # Keep a copy with unique physical stops for distance calculation
-        customers_phys = _unique_physical_stops(cluster_customers)
-
         # --- Optional pruning ------------------------------------------------
         if context.prune_tsp and context.max_route_time is not None:
             bhh_estimator = BHHEstimator()
@@ -368,15 +360,7 @@ class TSPEstimator:
                 return context.max_route_time * 1.01, []
 
         # Solve TSP on physical stops only
-        base_time, sequence = self._pyvrp_tsp_estimation(customers_phys, context)
-
-        # Add service time for additional pseudo-customers mapped to the same
-        # physical locations (those were not included in the TSP calculation).
-        extra_pseudo = len(cluster_customers) - len(customers_phys)
-        if extra_pseudo > 0:
-            base_time += calculate_total_service_time_hours(
-                extra_pseudo, context.service_time
-            )
+        base_time, sequence = self._pyvrp_tsp_estimation(customers, context)
 
         return base_time, sequence
 

@@ -694,7 +694,7 @@ def estimate_num_initial_clusters(
         sample_size = max(1, min(int(avg_customers_per_cluster), num_stops))
 
     if sample_size > 0:
-        avg_cluster = sample_customers_df.sample(n=sample_size)
+        avg_cluster = sample_customers_df.sample(n=sample_size, random_state=42)
     else:
         avg_cluster = pd.DataFrame(columns=customers.columns)
 

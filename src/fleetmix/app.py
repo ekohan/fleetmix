@@ -142,6 +142,9 @@ def _run_single_instance(
         if output_dir:
             params.results_dir = output_dir
 
+        # Set allow_split_stops explicitly (don't rely on default config)
+        params.allow_split_stops = allow_split_stops
+
         # Use the unified pipeline interface for optimization
         solution, configs = run_optimization(
             customers_df=customers_df, params=params, verbose=verbose
@@ -306,9 +309,8 @@ def _run_all_mcvrp_instances(
             if output_dir:
                 params.results_dir = output_dir
 
-            # Override allow_split_stops if specified
-            if allow_split_stops:
-                params.allow_split_stops = allow_split_stops
+            # Set allow_split_stops explicitly (don't rely on default config)
+            params.allow_split_stops = allow_split_stops
 
             # Use the unified pipeline interface for optimization
             solution, configs = run_optimization(
@@ -417,7 +419,12 @@ def optimize(
     allow_split_stops: bool = typer.Option(
         False,
         "--allow-split-stops",
-        help="Allow customers to be served by multiple vehicles (per-good atomicity)",
+        help="Allow customers to be served by multiple vehicles",
+    ),
+    debug_milp: Path | None = typer.Option(
+        None,
+        "--debug-milp",
+        help="Enable MILP debugging and save artifacts to specified directory",
     ),
 ) -> None:
     """
@@ -429,6 +436,12 @@ def optimize(
     """
     # Setup logging based on flags
     _setup_logging_from_flags(verbose, quiet, debug)
+
+    # Enable MILP debugging if requested
+    if debug_milp:
+        from fleetmix.utils.debug import ModelDebugger
+
+        ModelDebugger.enable(debug_milp)
 
     # -----------------------------
     # Validate CLI inputs first
@@ -565,7 +578,12 @@ def benchmark(
     allow_split_stops: bool = typer.Option(
         False,
         "--allow-split-stops",
-        help="Allow customers to be served by multiple vehicles (per-good atomicity)",
+        help="Allow customers to be served by multiple vehicles",
+    ),
+    debug_milp: Path | None = typer.Option(
+        None,
+        "--debug-milp",
+        help="Enable MILP debugging and save artifacts to specified directory",
     ),
 ) -> None:
     """
@@ -576,6 +594,12 @@ def benchmark(
     """
     # Setup logging based on flags
     _setup_logging_from_flags(verbose, quiet, debug)
+
+    # Enable MILP debugging if requested
+    if debug_milp:
+        from fleetmix.utils.debug import ModelDebugger
+
+        ModelDebugger.enable(debug_milp)
 
     if suite not in ["mcvrp", "cvrp"]:
         log_error(f"Invalid suite '{suite}'. Choose 'mcvrp' or 'cvrp'")
@@ -647,12 +671,28 @@ def convert(
         False, "--quiet", "-q", help="Minimal output (errors only)"
     ),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
+    allow_split_stops: bool = typer.Option(
+        False,
+        "--allow-split-stops",
+        help="Allow customers to be served by multiple vehicles",
+    ),
+    debug_milp: Path | None = typer.Option(
+        None,
+        "--debug-milp",
+        help="Enable MILP debugging and save artifacts to specified directory",
+    ),
 ) -> None:
     """
     Convert VRP instances to FSM format and optimize.
     """
     # Setup logging based on flags
     _setup_logging_from_flags(verbose, quiet, debug)
+
+    # Enable MILP debugging if requested
+    if debug_milp:
+        from fleetmix.utils.debug import ModelDebugger
+
+        ModelDebugger.enable(debug_milp)
 
     if type not in ["cvrp", "mcvrp"]:
         log_error(f"Invalid type '{type}'. Choose 'cvrp' or 'mcvrp'")

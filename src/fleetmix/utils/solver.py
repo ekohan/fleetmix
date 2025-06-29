@@ -2,6 +2,7 @@
 
 import importlib.util
 import os
+from typing import Any
 
 import pulp
 import pulp.apis
@@ -16,7 +17,7 @@ class GurobiAdapter:
     def get_pulp_solver(
         self,
         verbose: bool = False,
-        gap_rel: float | None = 0.001,
+        gap_rel: float | None = 0,
     ) -> pulp.LpSolver:
         """Return a configured Gurobi solver instance.
 
@@ -28,11 +29,51 @@ class GurobiAdapter:
                 adapters.
         """
         msg = 1 if verbose else 0
-        kwargs: dict[str, float | int] = {"msg": msg}
+        kwargs: dict[str, Any] = {"msg": msg}
         # Only pass gapRel when an explicit tolerance is requested – omitting
         # it forces the solver to strive for optimality with gap = 0.
         if gap_rel is not None:
             kwargs["gapRel"] = gap_rel
+
+        options: list[tuple[str, int | float]] = []
+        options.append(("TimeLimit", 3 * 60))
+        kwargs["options"] = options
+
+        # Enhanced Gurobi parameters to help escape local optima
+        # when dealing with multi-vehicle per customer problems
+        """
+        if os.getenv("FLEETMIX_ENHANCED_MIP", "1") == "1":
+            # Create options list for Gurobi parameters
+
+            # MIPFocus: 1 = focus on finding feasible solutions
+            #           2 = focus on proving optimality
+            #           3 = focus on improving the best bound
+            options.append(("MIPFocus", 1))
+            options.append(("Symmetry", 2))
+
+            # Increase solution pool to explore more solutions
+            options.append(("PoolSolutions", 10))
+            options.append(("PoolSearchMode", 2))  # Find n best solutions
+
+            # More aggressive heuristics
+            options.append(("Heuristics", 0.1))  # 10% of time on heuristics
+
+            # Stronger cuts to tighten the formulation
+            options.append(("Cuts", 2))  # Aggressive cut generation
+            options.append(("TimeLimit", 60))
+
+            # Multiple random seeds for diversity
+            seed_str = os.getenv("FLEETMIX_MIP_SEED")
+            if seed_str:
+                options.append(("Seed", int(seed_str)))
+
+            # Tune for finding good solutions quickly
+            options.append(("ImproveStartTime", 10))  # Focus on improving after 10s
+            options.append(("ImproveStartGap", 0.1))  # Or when gap < 10%
+
+            #kwargs["options"] = options
+        """
+
         return pulp.GUROBI_CMD(**kwargs)
 
     @property
@@ -53,11 +94,11 @@ class CbcAdapter:
     def get_pulp_solver(
         self,
         verbose: bool = False,
-        gap_rel: float | None = 0.01,
+        gap_rel: float | None = 0,
     ) -> pulp.LpSolver:
         """Return a configured CBC solver instance."""
         msg = 1 if verbose else 0
-        kwargs: dict[str, float | int] = {"msg": msg}
+        kwargs: dict[str, Any] = {"msg": msg}
         if gap_rel is not None:
             kwargs["gapRel"] = gap_rel
         return pulp.PULP_CBC_CMD(**kwargs)
@@ -74,7 +115,7 @@ class CbcAdapter:
         return True
 
 
-def pick_solver(verbose: bool = False, gap_rel: float | None = 0.01):
+def pick_solver(verbose: bool = False, gap_rel: float | None = 0):
     """
     Return a PuLP solver instance.
     Priority

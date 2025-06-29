@@ -7,9 +7,11 @@ Utility helpers for Fleetmix (dependency-free).
 • Logging colour codes and progress bars (`logging.py`).
 • Solver adapter (`solver.py`) – picks CBC / Gurobi / CPLEX based on the runtime environment.
 • Generation of vehicle configurations (`vehicle_configurations.py`).
+• MILP model debugging (`debug.py`) – solver-agnostic model artifact dumping.
 
 """
 
+from .debug import ModelDebugger
 from .project_root import PROJECT_ROOT, get_project_root
 
-__all__ = ["PROJECT_ROOT", "get_project_root"]
+__all__ = ["PROJECT_ROOT", "get_project_root", "ModelDebugger"]

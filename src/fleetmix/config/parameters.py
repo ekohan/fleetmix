@@ -139,6 +139,7 @@ class Parameters:
                 raise ValueError(
                     f"Error creating Parameters from {resolved_config_path}: {error_str}"
                 )
+
         return instance
 
     def __post_init__(self):

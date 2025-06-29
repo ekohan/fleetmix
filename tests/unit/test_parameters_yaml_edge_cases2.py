@@ -118,4 +118,48 @@ def test_typeerror_branches(tmp_path, yaml_mod, expected_msg):
     cfg_path = _write_yaml(tmp_path, modified)
     with pytest.raises(ValueError) as exc:
         Parameters.from_yaml(cfg_path)
-    assert expected_msg in str(exc.value) 
+    assert expected_msg in str(exc.value)
+
+
+# New file
+
+def _write_tmp_yaml(tmp_path, data):
+    p = tmp_path / "config.yaml"
+    with open(p, "w") as f:
+        yaml.dump(data, f)
+    return p
+
+
+def _basic_yaml_dict():
+    return {
+        "vehicles": {
+            "Truck": {
+                "capacity": 1000,
+                "fixed_cost": 0,
+                "avg_speed": 30,
+                "service_time": 0.2,
+                "max_route_time": 8,
+                # compartments will be inferred from goods keys
+                "Dry": True,
+                "Chilled": True,
+                "Frozen": True,
+            }
+        },
+        "goods": ["Dry", "Chilled", "Frozen"],
+        "depot": {"latitude": 0, "longitude": 0},
+        "demand_file": "dummy.csv",
+        "clustering": {"method": "minibatch_kmeans", "route_time_estimation": "BHH", "geo_weight": 0.7, "demand_weight": 0.3, "max_depth": 2},
+        "variable_cost_per_hour": 50,
+        "light_load_penalty": 0,
+        "light_load_threshold": 0.5,
+        "compartment_setup_cost": 0,
+        "format": "json",
+    }
+
+
+def test_allow_split_stops_flag(tmp_path):
+    cfg = _basic_yaml_dict()
+    cfg["allow_split_stops"] = True
+    p = _write_tmp_yaml(tmp_path, cfg)
+    params = Parameters.from_yaml(p)
+    assert params.allow_split_stops is True 

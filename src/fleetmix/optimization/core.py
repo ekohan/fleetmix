@@ -44,6 +44,7 @@ Typical usage
 import sys
 import time
 from typing import Any
+import os
 
 import pandas as pd
 import pulp
@@ -58,6 +59,7 @@ from fleetmix.core_types import (
 )
 from fleetmix.preprocess.demand import get_origin_id, get_subset_from_id
 from fleetmix.utils.cluster_conversion import dataframe_to_clusters
+from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
 from fleetmix.utils.solver import pick_solver
 
@@ -95,6 +97,7 @@ def solve_fsm_problem(
     solver=None,
     verbose: bool = False,
     time_recorder=None,
+    warm_start_solution: FleetmixSolution | None = None,
 ) -> FleetmixSolution:
     """Solve the Fleet Size-and-Mix MILP.
 
@@ -116,6 +119,7 @@ def solve_fsm_problem(
             on environment variables.
         verbose: If *True* prints solver progress to stdout.
         time_recorder: Optional TimeRecorder instance to measure post-optimization time.
+        warm_start_solution: Optional FleetmixSolution from Phase 1 to use as warm start.
 
     Returns:
         FleetmixSolution: A solution object with
@@ -146,6 +150,7 @@ def solve_fsm_problem(
         solver,
         verbose,
         time_recorder,
+        warm_start_solution,
     )
 
 
@@ -157,13 +162,16 @@ def _solve_internal(
     solver=None,
     verbose: bool = False,
     time_recorder=None,
+    warm_start_solution: FleetmixSolution | None = None,
 ) -> FleetmixSolution:
     """Internal implementation that processes DataFrames."""
     # Create optimization model
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, parameters)
+    model, y_vars, x_vars, c_vk = _create_model(
+        clusters_df, configurations, parameters, verbose, warm_start_solution
+    )
 
     # Select solver: use provided or pick based on FSM_SOLVER env
-    solver = solver or pick_solver(verbose)
+    solver = solver or pick_solver(verbose, gap_rel=0.0)
     logger.info(f"Using solver: {solver.name}")
     start_time = time.time()
     model.solve(solver)
@@ -173,72 +181,20 @@ def _solve_internal(
     if verbose:
         print(f"Optimization completed in {solver_time:.2f} seconds.")
 
+    # Dump model artifacts if debugging is enabled
+    ModelDebugger.dump(model, "fsm_model")
+
     # Check solution status
     if model.status != pulp.LpStatusOptimal:
         status_name = pulp.LpStatus[model.status]
+        is_infeasible = status_name in ["Infeasible", "Not Solved"]
 
-        # Enhanced error message for infeasible problems
-        if status_name == "Infeasible":
-            # Check if any clusters have no feasible vehicles
-            clusters_without_vehicles = []
-            has_novehicle_vars = False
-
-            for _, cluster in clusters_df.iterrows():
-                cluster_id = cluster["Cluster_ID"]
-                has_feasible_vehicle = False
-
-                for config in configurations:
-                    # Check if vehicle can serve cluster
-                    total_demand = sum(cluster["Total_Demand"].values())
-                    goods_required = set(
-                        g for g in parameters.goods if cluster["Total_Demand"][g] > 0
-                    )
-
-                    if total_demand <= config.capacity:
-                        # Check goods compatibility
-                        if all(config[g] == 1 for g in goods_required):
-                            has_feasible_vehicle = True
-                            break
-
-                if not has_feasible_vehicle:
-                    clusters_without_vehicles.append(cluster_id)
-
-            # Check if we have NoVehicle variables in the x_vars
-            has_novehicle_vars = any(v == "NoVehicle" for v, k in x_vars.keys())
-
-            # If we have NoVehicle variables and infeasible clusters, this should be
-            # treated as "Not Solved" rather than "Infeasible" in traditional mode
-            if (
-                has_novehicle_vars
-                and clusters_without_vehicles
-                and not parameters.allow_split_stops
-            ):
-                error_msg = "Optimization failed with status: Not Solved"
-                raise RuntimeError(error_msg)
-
-            error_msg = "Optimization problem is infeasible!"
-
-            if clusters_without_vehicles:
-                error_msg += (
-                    f"\nClusters without feasible vehicles: {clusters_without_vehicles}"
-                )
-                error_msg += "\nPossible causes:"
-                error_msg += "\n- Vehicle capacities are too small for cluster demands"
-                error_msg += "\n- No vehicles have the right compartment mix"
-                error_msg += "\n- Consider adding larger vehicles or more compartment configurations"
-            else:
-                error_msg += (
-                    "\nAll clusters have feasible vehicles, but constraints conflict."
-                )
-                error_msg += "\nPossible causes:"
-                error_msg += "\n- Not enough vehicles (check max_vehicles parameter)"
-                error_msg += "\n- Customer coverage constraints cannot be satisfied"
-                error_msg += "\n- Try relaxing penalties or adding more vehicle types"
-
-            raise ValueError(error_msg)
-        else:
+        if is_infeasible:
             error_msg = f"Optimization failed with status: {status_name}"
-            raise RuntimeError(error_msg)
+            if status_name == "Infeasible":
+                raise ValueError(error_msg)
+            else:
+                raise RuntimeError(error_msg)
 
     # Extract and validate solution
     selected_clusters = _extract_solution(clusters_df, y_vars, x_vars)
@@ -271,6 +227,8 @@ def _create_model(
     clusters_df: pd.DataFrame,
     configurations: list[VehicleConfiguration],
     parameters: Parameters,
+    verbose: bool = False,
+    warm_start_solution: FleetmixSolution | None = None,
 ) -> tuple[
     pulp.LpProblem,
     dict[Any, pulp.LpVariable],
@@ -436,6 +394,87 @@ def _create_model(
     for k in K:
         if "NoVehicle" in V_k[k]:
             model += y_vars[k] == 0, f"Unserviceable_Cluster_{k}"
+
+    # ------------------------------------------------------------------
+    # Warm-start: Apply warm start from Phase 1 baseline solution or
+    # existing baseline cluster warm start logic
+    # ------------------------------------------------------------------
+
+    if parameters.allow_split_stops:
+        # Identify baseline clusters (those without "::" pseudo-customers)
+        baseline_cluster_ids = []
+        for k in K:
+            cluster = clusters_df.loc[clusters_df["Cluster_ID"] == k].iloc[0]
+            customers_in_cluster = cluster["Customers"]
+            has_pseudo = any("::" in str(c) for c in customers_in_cluster)
+            if not has_pseudo:
+                baseline_cluster_ids.append(k)
+
+        if warm_start_solution and os.getenv("FLEETMIX_WARMSTART", "1") == "1":
+            # Phase 2: Use Phase 1 solution as warm start by mapping to baseline clusters
+            logger.info(
+                f"Using Phase 1 solution as warm start with {len(baseline_cluster_ids)} baseline clusters"
+            )
+
+            # Map Phase 1 clusters to Phase 2 baseline clusters by customer overlap
+            phase1_clusters = warm_start_solution.selected_clusters
+            warm_start_assignments = []
+
+            for phase1_cluster in phase1_clusters:
+                phase1_customers = set(phase1_cluster.customers)
+                best_match_k = None
+                best_overlap = 0
+
+                # Find baseline cluster with maximum customer overlap
+                for k in baseline_cluster_ids:
+                    cluster = clusters_df.loc[clusters_df["Cluster_ID"] == k].iloc[0]
+                    k_customers = set(cluster["Customers"])
+                    overlap = len(phase1_customers.intersection(k_customers))
+
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        best_match_k = k
+
+                if best_match_k and best_overlap > 0:
+                    # Find best vehicle config for this cluster
+                    best_v = None
+                    best_cost = float("inf")
+                    for v in V_k[best_match_k]:
+                        if (
+                            v != "NoVehicle"
+                            and c_vk.get((v, best_match_k), float("inf")) < best_cost
+                        ):
+                            best_cost = c_vk[v, best_match_k]
+                            best_v = v
+
+                    if best_v:
+                        warm_start_assignments.append((best_v, best_match_k))
+
+            # Apply warm start values
+            for v, k in warm_start_assignments:
+                y_vars[k].setInitialValue(1)
+                x_vars[v, k].setInitialValue(1)
+
+            logger.info(
+                f"Applied warm start to {len(warm_start_assignments)} baseline clusters"
+            )
+
+        elif baseline_cluster_ids and os.getenv("FLEETMIX_WARMSTART", "1") == "1":
+            # Fallback: Use existing baseline warm start logic
+            logger.info(
+                f"Warm-starting with {len(baseline_cluster_ids)} baseline clusters"
+            )
+
+            for k in baseline_cluster_ids:
+                y_vars[k].setInitialValue(1)
+                best_v = None
+                best_cost = float("inf")
+                for v in V_k[k]:
+                    if v != "NoVehicle" and c_vk.get((v, k), float("inf")) < best_cost:
+                        best_cost = c_vk[v, k]
+                        best_v = v
+                if best_v:
+                    x_vars[best_v, k].setInitialValue(1)
 
     return model, y_vars, x_vars, c_vk
 

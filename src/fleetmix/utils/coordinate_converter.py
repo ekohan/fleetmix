@@ -163,7 +163,7 @@ def validate_conversion(
 
     # Check a few random pairs of points
     import random
-    
+
     # Set seed for reproducibility
     random.seed(42)
 

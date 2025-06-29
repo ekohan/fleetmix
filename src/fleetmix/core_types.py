@@ -3,11 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
-from fleetmix.utils.project_root import get_project_root
 from fleetmix.utils.time_measurement import TimeMeasurement
 
 

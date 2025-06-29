@@ -305,9 +305,7 @@ class BHHEstimator:
         n_phys = len(customers)
 
         if n_phys <= 1:
-            return calculate_total_service_time_hours(
-                n_phys, context.service_time
-            ), []
+            return calculate_total_service_time_hours(n_phys, context.service_time), []
 
         # Service-time component uses *all* pseudo-customers
         service_time_total = calculate_total_service_time_hours(

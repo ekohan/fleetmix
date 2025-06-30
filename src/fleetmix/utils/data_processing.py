@@ -25,7 +25,7 @@ def get_demand_profiles_dir() -> Path:
     """Get the demand profiles directory path."""
     return data_dir() / "demand_profiles"
 
-
+# TODO add validations to log if e.g. diff clientIDs share same lat/lon
 def load_customer_demand(demand_file: str):
     """Load customer demand from CSV file.
 

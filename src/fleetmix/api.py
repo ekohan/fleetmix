@@ -244,6 +244,10 @@ def optimize(
         if allow_split_stops != params.allow_split_stops:
             params.allow_split_stops = allow_split_stops
 
+        # Update demand_file in params to reflect the actual file being used
+        if isinstance(demand, (str, Path)):
+            params.demand_file = str(demand)
+
         # Validate demand DataFrame has required columns
         required_columns = ["Customer_ID", "Latitude", "Longitude"]
         demand_columns = [f"{good}_Demand" for good in params.goods]

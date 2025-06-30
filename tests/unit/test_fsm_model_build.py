@@ -28,15 +28,31 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
 
 
 def test_create_model_basic(toy_fsm_model_build_data):
-    # Use shared toy data fixture for model build tests
-    clusters_df, configurations_df, params = toy_fsm_model_build_data
-    # Explicitly disable split-stops to ensure consistent constraint naming
-    params.allow_split_stops = False
+    """Test that _create_model creates appropriate variables and constraints."""
+    clusters_df, config_df, params = toy_fsm_model_build_data
+    
+    # Create a simple customers_df for the test
+    customers_df = pd.DataFrame({
+        "Customer_ID": [1, 2],
+        "Dry_Demand": [3, 2],
+        "Chilled_Demand": [0, 0],
+        "Frozen_Demand": [0, 0],
+        "Latitude": [0.0, 0.0],
+        "Longitude": [0.0, 0.0]
+    })
 
-    # Convert DataFrame to List[VehicleConfiguration]
-    configurations = dataframe_to_configurations(configurations_df)
+    # Convert config DataFrame to list of VehicleConfiguration objects
+    configurations = [
+        VehicleConfiguration(
+            config_id="v1", 
+            vehicle_type="A", 
+            capacity=10, 
+            fixed_cost=100,
+            compartments={"Dry": True, "Chilled": False, "Frozen": False}
+        )
+    ]
 
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
 
     # Model should be a pulp problem
     assert isinstance(model, pulp.LpProblem)

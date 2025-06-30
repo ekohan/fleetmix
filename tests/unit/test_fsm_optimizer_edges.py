@@ -30,12 +30,19 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
 
 
 def test_create_model_constraints(toy_fsm_edge_data):
+    """Test that model has correct constraint structure."""
     clusters_df, config_df, params = toy_fsm_edge_data
-    # Explicitly disable split-stops to ensure consistent constraint naming
-    params.allow_split_stops = False
-
+    
+    # Create a simple customers_df for the test
+    customers_df = pd.DataFrame({
+        "Customer_ID": ["C1", "C2"],
+        "Dry_Demand": [1, 1],
+        "Chilled_Demand": [0, 0],
+        "Frozen_Demand": [0, 0],
+    })
+    
     configurations = dataframe_to_configurations(config_df)
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
     # Each customer coverage constraint exists
     for cid in ["C1", "C2"]:
         cname = f"Customer_Coverage_{cid}"
@@ -45,33 +52,51 @@ def test_create_model_constraints(toy_fsm_edge_data):
 
 
 def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
+    """Test that light load penalty is applied correctly based on threshold."""
     clusters_df, config_df, params = toy_fsm_edge_data
-    # Explicitly disable split-stops to ensure consistent behavior
-    params.allow_split_stops = False
-
+    
+    # Create a simple customers_df for the test
+    customers_df = pd.DataFrame({
+        "Customer_ID": ["C1", "C2"],
+        "Dry_Demand": [1, 1],
+        "Chilled_Demand": [0, 0],
+        "Frozen_Demand": [0, 0],
+    })
+    
     configurations = dataframe_to_configurations(config_df)
-    # small cluster demand -> light-load penalty applies
+
+    # Test with light load penalty enabled
     params.light_load_penalty = 100
+    params.light_load_threshold = 0.5  # 50% threshold
+
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
     costs = []
     for thr in [0.0, 0.5, 0.9]:
         params.light_load_threshold = thr
-        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
         costs.append(c_vk[(1, 1)])
     # Objective cost non-decreasing as threshold increases
     assert costs[0] <= costs[1] <= costs[2]
 
 
 def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
+    """Test that NoVehicle is injected when cluster exceeds all vehicle capacities."""
     clusters_df, config_df, params = toy_fsm_edge_data
-    # Explicitly disable split-stops to ensure consistent behavior
-    params.allow_split_stops = False
-
+    
+    # Create a simple customers_df for the test
+    customers_df = pd.DataFrame({
+        "Customer_ID": ["C1", "C2"],
+        "Dry_Demand": [1, 1],
+        "Chilled_Demand": [0, 0],
+        "Frozen_Demand": [0, 0],
+    })
+    
     configurations = dataframe_to_configurations(config_df)
-    # Make demand exceed capacity
-    clusters_df.at[0, "Total_Demand"] = {"Dry": 100, "Chilled": 0, "Frozen": 0}
+    # Make cluster demand exceed vehicle capacity
+    clusters_df.at[0, "Total_Demand"] = {"Dry": 10, "Chilled": 0, "Frozen": 0}
     # Set caplog to capture DEBUG messages from the specific logger
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
     # 'NoVehicle' var should be present and y_1==0 forced
     assert any(v == "NoVehicle" for (v, k) in x_vars)
     # There should be an unserviceable-cluster constraint

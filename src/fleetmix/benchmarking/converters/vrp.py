@@ -13,6 +13,7 @@ from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 
 if TYPE_CHECKING:
     from fleetmix.pipeline.vrp_interface import VRPType
+# TODO fix nasty import.
 
 from fleetmix.config.parameters import Parameters
 

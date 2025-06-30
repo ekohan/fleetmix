@@ -12,6 +12,7 @@ from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import solve_fsm_problem
 from fleetmix.post_optimization import improve_solution
 from fleetmix.preprocess.demand import maybe_explode
+from fleetmix.utils.common import baseline_is_valid
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.save_results import save_optimization_results
@@ -35,7 +36,7 @@ def _two_phase_solve(
     baseline_params.allow_split_stops = False
 
     # For phase 1, use the original customers without explosion
-    baseline_customers_df = maybe_explode(customers_df, allow_split_stops=False)
+    baseline_customers_df = maybe_explode(customers_df, allow_split_stops=False, configurations=configs)
     baseline_customers = Customer.from_dataframe(baseline_customers_df)
 
     with time_recorder.measure("clustering_phase1"):
@@ -65,6 +66,9 @@ def _two_phase_solve(
         f"Phase 1 complete: {baseline_vehicles} vehicles, ${baseline_solution.total_cost:,.2f}"
     )
 
+    # Check if baseline solution can be used as warm start
+    baseline_valid = baseline_is_valid(baseline_solution)
+
     # Phase 2: Split-stop optimization with warm start
     logger.info("Phase 2: Solving split-stop problem with warm start")
 
@@ -73,7 +77,7 @@ def _two_phase_solve(
     phase2_params.allow_split_stops = True
 
     # For phase 2, use the exploded customers
-    phase2_customers_df = maybe_explode(customers_df, allow_split_stops=True)
+    phase2_customers_df = maybe_explode(customers_df, allow_split_stops=True, configurations=configs)
     phase2_customers = Customer.from_dataframe(phase2_customers_df)
 
     with time_recorder.measure("clustering_phase2"):
@@ -90,7 +94,7 @@ def _two_phase_solve(
                 parameters=phase2_params,
                 verbose=verbose,
                 time_recorder=time_recorder,
-                warm_start_solution=baseline_solution,
+                warm_start_solution=baseline_solution if baseline_valid else None,
             )
 
         # Apply post-optimization to phase 2 if enabled
@@ -105,16 +109,22 @@ def _two_phase_solve(
             f"Phase 2 complete: {phase2_vehicles} vehicles, ${phase2_solution.total_cost:,.2f}"
         )
 
-        # Choose better solution
-        if (
-            phase2_solution.total_cost < baseline_solution.total_cost
-            and phase2_vehicles <= baseline_vehicles
-        ):
-            logger.info("Using Phase 2 solution (better cost and no more vehicles)")
-            return phase2_solution
-        else:
-            logger.info("Using Phase 1 solution (Phase 2 not better)")
-            return baseline_solution
+        # Decide which solution to return
+        if len(phase2_solution.missing_customers) == 0 and phase2_vehicles > 0:
+            # Phase 2 feasible
+            if not baseline_valid:
+                logger.info("Baseline infeasible – using Phase 2 solution")
+                return phase2_solution
+
+            if (
+                phase2_solution.total_cost < baseline_solution.total_cost
+                and phase2_vehicles <= baseline_vehicles
+            ):
+                logger.info("Using Phase 2 solution (better cost and no more vehicles)")
+                return phase2_solution
+
+        logger.info("Using Phase 1 solution (Phase 2 not better or infeasible)")
+        return baseline_solution
 
     except (ValueError, RuntimeError) as e:
         logger.warning(f"Phase 2 optimization failed: {e}, using baseline solution")
@@ -268,7 +278,7 @@ def optimize(
         else:
             # Standard single-phase optimization
             # Apply split-stop preprocessing if needed
-            customers_df = maybe_explode(customers_df, params.allow_split_stops)
+            customers_df = maybe_explode(customers_df, params.allow_split_stops, configurations=configs)
             customers = Customer.from_dataframe(customers_df)
 
             # Step 4a: Generate clusters

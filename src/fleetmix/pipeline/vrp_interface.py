@@ -39,17 +39,18 @@ def run_optimization(
     time_recorder = TimeRecorder()
 
     with time_recorder.measure("global"):
+        # Generate vehicle configurations first (needed for smart explosion)
+        with time_recorder.measure("vehicle_configuration"):
+            configs = generate_vehicle_configurations(params.vehicles, params.goods)
+            
         # Apply split-stop preprocessing if enabled
         allow_split = params.allow_split_stops
-        customers_df = maybe_explode(customers_df, allow_split)
+        customers_df = maybe_explode(customers_df, allow_split, configurations=configs)
 
         # Convert customers DataFrame to list of Customer objects
         customers = Customer.from_dataframe(customers_df)
 
-        # Generate vehicle configurations and clusters
-        with time_recorder.measure("vehicle_configuration"):
-            configs = generate_vehicle_configurations(params.vehicles, params.goods)
-
+        # Generate clusters
         with time_recorder.measure("clustering"):
             clusters = generate_clusters_for_configurations(
                 customers=customers, configurations=configs, params=params

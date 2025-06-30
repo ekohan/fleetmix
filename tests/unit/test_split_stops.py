@@ -117,7 +117,7 @@ class TestMaybeExplode:
             ]
         )
 
-        result = maybe_explode(customers_df, allow_split_stops=False)
+        result = maybe_explode(customers_df, allow_split_stops=False, configurations=None)
 
         # Should return exact copy of original
         pd.testing.assert_frame_equal(result, customers_df)
@@ -145,7 +145,7 @@ class TestMaybeExplode:
             ]
         )
 
-        result = maybe_explode(customers_df, allow_split_stops=True)
+        result = maybe_explode(customers_df, allow_split_stops=True, configurations=None)
 
         # Should have more rows than original (C001 -> 3 pseudo, C002 -> 1 pseudo)
         assert len(result) == 4

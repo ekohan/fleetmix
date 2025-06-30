@@ -37,13 +37,14 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 3. [Architecture Overview](#architecture-overview)
 4. [Command‑Line Usage](#command-line-usage)
 5. [Python API](#python-api)
-6. [Composability & Extensibility](#composability--extensibility)
-7. [Benchmarking Suite](#benchmarking-suite)
-8. [Repository Layout](#repository-layout)
-9. [Paper ↔ Code Map](#paper-↔-code-map)
-10. [Contributing](#contributing)
-11. [Citation](#citation)
-12. [License](#license)
+6. [Configuration](#configuration)
+7. [Composability & Extensibility](#composability--extensibility)
+8. [Benchmarking Suite](#benchmarking-suite)
+9. [Repository Layout](#repository-layout)
+10. [Paper ↔ Code Map](#paper-↔-code-map)
+11. [Contributing](#contributing)
+12. [Citation](#citation)
+13. [License](#license)
 
 ---
 
@@ -89,16 +90,13 @@ fleetmix version
 ### Python API
 
 ```python
-import fleetmix
+import fleetmix as fm
 
-solution = fleetmix.optimize(
-    demand="customers.csv",
-    config="fleet_config.yaml"
-)
-
-print(f"Total cost: ${solution['total_cost']:,.2f}")
-print(f"Vehicles used: {len(solution['vehicles_used'])}")
+customers_df = ...  # build a DataFrame
+solution = fm.optimize(demand=customers_df, config="config.yaml")
 ```
+
+Retrieve metrics via `solution[...]` keys (see docstring for full schema).
 
 ### Web Interface
 
@@ -180,6 +178,59 @@ solution = fm.optimize(demand=customers_df, config="config.yaml")
 ```
 
 Retrieve metrics via `solution[...]` keys (see docstring for full schema).
+
+---
+
+## ⚙️ Configuration
+
+FleetMix uses YAML configuration files to define fleet composition, optimization parameters, and operational constraints.
+
+### Vehicle-Specific Goods Capability
+
+Vehicles can be configured to carry only specific subsets of goods, enabling realistic modeling of specialized fleets:
+
+```yaml
+vehicles:
+  # Dry goods only truck
+  DryTruck:
+    capacity: 2700
+    fixed_cost: 100
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 10
+    allowed_goods: ["Dry"]  # Can only carry dry goods
+  
+  # Refrigerated truck for cold chain
+  RefrigeratedTruck:
+    capacity: 3300
+    fixed_cost: 175
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 10
+    allowed_goods: ["Chilled", "Frozen"]  # No dry goods capability
+  
+  # Multi-temperature truck (no allowed_goods = can carry all goods)
+  MultiTempTruck:
+    capacity: 4500
+    fixed_cost: 225
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 10
+    # No allowed_goods specified - can carry all goods
+
+goods:
+  - Dry
+  - Chilled
+  - Frozen
+```
+
+**Key features:**
+- If `allowed_goods` is not specified, the vehicle can carry all goods (backward compatible)
+- If specified, must be a non-empty subset of the global `goods` list
+- Automatically generates only feasible compartment combinations
+- Optimization respects these constraints when assigning customers to vehicles
+
+See `src/fleetmix/config/example_allowed_goods_config.yaml` for a complete example.
 
 ---
 

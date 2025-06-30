@@ -148,6 +148,12 @@ def save_optimization_results(
             ("Truck Load % (Median)", f"{load_percentages.median():.1f}"),
             ("---Parameters---", ""),
             ("Demand File", parameters.demand_file),
+            (
+                "Config File",
+                parameters.config_file_path.name
+                if parameters.config_file_path
+                else "default",
+            ),
             ("Variable Cost per Hour", parameters.variable_cost_per_hour),
             ("Max Split Depth", parameters.clustering["max_depth"]),
             ("Clustering Method", parameters.clustering["method"]),

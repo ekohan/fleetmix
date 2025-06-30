@@ -193,6 +193,8 @@ def collect_parameters_from_ui() -> Parameters:
         "allow_split_stops": params.allow_split_stops,
     }
 
+    # TODO: allow_split_stops doesn't work in the gui.
+
     # Override with UI values stored in session state
     for key in st.session_state:
         if key.startswith("param_"):

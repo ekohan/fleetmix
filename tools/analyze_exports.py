@@ -274,7 +274,8 @@ def print_analysis(analysis: Dict):
     core_api = [
         export
         for export in analysis["top_level"]["explicit_exports"]
-        if export not in ["clustering", "config", "optimization", "post_optimization", "utils"]
+        if export
+        not in ["clustering", "config", "optimization", "post_optimization", "utils"]
     ]
 
     print("\nMINIMAL PUBLIC API SUGGESTION:")

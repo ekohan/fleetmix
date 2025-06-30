@@ -6,7 +6,7 @@ small, neighbouring clusters after the core FSM model has been solved.
 
 Rationale
 ~~~~~~~~~
-The MILP in ``fleetmix.optimization.solve_fsm_problem`` chooses from a *fixed* pool of clusters.  Once an
+The MILP in ``fleetmix.optimization.optimize_fleet`` chooses from a *fixed* pool of clusters.  Once an
 initial solution is available, additional cost savings can sometimes be obtained by *merging* two
 clusters and serving the combined demand with a larger vehicle—provided capacity and route‐time
 constraints remain feasible.
@@ -33,7 +33,7 @@ Route‐time calculations for the same customer sets are memoised in the module�
 Outcome
 -------
 Returns the *best* improved solution dictionary, identical in structure to the one produced by
-``fleetmix.optimization.solve_fsm_problem`` but with potentially lower total cost.
+``fleetmix.optimization.optimize_fleet`` but with potentially lower total cost.
 """
 
 from dataclasses import replace
@@ -52,7 +52,7 @@ from fleetmix.merging.core import (
     _create_config_lookup,
     generate_merge_phase_clusters,
 )
-from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.optimization.core import optimize_fleet
 from fleetmix.utils.cluster_conversion import (
     clusters_to_dataframe,
     dataframe_to_clusters,
@@ -78,7 +78,7 @@ def improve_solution(
 
     Args:
         initial_solution: Solution object returned by
-            :func:`fleetmix.optimization.solve_fsm_problem`.
+            :func:`fleetmix.optimization.optimize_fleet`.
         configurations: List of vehicle configurations, each containing
             capacity, fixed cost, and compartment information.
         customers: List of CustomerBase objects; required for route-time
@@ -157,7 +157,7 @@ def improve_solution(
         # due to tolerance.
         exact_solver = pick_solver(verbose=True, gap_rel=0.0)
 
-        trial_solution = solve_fsm_problem(
+        trial_solution = optimize_fleet(
             combined_clusters,
             configurations,
             customers,

@@ -35,9 +35,9 @@ Solver interface
 Typical usage
 -------------
 >>> from fleetmix.clustering import generate_clusters_for_configurations
->>> from fleetmix.optimization import solve_fsm_problem
+>>> from fleetmix.optimization import optimize_fleet
 >>> clusters = generate_clusters_for_configurations(customers, configs, params)
->>> solution = solve_fsm_problem(clusters, configs, customers, params)
+>>> solution = optimize_fleet(clusters, configs, customers, params)
 >>> print(solution.total_cost)
 """
 
@@ -89,7 +89,7 @@ def _configs_to_dataframe(configurations: list[VehicleConfiguration]) -> pd.Data
     return pd.DataFrame([config.to_dict() for config in configurations])
 
 
-def solve_fsm_problem(
+def optimize_fleet(
     clusters: list[Cluster],
     configurations: list[VehicleConfiguration],
     customers: list[CustomerBase],
@@ -128,7 +128,7 @@ def solve_fsm_problem(
             ``vehicles_used`` (dict), and solver metadata.
 
     Example:
-        >>> sol = solve_fsm_problem(clusters, configs, customers, params)
+        >>> sol = optimize_fleet(clusters, configs, customers, params)
         >>> sol.total_cost
         10543.75
 

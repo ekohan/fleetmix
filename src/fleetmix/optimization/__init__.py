@@ -10,7 +10,7 @@ from .core import (
     _extract_solution,
     _solve_internal,
     _validate_solution,
-    solve_fsm_problem,
+    optimize_fleet,
 )
 
 __all__ = [
@@ -20,5 +20,5 @@ __all__ = [
     "_extract_solution",
     "_solve_internal",
     "_validate_solution",
-    "solve_fsm_problem",
+    "optimize_fleet",
 ]

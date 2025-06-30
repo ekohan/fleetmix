@@ -8,7 +8,7 @@ from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 from fleetmix.clustering.generator import generate_clusters_for_configurations
-from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.optimization.core import optimize_fleet
 
 
 class TestAllowedGoodsIntegration:
@@ -149,7 +149,7 @@ post_optimization: false
         clusters = generate_clusters_for_configurations(test_customers, configs, params)
         
         # Run optimization
-        solution = solve_fsm_problem(clusters, configs, test_customers, params, verbose=False)
+        solution = optimize_fleet(clusters, configs, test_customers, params, verbose=False)
         
         # Verify solution
         assert solution.solver_status == "Optimal"
@@ -182,7 +182,7 @@ post_optimization: false
         
         # Generate clusters and solve
         clusters = generate_clusters_for_configurations(test_customers, configs, params)
-        solution = solve_fsm_problem(clusters, configs, test_customers, params, verbose=False)
+        solution = optimize_fleet(clusters, configs, test_customers, params, verbose=False)
         
         # Verify we get an optimal solution
         assert solution.solver_status == "Optimal"

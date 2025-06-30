@@ -14,7 +14,7 @@ from fleetmix.optimization.core import (
     _create_model,
     _extract_solution,
     _validate_solution,
-    solve_fsm_problem,
+    optimize_fleet,
 )
 
 
@@ -113,7 +113,7 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
     return configs
 
 
-def test_solve_fsm_problem_basic(
+def test_optimize_fleet_basic(
     simple_clusters_df, simple_configs_df, simple_customers_df, simple_params
 ):
     """Test basic FSM problem solving."""
@@ -124,7 +124,7 @@ def test_solve_fsm_problem_basic(
     clusters_list = Cluster.from_dataframe(simple_clusters_df)
     customers_list = Customer.from_dataframe(simple_customers_df)
 
-    result = solve_fsm_problem(
+    result = optimize_fleet(
         clusters=clusters_list,
         configurations=configurations,
         customers=customers_list,
@@ -144,7 +144,7 @@ def test_solve_fsm_problem_basic(
     assert result.total_vehicles > 0
 
 
-def test_solve_fsm_problem_with_post_optimization(
+def test_optimize_fleet_with_post_optimization(
     simple_clusters_df, simple_configs_df, simple_customers_df, params_with_post_opt
 ):
     """Test FSM problem solving with post-optimization enabled."""
@@ -156,7 +156,7 @@ def test_solve_fsm_problem_with_post_optimization(
     customers_list = Customer.from_dataframe(simple_customers_df)
 
     # First solve the core MILP
-    result = solve_fsm_problem(
+    result = optimize_fleet(
         clusters=clusters_list,
         configurations=configurations,
         customers=customers_list,
@@ -172,7 +172,7 @@ def test_solve_fsm_problem_with_post_optimization(
     # Validate result structure
     assert hasattr(result, "total_cost")
     assert hasattr(result, "selected_clusters")
-    # Note: post_optimization_runtime_sec is now set by improve_solution, not solve_fsm_problem
+    # Note: post_optimization_runtime_sec is now set by improve_solution, not optimize_fleet
 
 
 def test_create_model(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
@@ -314,7 +314,7 @@ def test_solve_with_infeasible_clusters():
     # - CBC reports "Infeasible" (raises ValueError)
     # - Gurobi reports "Not Solved" (raises RuntimeError)
     with pytest.raises((ValueError, RuntimeError), match=r"Optimization failed with status: (Infeasible|Not Solved)"):
-        solve_fsm_problem(
+        optimize_fleet(
             clusters=clusters_list,
             configurations=configurations,
             customers=customers_list,

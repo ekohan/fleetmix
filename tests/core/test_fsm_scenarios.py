@@ -5,7 +5,7 @@ import pytest
 
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import VehicleConfiguration
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.optimization import optimize_fleet
 
 # Define geographic coordinates for test customers
 CUSTOMER_COORDS = {
@@ -490,7 +490,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         clusters_list = Cluster.from_dataframe(clusters_df)
         customers_list = Customer.from_dataframe(customers_df)
 
-        result = solve_fsm_problem(
+        result = optimize_fleet(
             clusters_list, configurations, customers_list, params, verbose=False
         )
         # Compare expected

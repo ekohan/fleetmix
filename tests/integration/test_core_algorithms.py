@@ -14,7 +14,7 @@ import yaml
 
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
-from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.optimization.core import optimize_fleet
 from fleetmix.post_optimization.merge_phase import improve_solution
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 from fleetmix.utils.route_time import (
@@ -456,7 +456,7 @@ class TestCoreAlgorithms:
         )
 
         # Solve the FSM problem using the new API
-        solution = solve_fsm_problem(
+        solution = optimize_fleet(
             clusters=clusters,
             configurations=configs,
             customers=customers_list,
@@ -484,7 +484,7 @@ class TestCoreAlgorithms:
             customers=customers_list, configurations=configs, params=realistic_config
         )
 
-        solution = solve_fsm_problem(
+        solution = optimize_fleet(
             clusters=clusters,
             configurations=configs,
             customers=customers_list,

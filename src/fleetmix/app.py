@@ -382,7 +382,7 @@ def _run_single_instance(
         from fleetmix.utils.data_processing import load_customer_demand
 
         customers_df = load_customer_demand(str(csv_path))
-        
+
         # Update demand_file to reflect the actual file being used
         params.demand_file = str(csv_path)
 
@@ -592,7 +592,7 @@ def _run_all_case_instances(
             from fleetmix.utils.data_processing import load_customer_demand
 
             customers_df = load_customer_demand(str(csv_path))
-            
+
             # Update demand_file to reflect the actual file being used
             params.demand_file = str(csv_path)
 

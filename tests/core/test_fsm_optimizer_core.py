@@ -37,7 +37,7 @@ def test_create_model_counts_traditional_mode(toy_fsm_core_data):
 
     configurations = dataframe_to_configurations(config_df)
     model, y_vars, x_vars, c_vk = optimization._create_model(
-        clusters_df, configurations, params
+        clusters_df, configurations, customers_df, params
     )
     # Exactly one cluster variable and one assignment x-var
     assert len(y_vars) == 1, "Should create one y var"
@@ -66,10 +66,20 @@ def test_create_model_counts_split_stop_mode(toy_fsm_core_data):
     ]  # Two pseudo-customers for same physical customer
     clusters_df.at[0, "Total_Demand"] = {"Dry": 1, "Chilled": 1, "Frozen": 0}
     config_df.at[0, "Chilled"] = 1  # Enable chilled compartment
+    
+    # Update customers_df to include the pseudo-customers
+    customers_df = pd.DataFrame({
+        "Customer_ID": ["C1::dry", "C1::chilled"],
+        "Dry_Demand": [1, 0],
+        "Chilled_Demand": [0, 1],
+        "Frozen_Demand": [0, 0],
+        "Latitude": [0.0, 0.0],
+        "Longitude": [0.0, 0.0]
+    })
 
     configurations = dataframe_to_configurations(config_df)
     model, y_vars, x_vars, c_vk = optimization._create_model(
-        clusters_df, configurations, params
+        clusters_df, configurations, customers_df, params
     )
     # Exactly one cluster variable and one assignment x-var
     assert len(y_vars) == 1, "Should create one y var"
@@ -100,7 +110,7 @@ def test_create_model_counts(toy_fsm_core_data):
 
     configurations = dataframe_to_configurations(config_df)
     model, y_vars, x_vars, c_vk = optimization._create_model(
-        clusters_df, configurations, params
+        clusters_df, configurations, customers_df, params
     )
     # Exactly one cluster variable and one assignment x-var
     assert len(y_vars) == 1, "Should create one y var"
@@ -147,7 +157,7 @@ def test_capacity_violation_model_warning_traditional_mode(toy_fsm_core_data, ca
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
     # Create model
     model, y_vars, x_vars, c_vk = optimization._create_model(
-        clusters_df, configurations, params
+        clusters_df, configurations, customers_df, params
     )
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
     assert any(v == "NoVehicle" for v, k in x_vars.keys()), (
@@ -183,7 +193,7 @@ def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, cap
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
     # Create model
     model, y_vars, x_vars, c_vk = optimization._create_model(
-        clusters_df, configurations, params
+        clusters_df, configurations, customers_df, params
     )
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
     assert any(v == "NoVehicle" for v, k in x_vars.keys()), (
@@ -227,7 +237,7 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     caplog.set_level(logging.DEBUG, logger="fleetmix.optimization.core")
     # Create model
     model, y_vars, x_vars, c_vk = optimization._create_model(
-        clusters_df, configurations, params
+        clusters_df, configurations, customers_df, params
     )
     # Assert that 'NoVehicle' variable was injected for unserviceable cluster
     assert any(v == "NoVehicle" for v, k in x_vars.keys()), (

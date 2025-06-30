@@ -389,6 +389,97 @@ class TestCollectParametersFromUI(unittest.TestCase):
         # Ensure that the Parameters object is persisted back to session state
         self.assertIs(mock_state.parameters, new_params)
 
+    def test_collect_parameters_with_allowed_goods(self):
+        """Test that allowed goods are properly handled in parameter collection."""
+
+        mock_params = Parameters.from_yaml()
+
+        # Prepare vehicles with allowed goods
+        updated_vehicles = {
+            "RefrigeratedTruck": {
+                "capacity": 2000,
+                "fixed_cost": 200,
+                "avg_speed": 30,
+                "service_time": 25,
+                "max_route_time": 8,
+                "allowed_goods": ["Chilled", "Frozen"],  # Specialized truck
+                "compartments": {"Dry": False, "Chilled": True, "Frozen": True},
+            },
+            "DryVan": {
+                "capacity": 1500,
+                "fixed_cost": 100,
+                "avg_speed": 35,
+                "service_time": 20,
+                "max_route_time": 10,
+                "allowed_goods": ["Dry"],  # Dry goods only
+                "compartments": {"Dry": True, "Chilled": False, "Frozen": False},
+            }
+        }
+
+        # Create mock session state
+        mock_state = MagicMock()
+        mock_state.parameters = mock_params
+
+        session_items = {
+            "parameters": mock_params,
+            "param_vehicles": updated_vehicles,
+        }
+
+        mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
+        mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
+        
+        def setitem_side_effect(key, value):
+            session_items[key] = value
+            setattr(mock_state, key, value)
+
+        mock_state.__setitem__.side_effect = setitem_side_effect
+
+        with patch("streamlit.session_state", mock_state):
+            new_params = gui.collect_parameters_from_ui()
+
+        # Verify that allowed goods are properly set
+        self.assertIn("RefrigeratedTruck", new_params.vehicles)
+        self.assertIn("DryVan", new_params.vehicles)
+        
+        ref_truck = new_params.vehicles["RefrigeratedTruck"]
+        dry_van = new_params.vehicles["DryVan"]
+        
+        self.assertEqual(ref_truck.allowed_goods, ["Chilled", "Frozen"])
+        self.assertEqual(dry_van.allowed_goods, ["Dry"])
+        
+        # Verify other properties are preserved
+        self.assertEqual(ref_truck.capacity, 2000)
+        self.assertEqual(dry_van.capacity, 1500)
+
+    def test_collect_parameters_with_split_stops(self):
+        """Test that allow_split_stops parameter is properly handled."""
+
+        mock_params = Parameters.from_yaml()
+
+        # Create mock session state
+        mock_state = MagicMock()
+        mock_state.parameters = mock_params
+
+        session_items = {
+            "parameters": mock_params,
+            "param_allow_split_stops": True,  # Enable split stops
+        }
+
+        mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
+        mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
+        
+        def setitem_side_effect(key, value):
+            session_items[key] = value
+            setattr(mock_state, key, value)
+
+        mock_state.__setitem__.side_effect = setitem_side_effect
+
+        with patch("streamlit.session_state", mock_state):
+            new_params = gui.collect_parameters_from_ui()
+
+        # Verify that allow_split_stops is properly set
+        self.assertTrue(new_params.allow_split_stops)
+
 
 @pytest.mark.skipif(not STREAMLIT_AVAILABLE, reason="Streamlit not installed")
 class TestDisplayResults(unittest.TestCase):

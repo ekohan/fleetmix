@@ -35,10 +35,12 @@ def test_generate_vehicle_configurations_hypothesis(vehicle_types_raw, goods):
     assert isinstance(configs, list)
     assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
-    # Config_ID unique and sequential starting at 1
+    # Config_ID unique and sequential starting at "1"
     config_ids = [config.config_id for config in configs]
     assert len(config_ids) == len(set(config_ids))  # All unique
-    assert sorted(config_ids) == list(range(1, len(config_ids) + 1))
+    # Convert to int for sorting, then back to string for comparison
+    expected_ids = [str(i) for i in range(1, len(config_ids) + 1)]
+    assert sorted(config_ids, key=int) == expected_ids
 
     # Every configuration has at least one compartment enabled
     assert all(any(config.compartments.values()) for config in configs)

@@ -479,7 +479,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
 
     if exp["missing_customers"]:
         # Infeasible: model should inject NoVehicle and warn
-        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, params)
+        model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
         selected = _extract_solution(clusters_df, y_vars, x_vars)
         missing = _validate_solution(selected, customers_df, configurations, params)
         assert missing == exp["missing_customers"]

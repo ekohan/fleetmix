@@ -57,7 +57,7 @@ from fleetmix.core_types import (
     FleetmixSolution,
     VehicleConfiguration,
 )
-from fleetmix.preprocess.demand import get_origin_id, get_subset_from_id
+from fleetmix.preprocess.demand import get_origin_id
 from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
@@ -167,8 +167,33 @@ def _solve_internal(
     """Internal implementation that processes DataFrames."""
     # Create optimization model
     model, y_vars, x_vars, c_vk = _create_model(
-        clusters_df, configurations, parameters, verbose, warm_start_solution
+        clusters_df,
+        configurations,
+        customers_df,
+        parameters,
+        verbose,
+        warm_start_solution,
     )
+
+    # Handle empty model case (no clusters)
+    if not y_vars and not x_vars:
+        logger.warning("No feasible clusters - returning empty solution")
+        # Return empty solution
+        empty_solution = FleetmixSolution(
+            total_cost=0.0,
+            total_fixed_cost=0.0,
+            total_variable_cost=0.0,
+            total_penalties=0.0,
+            selected_clusters=[],
+            vehicles_used={},
+            total_vehicles=0,
+            missing_customers=set(customers_df["Customer_ID"]),
+            solver_name="None",
+            solver_status="No clusters to optimize",
+            solver_runtime_sec=0.0,
+            time_measurements=None,
+        )
+        return empty_solution
 
     # Select solver: use provided or pick based on FSM_SOLVER env
     solver = solver or pick_solver(verbose, gap_rel=0.0)
@@ -226,6 +251,7 @@ def _solve_internal(
 def _create_model(
     clusters_df: pd.DataFrame,
     configurations: list[VehicleConfiguration],
+    customers_df: pd.DataFrame,
     parameters: Parameters,
     verbose: bool = False,
     warm_start_solution: FleetmixSolution | None = None,
@@ -242,6 +268,12 @@ def _create_model(
 
     # Create the optimization model
     model = pulp.LpProblem("FSM-MCV_Model2", pulp.LpMinimize)
+
+    # Handle empty clusters case
+    if clusters_df.empty:
+        logger.warning("No clusters provided to optimization - creating empty model")
+        # Return empty model with no variables
+        return model, {}, {}, {}
 
     # Sets
     N = set(clusters_df["Customers"].explode().unique())  # Customers
@@ -334,8 +366,21 @@ def _create_model(
     # 1. Customer Allocation Constraint (Exact Assignment or Split-Stop Exclusivity)
     if parameters.allow_split_stops:
         # Build mapping tables for split-stop constraints
-        origin_id = {customer_id: get_origin_id(customer_id) for customer_id in N}
-        subset = {customer_id: get_subset_from_id(customer_id) for customer_id in N}
+        # First, convert customer IDs to Customer objects to use proper methods
+        customers = Customer.from_dataframe(customers_df)
+        customer_objects = {c.customer_id: c for c in customers}
+
+        origin_id = {}
+        subset = {}
+        for customer_id in N:
+            if customer_id in customer_objects:
+                customer_obj = customer_objects[customer_id]
+                origin_id[customer_id] = customer_obj.get_origin_id()
+                subset[customer_id] = customer_obj.get_goods_subset()
+            else:
+                # Fallback for any missing customers
+                origin_id[customer_id] = get_origin_id(customer_id)
+                subset[customer_id] = tuple()  # Empty for missing customers
 
         # Get all physical customers and their goods
         physical_customers = set(origin_id.values())

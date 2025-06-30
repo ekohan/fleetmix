@@ -28,6 +28,7 @@ from fleetmix.registry import (
     ROUTE_TIME_ESTIMATOR_REGISTRY,
     register_clusterer,
 )
+from fleetmix.utils.common import to_cfg_key
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.utils.route_time import make_rt_context
 
@@ -290,14 +291,15 @@ def get_cached_route_time(
 
 
 def get_feasible_customers_subset(
-    customers: list[CustomerBase], feasible_customers: dict, config_id: int
+    customers: list[CustomerBase], feasible_customers: dict, config_id: str | int
 ) -> list[CustomerBase]:
     """Extract feasible customers for a given configuration."""
+    config_key = to_cfg_key(config_id)
     return [
         customer
         for customer in customers
         if customer.customer_id in feasible_customers
-        and config_id in feasible_customers[customer.customer_id]
+        and config_key in feasible_customers[customer.customer_id]
     ]
 
 
@@ -370,7 +372,8 @@ def create_normal_dataset_clusters(
     return clusters
 
 
-def generate_cluster_id_base(config_id: int) -> int:
+def generate_cluster_id_base(config_id: str | int) -> int:
+    # TODO: fix this hack, set a type.
     """Generate a base cluster ID from the configuration ID."""
     return int(str(config_id) + "000")
 

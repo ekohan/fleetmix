@@ -23,6 +23,7 @@ from fleetmix.core_types import (
     VehicleConfiguration,
 )
 from fleetmix.merging.core import generate_merge_phase_clusters
+from fleetmix.utils.common import to_cfg_key
 from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.utils.route_time import estimate_route_time
 
@@ -304,7 +305,7 @@ def _generate_feasibility_mapping(
 
         for config in configurations:
             if _is_customer_feasible(customer, config, goods):
-                feasible_configs.append(config.config_id)
+                feasible_configs.append(to_cfg_key(config.config_id))
 
         if feasible_configs:
             feasible_customers[customer_id] = feasible_configs

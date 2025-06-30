@@ -175,12 +175,13 @@ def test_solve_fsm_problem_with_post_optimization(
     # Note: post_optimization_runtime_sec is now set by improve_solution, not solve_fsm_problem
 
 
-def test_create_model(simple_clusters_df, simple_configs_df, simple_params):
+def test_create_model(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):
     """Test model creation."""
     configurations = dataframe_to_configurations(simple_configs_df)
     model, y_vars, x_vars, c_vk = _create_model(
         clusters_df=simple_clusters_df,
         configurations=configurations,
+        customers_df=simple_customers_df,
         parameters=simple_params,
     )
 

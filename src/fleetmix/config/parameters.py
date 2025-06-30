@@ -94,6 +94,10 @@ class Parameters:
                 "max_route_time": v_details.pop("max_route_time"),
             }
 
+            # Parse allowed_goods if present
+            if "allowed_goods" in v_details:
+                spec_kwargs["allowed_goods"] = v_details.pop("allowed_goods")
+
             # Remaining items go into extra
             spec_kwargs["extra"] = v_details
             parsed_vehicles[v_name] = VehicleSpec(**spec_kwargs)
@@ -165,6 +169,37 @@ class Parameters:
                 f"max_improvement_iterations must be a non-negative integer. Got: {self.max_improvement_iterations}"
             )
 
+        # Validate allowed_goods for each vehicle
+        for vehicle_name, vehicle_spec in self.vehicles.items():
+            if vehicle_spec.allowed_goods is not None:
+                # Ensure it's a list
+                if not isinstance(vehicle_spec.allowed_goods, list):
+                    raise ValueError(
+                        f"Vehicle '{vehicle_name}': allowed_goods must be a list. Got: {type(vehicle_spec.allowed_goods).__name__}"
+                    )
+
+                # Ensure it's not empty
+                if len(vehicle_spec.allowed_goods) == 0:
+                    raise ValueError(
+                        f"Vehicle '{vehicle_name}': allowed_goods cannot be empty. Either specify goods or omit the field."
+                    )
+
+                # Ensure all allowed goods exist in global goods list
+                invalid_goods = set(vehicle_spec.allowed_goods) - set(self.goods)
+                if invalid_goods:
+                    raise ValueError(
+                        f"Vehicle '{vehicle_name}': allowed_goods contains goods not in global list: {sorted(invalid_goods)}. "
+                        f"Valid goods are: {sorted(self.goods)}"
+                    )
+
+                # Check for duplicates
+                if len(vehicle_spec.allowed_goods) != len(
+                    set(vehicle_spec.allowed_goods)
+                ):
+                    raise ValueError(
+                        f"Vehicle '{vehicle_name}': allowed_goods contains duplicates."
+                    )
+
         if not self.results_dir.is_absolute():
             self.results_dir = (PROJECT_ROOT / self.results_dir).resolve()
 
@@ -193,6 +228,16 @@ class Parameters:
         data_to_save = asdict(self)
         del data_to_save["config_file_path"]
 
+        # Clean up the data before saving
+        def clean_dict(d):
+            """Recursively remove None values from dictionaries."""
+            if isinstance(d, dict):
+                return {k: clean_dict(v) for k, v in d.items() if v is not None}
+            elif isinstance(d, list):
+                return [clean_dict(item) for item in d]
+            else:
+                return d
+
         for key, value in data_to_save.items():
             if isinstance(value, Path):
                 data_to_save[key] = str(value)
@@ -201,7 +246,12 @@ class Parameters:
             elif isinstance(value, dict) and all(
                 isinstance(v, VehicleSpec) for v in value.values()
             ):
-                data_to_save[key] = {k: v.to_dict() for k, v in value.items()}
+                data_to_save[key] = {
+                    k: clean_dict(v.to_dict()) for k, v in value.items()
+                }
+
+        # Clean the entire data structure to remove None values
+        data_to_save = clean_dict(data_to_save)
 
         with open(output_path, "w") as f:
             yaml.dump(data_to_save, f, sort_keys=False)

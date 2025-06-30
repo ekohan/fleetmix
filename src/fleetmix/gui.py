@@ -190,6 +190,7 @@ def collect_parameters_from_ui() -> Parameters:
         "nearest_merge_candidates": params.nearest_merge_candidates,
         "max_improvement_iterations": params.max_improvement_iterations,
         "prune_tsp": params.prune_tsp,
+        "allow_split_stops": params.allow_split_stops,
     }
 
     # Override with UI values stored in session state
@@ -224,6 +225,7 @@ def collect_parameters_from_ui() -> Parameters:
                     avg_speed=vdata.get("avg_speed", 30.0),
                     service_time=vdata.get("service_time", 25.0),
                     max_route_time=vdata.get("max_route_time", 10.0),
+                    allowed_goods=vdata.get("allowed_goods"),
                     extra={
                         k: v
                         for k, v in vdata.items()
@@ -235,6 +237,7 @@ def collect_parameters_from_ui() -> Parameters:
                             "avg_speed",
                             "service_time",
                             "max_route_time",
+                            "allowed_goods",
                         ]
                     },
                 )
@@ -405,7 +408,14 @@ def main():
         # Vehicle configuration
         with st.expander("🚚 Vehicles", expanded=False):
             st.markdown("Configure vehicle types and costs")
+            st.info(
+                "💡 **Tip**: Use 'Allowed Goods' to create specialized vehicles (e.g., refrigerated trucks for chilled/frozen goods only)"
+            )
             vehicles = st.session_state.parameters.vehicles.copy()  # Work with a copy
+
+            # Get available goods from parameters
+            available_goods = st.session_state.parameters.goods
+
             for vehicle_type, vehicle_data in vehicles.items():
                 st.markdown(f"**Vehicle Type {vehicle_type}**")
                 col1_v, col2_v = st.columns(2)  # Unique var names for columns
@@ -478,12 +488,42 @@ def main():
                         key=f"vehicle_{vehicle_type}_max_route_time",
                     )
 
+                # Add allowed goods selection
+                st.markdown("**Allowed Goods**")
+
+                # Get current allowed goods for this vehicle
+                current_allowed_goods = None
+                if hasattr(vehicle_data, "allowed_goods"):
+                    current_allowed_goods = vehicle_data.allowed_goods
+                elif isinstance(vehicle_data, dict) and "allowed_goods" in vehicle_data:
+                    current_allowed_goods = vehicle_data["allowed_goods"]
+
+                # If no allowed goods specified, default to all goods
+                if current_allowed_goods is None:
+                    current_allowed_goods = available_goods
+
+                allowed_goods: list[str] = st.multiselect(
+                    f"Select goods that {vehicle_type} can carry",
+                    options=available_goods,
+                    default=current_allowed_goods,
+                    key=f"vehicle_{vehicle_type}_allowed_goods",
+                    help="Leave empty to allow all goods. Select specific goods to restrict this vehicle type.",
+                )
+
+                # If no goods selected, default to all goods
+                if not allowed_goods:
+                    allowed_goods = available_goods
+                    st.info(
+                        f"No goods selected - {vehicle_type} will be able to carry all goods"
+                    )
+
                 vehicles[vehicle_type] = {
                     "capacity": capacity,
                     "fixed_cost": fixed_cost,
                     "avg_speed": float(avg_speed),
                     "service_time": float(service_time),
                     "max_route_time": float(max_route_time),
+                    "allowed_goods": allowed_goods,
                     # Preserve any existing compartment layout so downstream logic is unaffected
                     "compartments": (
                         vehicle_data.compartments
@@ -505,6 +545,15 @@ def main():
                 value=float(st.session_state.parameters.variable_cost_per_hour),
                 step=1.0,
                 key="param_variable_cost_per_hour",
+            )
+
+            # Split-stop capability
+            st.markdown("**Split-Stop Configuration**")
+            st.checkbox(
+                "Allow Split Stops",
+                value=getattr(st.session_state.parameters, "allow_split_stops", False),
+                key="param_allow_split_stops",
+                help="Allow customers to be served by multiple vehicles. Useful for large customers with diverse goods requirements.",
             )
 
         # Clustering parameters

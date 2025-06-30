@@ -70,7 +70,7 @@ def stub_clustering(monkeypatch):
     """Stub clustering to return one trivial cluster."""
     monkeypatch.setattr(
         clustering_module,
-        "generate_clusters_for_configurations",
+        "generate_feasible_clusters",
         lambda *args, **kwargs: pd.DataFrame(
             [
                 {

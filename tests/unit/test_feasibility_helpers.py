@@ -1,7 +1,9 @@
+import pytest
 import pandas as pd
 
-from fleetmix.clustering import _is_customer_feasible, get_cached_demand
-from fleetmix.core_types import Customer, VehicleConfiguration
+from fleetmix.clustering.generator import _is_customer_feasible
+from fleetmix.clustering.heuristics import get_cached_demand
+from fleetmix.core_types import ClusteringContext, Customer, VehicleConfiguration
 
 
 def test_is_customer_feasible_all_goods_fit():

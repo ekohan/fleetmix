@@ -14,6 +14,16 @@ CLUSTERER_REGISTRY: dict[str, type[Clusterer]] = {}
 ROUTE_TIME_ESTIMATOR_REGISTRY: dict[str, type[RouteTimeEstimator]] = {}
 SOLVER_ADAPTER_REGISTRY: dict[str, type[SolverAdapter]] = {}
 
+__all__ = [
+    "register_clusterer",
+    "register_route_time_estimator",
+    "register_solver_adapter",
+    # Expose registries for advanced users who need direct access
+    "CLUSTERER_REGISTRY",
+    "ROUTE_TIME_ESTIMATOR_REGISTRY",
+    "SOLVER_ADAPTER_REGISTRY",
+]
+
 
 def register_clusterer(name: str):
     """Decorator to register a clusterer implementation."""

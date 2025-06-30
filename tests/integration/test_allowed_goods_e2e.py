@@ -3,12 +3,15 @@
 import pytest
 import pandas as pd
 from pathlib import Path
+import tempfile
+import yaml
 
+from fleetmix import generate_feasible_clusters
+from fleetmix.api import optimize
 from fleetmix.config.parameters import Parameters
-from fleetmix.core_types import Customer
-from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-from fleetmix.clustering.generator import generate_clusters_for_configurations
+from fleetmix.core_types import Customer, VehicleSpec
 from fleetmix.optimization.core import optimize_fleet
+from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
 
 class TestAllowedGoodsIntegration:
@@ -125,7 +128,7 @@ post_optimization: false
         configs = generate_vehicle_configurations(params.vehicles, params.goods)
         
         # Generate clusters
-        clusters = generate_clusters_for_configurations(test_customers, configs, params)
+        clusters = generate_feasible_clusters(test_customers, configs, params)
         
         # Verify that clusters are only created for compatible vehicle configurations
         for cluster in clusters:
@@ -146,7 +149,7 @@ post_optimization: false
         configs = generate_vehicle_configurations(params.vehicles, params.goods)
         
         # Generate clusters
-        clusters = generate_clusters_for_configurations(test_customers, configs, params)
+        clusters = generate_feasible_clusters(test_customers, configs, params)
         
         # Run optimization
         solution = optimize_fleet(clusters, configs, test_customers, params, verbose=False)
@@ -181,7 +184,7 @@ post_optimization: false
         configs = generate_vehicle_configurations(params.vehicles, params.goods)
         
         # Generate clusters and solve
-        clusters = generate_clusters_for_configurations(test_customers, configs, params)
+        clusters = generate_feasible_clusters(test_customers, configs, params)
         solution = optimize_fleet(clusters, configs, test_customers, params, verbose=False)
         
         # Verify we get an optimal solution

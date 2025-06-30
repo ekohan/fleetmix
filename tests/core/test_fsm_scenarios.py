@@ -471,7 +471,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
     for k, v in upd.items():
         setattr(params, k, v)
     # Solve or validate infeasible
-    from fleetmix.optimization import (
+    from fleetmix.optimization.core import (
         _create_model,
         _extract_solution,
         _validate_solution,

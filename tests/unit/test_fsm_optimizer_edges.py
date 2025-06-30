@@ -4,7 +4,7 @@ import pandas as pd
 import pulp
 
 from fleetmix.core_types import VehicleConfiguration
-from fleetmix.optimization import _create_model, _extract_solution, _validate_solution
+from fleetmix.optimization.core import _create_model, _extract_solution, _validate_solution
 
 
 def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:

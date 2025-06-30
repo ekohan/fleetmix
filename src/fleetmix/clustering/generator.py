@@ -43,7 +43,7 @@ class Symbols:
     CROSS = "✗"
 
 
-def generate_clusters_for_configurations(
+def generate_feasible_clusters(
     customers: list[CustomerBase],
     configurations: list[VehicleConfiguration],
     params: Parameters,

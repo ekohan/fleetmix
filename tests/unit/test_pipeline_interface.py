@@ -31,7 +31,7 @@ def stub_everything(monkeypatch):
         lambda *args, **kw: pd.DataFrame(),
     )
     monkeypatch.setattr(
-        "fleetmix.pipeline.vrp_interface.generate_clusters_for_configurations",
+        "fleetmix.pipeline.vrp_interface.generate_feasible_clusters",
         lambda *args, **kw: pd.DataFrame(),
     )
     # Stub solver in pipeline
@@ -115,3 +115,6 @@ def test_run_optimization_with_post_optimization(caplog, monkeypatch):
     assert post_opt_called, "Post-optimization should have been called when enabled"
     assert sol.total_cost == 0
     assert isinstance(cfg, pd.DataFrame)
+
+
+

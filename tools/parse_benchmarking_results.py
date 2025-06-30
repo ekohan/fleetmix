@@ -37,7 +37,9 @@ def parse_vrp_results(vrp_type: str):
         config_files = [
             f
             for f in results_dir.glob(config_pattern)
-            if vrp_type in f.name or (vrp_type == "cvrp" and "X-n" in f.name)
+            if (vrp_type == "mcvrp" and "mcvrp" in f.name)
+            or (vrp_type == "cvrp" and "cvrp" in f.name and "mcvrp" not in f.name)
+            or (vrp_type == "cvrp" and "X-n" in f.name and "mcvrp" not in f.name)
         ]
         json_files.extend(config_files)
         json_files = list(set(json_files))  # Remove duplicates

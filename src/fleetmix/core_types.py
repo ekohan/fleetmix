@@ -9,6 +9,24 @@ import pandas as pd
 
 from fleetmix.utils.time_measurement import TimeMeasurement
 
+__all__ = [
+    # Core domain types
+    "Customer",
+    "CustomerBase",
+    "PseudoCustomer",
+    "Cluster",
+    "DepotLocation",
+    "VehicleSpec",
+    "VehicleConfiguration",
+    "FleetmixSolution",
+    # Context types
+    "ClusteringContext",
+    "RouteTimeContext",
+    # Other types used in public APIs
+    "VRPSolution",
+    "BenchmarkType",
+]
+
 
 @dataclass
 class VRPSolution:

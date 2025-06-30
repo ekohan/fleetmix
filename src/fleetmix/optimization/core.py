@@ -5,7 +5,7 @@ Solves the **Fleet Size-and-Mix with Heterogeneous Multi-Compartment Vehicles** 
 problem, corresponding to Model (2) in Section 4.3 of the research paper.
 
 Given a pool of candidate clusters K (created in ``fleetmix.clustering`` via
-:func:`generate_clusters_for_configurations`) and a catalogue of
+:func:`generate_feasible_clusters`) and a catalogue of
 vehicle configurations V, this module builds and solves an integer linear programme that
 selects a subset of clusters and assigns exactly one vehicle configuration to each selected
 cluster.
@@ -34,9 +34,9 @@ Solver interface
 
 Typical usage
 -------------
->>> from fleetmix.clustering import generate_clusters_for_configurations
+>>> from fleetmix.clustering import generate_feasible_clusters
 >>> from fleetmix.optimization import optimize_fleet
->>> clusters = generate_clusters_for_configurations(customers, configs, params)
+>>> clusters = generate_feasible_clusters(customers, configs, params)
 >>> solution = optimize_fleet(clusters, configs, customers, params)
 >>> print(solution.total_cost)
 """

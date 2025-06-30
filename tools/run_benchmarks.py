@@ -41,11 +41,13 @@ def main():
     print("Step 1: Running CVRP and MCVRP benchmarks")
     print("-" * 40)
 
+    # with default config
+    # TODO: if change, make sure to check vehicles have infinite route time
     cvrp_cmd = (
-        "fleetmix benchmark cvrp --config src/fleetmix/config/default_config.yaml"
+        "fleetmix benchmark cvrp"
     )
     mcvrp_cmd = (
-        "fleetmix benchmark mcvrp --config src/fleetmix/config/default_config.yaml"
+        "fleetmix benchmark mcvrp"
     )
 
     print("CVRP Benchmark:")

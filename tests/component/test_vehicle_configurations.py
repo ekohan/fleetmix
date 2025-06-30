@@ -21,10 +21,10 @@ def test_generate_vehicle_configurations_basic():
     assert all(config.capacity == 10 for config in configs)
     assert all(config.fixed_cost == 5 for config in configs)
 
-    # Config_IDs should be unique and start at 1
+    # Config_IDs should be unique and start at "1"
     config_ids = [config.config_id for config in configs]
     assert len(set(config_ids)) == len(config_ids)  # All unique
-    assert min(config_ids) == 1
+    assert min(config_ids) == "1"
 
     # Should have expected compartment combinations (excluding all-zeros)
     # With 2 goods, we have 2^2 - 1 = 3 valid combinations: (1,0), (0,1), (1,1)

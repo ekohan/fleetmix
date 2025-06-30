@@ -66,13 +66,21 @@ class CustomerBase(ABC):
         """Return total demand across all goods."""
         return sum(self.demands.values())
 
+    def has_positive_demand(self, good: str) -> bool:
+        """Return True if demand for `good` is strictly positive (treat NaN/None/0 as no demand)."""
+        val = self.demands.get(good, 0.0)
+        try:
+            return float(val or 0.0) > 0.0
+        except (TypeError, ValueError):
+            return False
+
     def has_demand_for(self, good: str) -> bool:
-        """Check if customer has positive demand for a specific good."""
-        return self.demands.get(good, 0.0) > 0
+        """Backward compatibility alias for has_positive_demand."""
+        return self.has_positive_demand(good)
 
     def get_required_goods(self) -> set[str]:
         """Return set of goods with positive demand."""
-        return {good for good, demand in self.demands.items() if demand > 0}
+        return {good for good in self.demands if self.has_positive_demand(good)}
 
 
 @dataclass
@@ -262,7 +270,7 @@ class Cluster:
     """Represents a cluster of customers that can be served by a vehicle configuration."""
 
     cluster_id: int
-    config_id: int
+    config_id: str | int  # Accept both string and int for compatibility
     customers: list[str]
     total_demand: dict[str, float]
     centroid_latitude: float
@@ -404,6 +412,9 @@ class VehicleSpec:
     avg_speed: float = 30.0  # km/h
     service_time: float = 25.0  # minutes per customer
     max_route_time: float = 10.0  # hours
+    allowed_goods: list[str] | None = (
+        None  # Optional list of goods this vehicle can carry
+    )
     extra: dict[str, Any] = field(default_factory=dict)
 
     def __getitem__(self, item: str) -> Any:
@@ -424,6 +435,8 @@ class VehicleSpec:
             "service_time": self.service_time,
             "max_route_time": self.max_route_time,
         }
+        if self.allowed_goods is not None and len(self.allowed_goods) > 0:
+            data["allowed_goods"] = self.allowed_goods
         data.update(self.extra)
         return data
 
@@ -432,7 +445,7 @@ class VehicleSpec:
 class VehicleConfiguration:
     """Represents a specific vehicle configuration with compartment assignments."""
 
-    config_id: int
+    config_id: str  # Always stored as string for consistent key comparisons
     vehicle_type: str
     capacity: int
     fixed_cost: float

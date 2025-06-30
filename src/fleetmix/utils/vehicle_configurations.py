@@ -9,7 +9,7 @@ def generate_vehicle_configurations(
 ) -> list[VehicleConfiguration]:
     """
     Enumerate every feasible vehicle–compartment combination (paper §4.4).
-    
+
     If a vehicle has allowed_goods specified, only generate configurations
     for those goods. Otherwise, generate configurations for all global goods.
     """
@@ -18,11 +18,13 @@ def generate_vehicle_configurations(
 
     for vt_name, vt_info in vehicle_types.items():
         # Determine which goods this vehicle can carry
-        vehicle_goods = vt_info.allowed_goods if vt_info.allowed_goods is not None else goods
-        
+        vehicle_goods = (
+            vt_info.allowed_goods if vt_info.allowed_goods is not None else goods
+        )
+
         # Generate compartment options only for the vehicle's allowed goods
         compartment_options = list(itertools.product([0, 1], repeat=len(vehicle_goods)))
-        
+
         for option in compartment_options:
             # Skip configuration if no compartments are selected
             if sum(option) == 0:
@@ -30,7 +32,7 @@ def generate_vehicle_configurations(
 
             # Create compartments dictionary - initialize all goods to False
             compartments = {good: False for good in goods}
-            
+
             # Then set the vehicle's allowed goods based on the option
             for i, good in enumerate(vehicle_goods):
                 compartments[good] = bool(option[i])

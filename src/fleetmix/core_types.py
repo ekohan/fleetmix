@@ -412,7 +412,9 @@ class VehicleSpec:
     avg_speed: float = 30.0  # km/h
     service_time: float = 25.0  # minutes per customer
     max_route_time: float = 10.0  # hours
-    allowed_goods: list[str] | None = None  # Optional list of goods this vehicle can carry
+    allowed_goods: list[str] | None = (
+        None  # Optional list of goods this vehicle can carry
+    )
     extra: dict[str, Any] = field(default_factory=dict)
 
     def __getitem__(self, item: str) -> Any:

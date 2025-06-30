@@ -1,4 +1,5 @@
 """Common one-liner helpers shared across FleetMix modules."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -24,4 +25,4 @@ def build_zero_filled_demands(all_goods: list[str]) -> dict[str, float]:
 
 def baseline_is_valid(sol: FleetmixSolution) -> bool:
     """A baseline solution is usable when it serves every customer with at least one vehicle."""
-    return sol.total_vehicles > 0 and not sol.missing_customers 
+    return sol.total_vehicles > 0 and not sol.missing_customers

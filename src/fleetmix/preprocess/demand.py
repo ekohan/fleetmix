@@ -24,33 +24,31 @@ logger = FleetmixLogger.get_logger(__name__)
 
 
 def get_feasible_goods_combinations(
-    goods_with_demand: list[str], 
-    configurations: list["VehicleConfiguration"]
+    goods_with_demand: list[str], configurations: list["VehicleConfiguration"]
 ) -> list[tuple[str, ...]]:
     """
     Get all feasible combinations of goods that can be served by at least one vehicle.
-    
+
     Args:
         goods_with_demand: List of goods that have positive demand
         configurations: List of vehicle configurations
-        
+
     Returns:
         List of tuples, each representing a feasible combination of goods
     """
     feasible_combinations = set()
-    
+
     # For each configuration, add all possible subsets of its compartments
     # that overlap with the goods_with_demand
     for config in configurations:
         # Get goods this vehicle can carry that are also demanded
         vehicle_goods = [
-            good for good in goods_with_demand 
-            if config.compartments.get(good, False)
+            good for good in goods_with_demand if config.compartments.get(good, False)
         ]
-        
+
         if not vehicle_goods:
             continue
-            
+
         # Generate all non-empty subsets of vehicle_goods
         num_goods = len(vehicle_goods)
         for mask in range(1, (1 << num_goods)):
@@ -58,7 +56,7 @@ def get_feasible_goods_combinations(
                 vehicle_goods[i] for i in range(num_goods) if mask & (1 << i)
             )
             feasible_combinations.add(subset)
-    
+
     return sorted(list(feasible_combinations))
 
 
@@ -72,14 +70,14 @@ def explode_customer_smart(
     """
     Explode a customer into pseudo-customers, but only create feasible combinations
     based on vehicle configurations.
-    
+
     Args:
         customer_id: Original customer ID
         demands: Dict mapping good names to demand quantities
         location: (latitude, longitude) tuple
         configurations: List of vehicle configurations to check feasibility
         service_time: Service time in minutes per stop
-        
+
     Returns:
         List of PseudoCustomer objects representing feasible subsets of goods
     """
@@ -88,12 +86,12 @@ def explode_customer_smart(
     assert goods_with_demand, (
         f"Customer {customer_id} has no positive demands - this should not happen"
     )
-    
+
     # Get feasible combinations based on vehicle configurations
     feasible_combinations = get_feasible_goods_combinations(
         goods_with_demand, configurations
     )
-    
+
     if not feasible_combinations:
         logger.warning(
             f"Customer {customer_id} cannot be served by any vehicle configuration! "
@@ -101,17 +99,17 @@ def explode_customer_smart(
         )
         # Fall back to creating individual pseudo-customers for each good
         feasible_combinations = [(good,) for good in goods_with_demand]
-    
+
     pseudo_customers = []
     for subset_goods in feasible_combinations:
         # Create pseudo-customer ID
         pseudo_id = f"{customer_id}::{'-'.join(subset_goods)}"
-        
+
         # Build zero-filled demand vector, then populate subset goods
         demand_vector = build_zero_filled_demands(list(demands.keys()))
         for good in subset_goods:
             demand_vector[good] = float(demands[good])
-        
+
         pseudo_customer = PseudoCustomer(
             customer_id=pseudo_id,
             origin_id=customer_id,
@@ -121,7 +119,7 @@ def explode_customer_smart(
             service_time=service_time,
         )
         pseudo_customers.append(pseudo_customer)
-    
+
     logger.debug(
         f"Exploded customer {customer_id} into {len(pseudo_customers)} feasible pseudo-customers"
     )
@@ -200,8 +198,8 @@ def explode_customer(
 
 
 def explode_customers(
-    customers: list[CustomerBase], 
-    configurations: list["VehicleConfiguration"] | None = None
+    customers: list[CustomerBase],
+    configurations: list["VehicleConfiguration"] | None = None,
 ) -> list[CustomerBase]:
     """
     Explode regular customers into pseudo-customers while preserving existing pseudo-customers.
@@ -247,9 +245,9 @@ def explode_customers(
 
 
 def maybe_explode(
-    customers_df: pd.DataFrame, 
+    customers_df: pd.DataFrame,
     allow_split_stops: bool,
-    configurations: list["VehicleConfiguration"] | None = None
+    configurations: list["VehicleConfiguration"] | None = None,
 ) -> pd.DataFrame:
     """
     Conditionally explode customers into pseudo-customers based on split-stop setting.
@@ -269,9 +267,11 @@ def maybe_explode(
     logger.info(
         f"Split-stops enabled, exploding {len(customers_df)} customers into pseudo-customers"
     )
-    
+
     if configurations:
-        logger.info(f"Using smart explosion with {len(configurations)} vehicle configurations")
+        logger.info(
+            f"Using smart explosion with {len(configurations)} vehicle configurations"
+        )
 
     # Convert DataFrame to CustomerBase objects
     customers = Customer.from_dataframe(customers_df)
@@ -285,17 +285,23 @@ def maybe_explode(
     logger.info(
         f"Created {len(result_df)} pseudo-customers from {len(customers_df)} original customers"
     )
-    
+
     # Debug: Show which customers needed multiple vehicles
     if configurations:
         multi_vehicle_customers = {}
         for customer in customers:
-            pseudo_count = sum(1 for pc in exploded_customers if pc.get_origin_id() == customer.customer_id)
+            pseudo_count = sum(
+                1
+                for pc in exploded_customers
+                if pc.get_origin_id() == customer.customer_id
+            )
             if pseudo_count > 1:
                 multi_vehicle_customers[customer.customer_id] = pseudo_count
-        
+
         if multi_vehicle_customers:
-            logger.info(f"Customers requiring multiple vehicles: {len(multi_vehicle_customers)}")
+            logger.info(
+                f"Customers requiring multiple vehicles: {len(multi_vehicle_customers)}"
+            )
             for cid, count in list(multi_vehicle_customers.items())[:5]:
                 logger.debug(f"  {cid}: {count} pseudo-customers")
 
@@ -303,6 +309,7 @@ def maybe_explode(
 
 
 # Legacy utility functions - DEPRECATED - Use CustomerBase methods instead
+# TODO: remove these.
 def is_pseudo_customer(customer_id: str) -> bool:
     """Check if a customer ID represents a pseudo-customer (contains '::').
 

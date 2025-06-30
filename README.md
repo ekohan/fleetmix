@@ -111,7 +111,7 @@ fleetmix gui --port 8080
 The GUI provides:
 
 * 📥 Drag‑and‑drop CSV upload
-* 🎛️ Interactive parameter tweaking
+* 🎛️ Interactive parameter tweaking (including allowed goods per vehicle and split-stop configuration)
 * 🔎 Real‑time optimization progress
 * 🗺️ Map‑based visual results
 * 📊 Excel/JSON export

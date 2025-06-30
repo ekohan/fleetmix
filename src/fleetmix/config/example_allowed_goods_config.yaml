@@ -1,79 +1,75 @@
-# Example configuration demonstrating vehicle-specific goods capability
-# This shows how to configure a mixed fleet with specialized vehicles
+# Example FleetMix Configuration with Allowed Goods Feature
+# This demonstrates how to configure specialized vehicles for different goods types
 
+# Vehicle specifications with allowed goods restrictions
 vehicles:
-  # Standard dry goods truck - can only carry dry products
-  DryTruck:
-    capacity: 2700
+  # Standard dry van - can only carry dry goods
+  DryVan:
+    capacity: 1500
     fixed_cost: 100
-    avg_speed: 30
-    service_time: 25
+    avg_speed: 35
+    service_time: 20
     max_route_time: 10
-    allowed_goods: ["Dry"]
+    allowed_goods: ["Dry"]  # Restricted to dry goods only
   
-  # Refrigerated truck - can carry chilled and frozen but not dry
+  # Refrigerated truck - can carry chilled and frozen goods
   RefrigeratedTruck:
-    capacity: 3300
-    fixed_cost: 175
-    avg_speed: 30
-    service_time: 25
-    max_route_time: 10
-    allowed_goods: ["Chilled", "Frozen"]
-  
-  # Multi-temperature truck - can carry all goods (no allowed_goods specified)
-  MultiTempTruck:
-    capacity: 4500
-    fixed_cost: 225
-    avg_speed: 30
-    service_time: 25
-    max_route_time: 10
-    # No allowed_goods specified - can carry all goods
-  
-  # Frozen specialist - high capacity but only for frozen goods
-  FrozenSpecialist:
-    capacity: 5000
+    capacity: 1200
     fixed_cost: 250
     avg_speed: 30
     service_time: 25
-    max_route_time: 10
-    allowed_goods: ["Frozen"]
+    max_route_time: 8
+    allowed_goods: ["Chilled", "Frozen"]  # Cold chain goods only
+  
+  # Multi-temperature truck - can carry all goods (most expensive)
+  MultiTempTruck:
+    capacity: 2000
+    fixed_cost: 400
+    avg_speed: 28
+    service_time: 30
+    max_route_time: 9
+    # No allowed_goods specified = can carry all goods
 
-# Global goods list - all possible product types
-goods:
-  - Dry
-  - Chilled
-  - Frozen
+# Goods types
+goods: ["Dry", "Chilled", "Frozen"]
 
-# Depot location
+# Depot location (New York City)
 depot:
   latitude: 40.7128
   longitude: -74.0060
 
-# Clustering parameters
+# Cost parameters
+variable_cost_per_hour: 50
+light_load_penalty: 100
+light_load_threshold: 0.3
+compartment_setup_cost: 25
+
+# Clustering configuration
 clustering:
-  method: minibatch_kmeans
-  max_depth: 3
-  route_time_estimation: TSP
+  method: combine
+  max_depth: 20
+  route_time_estimation: BHH
   geo_weight: 0.7
   demand_weight: 0.3
 
-# Other optimization parameters
-demand_file: demand.csv
-variable_cost_per_hour: 50
-light_load_penalty: 50
-light_load_threshold: 0.5
-compartment_setup_cost: 10
-format: csv
+# Optimization settings
 post_optimization: true
+small_cluster_size: 3
+nearest_merge_candidates: 10
+max_improvement_iterations: 5
+prune_tsp: true
+
+# Output format
+format: excel
 
 # Benefits of this configuration:
-# 1. DryTruck: Lower cost for dry-only deliveries
+# 1. DryVan: Lower cost for dry-only deliveries
 # 2. RefrigeratedTruck: Specialized for cold chain without dry goods capability
 # 3. MultiTempTruck: Flexible but more expensive, good for mixed deliveries
 # 4. FrozenSpecialist: High capacity for frozen-only routes
 
 # The optimization will automatically:
-# - Assign dry-only customers to DryTruck when beneficial
+# - Assign dry-only customers to DryVan when beneficial
 # - Use RefrigeratedTruck for chilled/frozen only deliveries
 # - Deploy MultiTempTruck for customers needing all three goods
 # - Utilize FrozenSpecialist for large frozen-only demands 

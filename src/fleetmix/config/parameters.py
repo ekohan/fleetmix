@@ -93,7 +93,7 @@ class Parameters:
                 "service_time": v_details.pop("service_time"),
                 "max_route_time": v_details.pop("max_route_time"),
             }
-            
+
             # Parse allowed_goods if present
             if "allowed_goods" in v_details:
                 spec_kwargs["allowed_goods"] = v_details.pop("allowed_goods")
@@ -177,13 +177,13 @@ class Parameters:
                     raise ValueError(
                         f"Vehicle '{vehicle_name}': allowed_goods must be a list. Got: {type(vehicle_spec.allowed_goods).__name__}"
                     )
-                
+
                 # Ensure it's not empty
                 if len(vehicle_spec.allowed_goods) == 0:
                     raise ValueError(
                         f"Vehicle '{vehicle_name}': allowed_goods cannot be empty. Either specify goods or omit the field."
                     )
-                
+
                 # Ensure all allowed goods exist in global goods list
                 invalid_goods = set(vehicle_spec.allowed_goods) - set(self.goods)
                 if invalid_goods:
@@ -191,9 +191,11 @@ class Parameters:
                         f"Vehicle '{vehicle_name}': allowed_goods contains goods not in global list: {sorted(invalid_goods)}. "
                         f"Valid goods are: {sorted(self.goods)}"
                     )
-                
+
                 # Check for duplicates
-                if len(vehicle_spec.allowed_goods) != len(set(vehicle_spec.allowed_goods)):
+                if len(vehicle_spec.allowed_goods) != len(
+                    set(vehicle_spec.allowed_goods)
+                ):
                     raise ValueError(
                         f"Vehicle '{vehicle_name}': allowed_goods contains duplicates."
                     )
@@ -244,7 +246,9 @@ class Parameters:
             elif isinstance(value, dict) and all(
                 isinstance(v, VehicleSpec) for v in value.values()
             ):
-                data_to_save[key] = {k: clean_dict(v.to_dict()) for k, v in value.items()}
+                data_to_save[key] = {
+                    k: clean_dict(v.to_dict()) for k, v in value.items()
+                }
 
         # Clean the entire data structure to remove None values
         data_to_save = clean_dict(data_to_save)

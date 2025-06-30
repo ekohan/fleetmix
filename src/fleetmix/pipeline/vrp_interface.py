@@ -42,7 +42,7 @@ def run_optimization(
         # Generate vehicle configurations first (needed for smart explosion)
         with time_recorder.measure("vehicle_configuration"):
             configs = generate_vehicle_configurations(params.vehicles, params.goods)
-            
+
         # Apply split-stop preprocessing if enabled
         allow_split = params.allow_split_stops
         customers_df = maybe_explode(customers_df, allow_split, configurations=configs)

@@ -167,7 +167,12 @@ def _solve_internal(
     """Internal implementation that processes DataFrames."""
     # Create optimization model
     model, y_vars, x_vars, c_vk = _create_model(
-        clusters_df, configurations, customers_df, parameters, verbose, warm_start_solution
+        clusters_df,
+        configurations,
+        customers_df,
+        parameters,
+        verbose,
+        warm_start_solution,
     )
 
     # Handle empty model case (no clusters)
@@ -364,7 +369,7 @@ def _create_model(
         # First, convert customer IDs to Customer objects to use proper methods
         customers = Customer.from_dataframe(customers_df)
         customer_objects = {c.customer_id: c for c in customers}
-        
+
         origin_id = {}
         subset = {}
         for customer_id in N:

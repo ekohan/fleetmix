@@ -36,7 +36,9 @@ def _two_phase_solve(
     baseline_params.allow_split_stops = False
 
     # For phase 1, use the original customers without explosion
-    baseline_customers_df = maybe_explode(customers_df, allow_split_stops=False, configurations=configs)
+    baseline_customers_df = maybe_explode(
+        customers_df, allow_split_stops=False, configurations=configs
+    )
     baseline_customers = Customer.from_dataframe(baseline_customers_df)
 
     with time_recorder.measure("clustering_phase1"):
@@ -77,7 +79,9 @@ def _two_phase_solve(
     phase2_params.allow_split_stops = True
 
     # For phase 2, use the exploded customers
-    phase2_customers_df = maybe_explode(customers_df, allow_split_stops=True, configurations=configs)
+    phase2_customers_df = maybe_explode(
+        customers_df, allow_split_stops=True, configurations=configs
+    )
     phase2_customers = Customer.from_dataframe(phase2_customers_df)
 
     with time_recorder.measure("clustering_phase2"):
@@ -278,7 +282,9 @@ def optimize(
         else:
             # Standard single-phase optimization
             # Apply split-stop preprocessing if needed
-            customers_df = maybe_explode(customers_df, params.allow_split_stops, configurations=configs)
+            customers_df = maybe_explode(
+                customers_df, params.allow_split_stops, configurations=configs
+            )
             customers = Customer.from_dataframe(customers_df)
 
             # Step 4a: Generate clusters

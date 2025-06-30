@@ -1,0 +1,76 @@
+# Vehicle Types and Capacities
+vehicles:
+  A:
+    capacity: 700
+    fixed_cost: 80
+    avg_speed: 30  # km/h
+    service_time: 25  # minutes per customer
+    max_route_time: 10  # hours
+  B:
+    capacity: 1300
+    fixed_cost: 140
+    avg_speed: 30  # km/h
+    service_time: 25  # minutes per customer
+    max_route_time: 10  # hours
+  C:
+    capacity: 2500
+    fixed_cost: 180
+    avg_speed: 30  # km/h
+    service_time: 25  # minutes per customer
+    max_route_time: 10  # hours
+
+# Cost Parameters
+variable_cost_per_hour: 10.00
+
+# Location
+depot:
+  latitude: 4.7
+  longitude: -74.1
+
+# Product Types
+goods:
+  - Dry
+  - Chilled
+  - Frozen
+
+# Clustering Parameters
+clustering:
+  max_depth: 20
+  method: combine  # Options: minibatch_kmeans, kmedoids, agglomerative, combine
+  distance: euclidean  # Options: euclidean, composite (only for agglomerative)
+  geo_weight: 0.7    # Weight for geographical distance (composite-only)
+  demand_weight: 0.3  # Weight for demand distance (composite-only)
+  route_time_estimation: 'BHH'  # Options: TSP, BHH, Legacy
+
+prune_tsp: false  # Skip TSP based on BHH estimate
+
+
+# Data Files
+# See options in data/demand_profiles/
+# sales_2023_high_demand_day.csv
+# sales_2023_low_demand_day.csv
+# sales_2023_uniform_visits_per_week.csv
+# sales_2023_avg_daily_demand.csv -- WARNING: visits every client that ordered in the 9-month period
+# sales_2023_09_avg_daily_demand.csv -- WARNING: visits every client that ordered in September 2023
+demand_file: "sales_2024_avg_day_demand.csv"
+
+# Math model Parameters
+light_load_penalty: 0  # Adjust penalty value as needed -- 0 == don't penalize
+light_load_threshold: 0  # Threshold for light load (e.g., 0.2 for 20%) -- when to penalize
+compartment_setup_cost: 3  # Cost per additional compartment beyond the first one
+
+# Post-optimization
+post_optimization: true         # Enable iterative improvement phase
+small_cluster_size: 1000         # ≤ customers per "small" cluster
+nearest_merge_candidates: 1000   # max neighbour clusters to probe
+max_improvement_iterations: 20  # max iterations for iterative post-optimization
+
+# Merge phase pre-MILP
+pre_small_cluster_size: 5
+pre_nearest_merge_candidates: 50
+
+# Split-stop capability
+allow_split_stops: false  # Allow customers to be served by multiple vehicles (per-good atomicity)
+
+# Output format
+format: 'json'  # Output format (excel or json)

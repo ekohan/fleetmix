@@ -4,6 +4,7 @@ import shutil
 import sys  # For checking stderr
 from pathlib import Path
 from unittest.mock import patch  # For mocking subprocess
+import re
 
 import pytest
 from typer.testing import CliRunner
@@ -221,7 +222,9 @@ def test_version_command():
     """Test 'fleetmix version'."""
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    assert __version__ in result.stdout
+    # Strip ANSI codes from output before checking
+    clean_output = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout)
+    assert __version__ in clean_output
 
 
 @patch("subprocess.run")

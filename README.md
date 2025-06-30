@@ -154,6 +154,14 @@ Run the **full benchmark suites** shipped with Fleetmix (batch mode over all ins
 ```bash
 fleetmix benchmark mcvrp   # All MCVRP instances
 fleetmix benchmark cvrp    # All CVRP instances
+fleetmix benchmark case    # All case study instances
+```
+
+You can also specify a config file to use custom parameters:
+
+```bash
+fleetmix benchmark mcvrp --config custom_config.yaml
+fleetmix benchmark case --config baseline_config.yaml --format excel
 ```
 
 ### `fleetmix convert`
@@ -276,7 +284,13 @@ Located under `src/fleetmix/benchmarking/`.
 * **Converters** – `.vrp` / `.dat` → FSM tables
 * **Parsers & Models** – light dataclasses for CVRP / MCVRP metadata
 * **Solvers** – PyVRP wrapper providing single‑ & multi‑compartment baselines
+* **Case Studies** – real-world demand patterns from food distribution
 * **Scripts** – batch runners producing JSON/XLSX artifacts in `results/`
+
+The suite includes three benchmark types:
+- **CVRP**: Classic vehicle routing instances
+- **MCVRP**: Multi-compartment vehicle routing instances  
+- **Case**: Real-world food distribution demand patterns
 
 Upper‑ and lower‑bound reference solutions are generated automatically for sanity checks.
 

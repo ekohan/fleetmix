@@ -74,4 +74,4 @@ pre_nearest_merge_candidates: 50
 allow_split_stops: false  # Allow customers to be served by multiple vehicles
 
 # Output format
-format: 'excel'  # Output format (excel or json)
+format: 'json'  # Output format (excel or json)

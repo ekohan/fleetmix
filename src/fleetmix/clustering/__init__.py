@@ -2,33 +2,9 @@
 Customer clustering for the cluster-first heuristic (§4.2).
 """
 
-from fleetmix.core_types import (
-    Cluster,
-    ClusteringContext,
-    Customer,
-    CustomerBase,
-    PseudoCustomer,
-)
-
-from .generator import (
-    _is_customer_feasible,
-    generate_clusters_for_configurations,
-)
-from .heuristics import (
-    compute_composite_distance,
-    estimate_num_initial_clusters,
-    get_cached_demand,
-)
+# Import only what we need to re-export
+from .generator import generate_feasible_clusters
 
 __all__ = [
-    "Cluster",
-    "ClusteringContext",
-    "Customer",
-    "CustomerBase",
-    "PseudoCustomer",
-    "_is_customer_feasible",
-    "compute_composite_distance",
-    "estimate_num_initial_clusters",
-    "generate_clusters_for_configurations",
-    "get_cached_demand",
+    "generate_feasible_clusters",
 ]

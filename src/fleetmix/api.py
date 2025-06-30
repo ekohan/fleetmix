@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from fleetmix.clustering import generate_clusters_for_configurations
+from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import optimize_fleet
@@ -42,7 +42,7 @@ def _two_phase_solve(
     baseline_customers = Customer.from_dataframe(baseline_customers_df)
 
     with time_recorder.measure("clustering_phase1"):
-        baseline_clusters = generate_clusters_for_configurations(
+        baseline_clusters = generate_feasible_clusters(
             customers=baseline_customers, configurations=configs, params=baseline_params
         )
 
@@ -85,7 +85,7 @@ def _two_phase_solve(
     phase2_customers = Customer.from_dataframe(phase2_customers_df)
 
     with time_recorder.measure("clustering_phase2"):
-        phase2_clusters = generate_clusters_for_configurations(
+        phase2_clusters = generate_feasible_clusters(
             customers=phase2_customers, configurations=configs, params=phase2_params
         )
 
@@ -294,7 +294,7 @@ def optimize(
             # Step 4a: Generate clusters
             try:
                 with time_recorder.measure("clustering"):
-                    clusters = generate_clusters_for_configurations(
+                    clusters = generate_feasible_clusters(
                         customers=customers, configurations=configs, params=params
                     )
             except Exception as e:

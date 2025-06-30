@@ -21,3 +21,6 @@ References:
   New benchmark instances for the Capacitated Vehicle Routing Problem.
   European Journal of Operational Research, 257(3), 845-858.
 """
+
+# No public exports - datasets are accessed through parsers
+__all__: list[str] = []

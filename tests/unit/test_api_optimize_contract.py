@@ -51,7 +51,7 @@ def test_optimize_happy_path(monkeypatch, demand_df, params):
         lambda *a, **k: [],
     )
     monkeypatch.setattr(
-        "fleetmix.api.generate_clusters_for_configurations",
+        "fleetmix.api.generate_feasible_clusters",
         lambda **k: ["cluster"],
     )
     monkeypatch.setattr(

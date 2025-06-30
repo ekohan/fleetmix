@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fleetmix.clustering import (
+from fleetmix.core_types import Customer
+from fleetmix.clustering.heuristics import (
     compute_composite_distance,
+    get_cached_demand,
     estimate_num_initial_clusters,
 )
 from fleetmix.core_types import ClusteringContext, DepotLocation, VehicleConfiguration

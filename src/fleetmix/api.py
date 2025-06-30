@@ -9,7 +9,7 @@ import pandas as pd
 from fleetmix.clustering import generate_clusters_for_configurations
 from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
-from fleetmix.optimization import solve_fsm_problem
+from fleetmix.optimization import optimize_fleet
 from fleetmix.post_optimization import improve_solution
 from fleetmix.preprocess.demand import maybe_explode
 from fleetmix.utils.common import baseline_is_valid
@@ -47,7 +47,7 @@ def _two_phase_solve(
         )
 
     with time_recorder.measure("fsm_phase1"):
-        baseline_solution = solve_fsm_problem(
+        baseline_solution = optimize_fleet(
             clusters=baseline_clusters,
             configurations=configs,
             customers=baseline_customers,
@@ -91,7 +91,7 @@ def _two_phase_solve(
 
     try:
         with time_recorder.measure("fsm_phase2"):
-            phase2_solution = solve_fsm_problem(
+            phase2_solution = optimize_fleet(
                 clusters=phase2_clusters,
                 configurations=configs,
                 customers=phase2_customers,
@@ -318,7 +318,7 @@ def optimize(
             # Step 4b: Solve optimization
             try:
                 with time_recorder.measure("fsm_initial"):
-                    solution = solve_fsm_problem(
+                    solution = optimize_fleet(
                         clusters=clusters,
                         configurations=configs,
                         customers=customers,

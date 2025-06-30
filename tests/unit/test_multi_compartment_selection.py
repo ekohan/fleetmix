@@ -9,7 +9,7 @@ from fleetmix.core_types import (
     VehicleConfiguration,
 )
 from fleetmix.config.parameters import Parameters
-from fleetmix.optimization.core import solve_fsm_problem
+from fleetmix.optimization.core import optimize_fleet
 
 
 def _make_params(variable_cost_per_hour: float = 0.0) -> Parameters:
@@ -146,7 +146,7 @@ def test_multi_compartment_selected_when_cheaper():
     params = _make_params(variable_cost_per_hour=0.0)
     configurations, customers, clusters = _make_test_data()
 
-    solution = solve_fsm_problem(clusters, configurations, customers, params)
+    solution = optimize_fleet(clusters, configurations, customers, params)
 
     # Exactly one vehicle / cluster should be selected
     assert solution.total_vehicles == 1, "Expected a single vehicle to serve both goods"

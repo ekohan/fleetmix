@@ -43,7 +43,7 @@ class DummySolution(FleetmixSolution):
 # ----------------------- successful path -----------------------
 
 def test_optimize_happy_path(monkeypatch, demand_df, params):
-    """`optimize` returns the object produced by `solve_fsm_problem` and preserves basic fields."""
+    """`optimize` returns the object produced by `optimize_fleet` and preserves basic fields."""
 
     # Arrange – stub out heavy internals
     monkeypatch.setattr(
@@ -55,7 +55,7 @@ def test_optimize_happy_path(monkeypatch, demand_df, params):
         lambda **k: ["cluster"],
     )
     monkeypatch.setattr(
-        "fleetmix.api.solve_fsm_problem",
+        "fleetmix.api.optimize_fleet",
         lambda **k: DummySolution(),
     )
     monkeypatch.setattr(

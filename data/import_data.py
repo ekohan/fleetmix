@@ -3,6 +3,8 @@ import logging
 import sqlite3
 from pathlib import Path
 
+# TODO: importante, anonimizar Opperar
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

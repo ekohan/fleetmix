@@ -412,6 +412,7 @@ class FleetmixSolution:
     solver_status: str = "Unknown"
     solver_name: str = "Unknown"
     solver_runtime_sec: float = 0.0
+    # TODO: remove this field as we're using time_measurements instead
     post_optimization_runtime_sec: float | None = None
     time_measurements: list[TimeMeasurement] | None = None
 

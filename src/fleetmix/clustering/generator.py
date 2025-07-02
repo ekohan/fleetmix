@@ -7,10 +7,10 @@ cluster-first, fleet-design second heuristic.
 """
 
 import itertools
+import os
 from dataclasses import replace
 from multiprocessing import Manager
 
-import pandas as pd
 from joblib import Parallel, delayed
 
 from fleetmix.config.parameters import Parameters
@@ -126,8 +126,16 @@ def generate_feasible_clusters(
                 f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---"
             )
 
+            # Determine level of parallelism: obey FLEETMIX_N_JOBS env var if set
+            n_jobs_env = os.getenv("FLEETMIX_N_JOBS")
+            try:
+                n_jobs = int(n_jobs_env) if n_jobs_env is not None else -1
+            except ValueError:
+                # Fallback to default behaviour if parsing fails
+                n_jobs = -1
+
             # Run clustering for all configurations using these context in parallel, process-based
-            clusters_by_config = Parallel(n_jobs=-1, backend="loky")(
+            clusters_by_config = Parallel(n_jobs=n_jobs, backend="loky")(
                 delayed(process_configuration)(
                     config,
                     customers,

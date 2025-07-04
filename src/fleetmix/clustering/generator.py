@@ -195,19 +195,17 @@ def generate_feasible_clusters(
             lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
         )
 
-    # TODO: tidy up parameter hand-off
-    pre_params = replace(
-        params,
-        nearest_merge_candidates=params.pre_nearest_merge_candidates,
-        small_cluster_size=params.pre_small_cluster_size,
-        post_optimization=False,
-    )
+    # Neighbour‐merge candidate generation ahead of the MILP uses tighter
+    # thresholds than the post-optimization step.  Pass those overrides
+    # explicitly instead of mutating the Parameters object.
 
     merged_df = generate_merge_phase_clusters(
         selected_clusters=base_df,
         configurations=configurations,
         customers_df=customers_df,
-        params=pre_params,
+        params=params,
+        small_cluster_size=params.pre_small_cluster_size,
+        nearest_merge_candidates=params.pre_nearest_merge_candidates,
     )
 
     if not merged_df.empty:

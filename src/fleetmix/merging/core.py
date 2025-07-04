@@ -83,6 +83,9 @@ def generate_merge_phase_clusters(
     configurations: list[VehicleConfiguration],
     customers_df: pd.DataFrame,
     params: Parameters,
+    *,
+    small_cluster_size: int | None = None,
+    nearest_merge_candidates: int | None = None,
 ) -> pd.DataFrame:
     """Generate merged clusters from selected small clusters.
 
@@ -95,10 +98,15 @@ def generate_merge_phase_clusters(
         configurations: List of vehicle configurations
         customers_df: DataFrame of all customers
         params: Parameters object with merge configuration
+        small_cluster_size: Optionally override ``params.small_cluster_size`` for this call.
+        nearest_merge_candidates: Optionally override ``params.nearest_merge_candidates`` for this call.
 
     Returns:
         DataFrame of merged cluster candidates
     """
+    small_limit = small_cluster_size or params.small_cluster_size
+    neighbour_cap = nearest_merge_candidates or params.nearest_merge_candidates
+
     new_clusters = []
     stats = {
         "attempted": 0,
@@ -119,7 +127,7 @@ def generate_merge_phase_clusters(
         configs_indexed["Capacity"]
     )
     small_meta = cluster_meta[
-        cluster_meta["Customers"].apply(len) <= params.small_cluster_size
+        cluster_meta["Customers"].apply(len) <= small_limit
     ]
     if small_meta.empty:
         return pd.DataFrame()
@@ -161,7 +169,7 @@ def generate_merge_phase_clusters(
         if valid_idxs.size == 0:
             continue
         nearest_idxs = valid_idxs[
-            np.argsort(distances[valid_idxs])[: params.nearest_merge_candidates]
+            np.argsort(distances[valid_idxs])[: neighbour_cap]
         ]
         # Check capacity for total demand based on the memory
         total_small_sum = total_small

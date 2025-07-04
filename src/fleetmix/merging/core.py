@@ -126,9 +126,7 @@ def generate_merge_phase_clusters(
     cluster_meta["Capacity"] = cluster_meta["Config_ID"].map(
         configs_indexed["Capacity"]
     )
-    small_meta = cluster_meta[
-        cluster_meta["Customers"].apply(len) <= small_limit
-    ]
+    small_meta = cluster_meta[cluster_meta["Customers"].apply(len) <= small_limit]
     if small_meta.empty:
         return pd.DataFrame()
     target_meta = cluster_meta
@@ -168,9 +166,7 @@ def generate_merge_phase_clusters(
         valid_idxs = np.where(valid_mask)[0]
         if valid_idxs.size == 0:
             continue
-        nearest_idxs = valid_idxs[
-            np.argsort(distances[valid_idxs])[: neighbour_cap]
-        ]
+        nearest_idxs = valid_idxs[np.argsort(distances[valid_idxs])[:neighbour_cap]]
         # Check capacity for total demand based on the memory
         total_small_sum = total_small
 

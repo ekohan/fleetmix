@@ -34,6 +34,7 @@ src/*.egg-info/
 *.txt
 .idea/
 .cursor/
+.cursorignore
 
 # TODO: do add the paper
 paper_wip.txt

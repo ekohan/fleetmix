@@ -1,5 +1,7 @@
 # Code ↔ Paper Mapping
 
+<!-- TODO: check this -->
+
 This table helps readers of *Designing Multi-Compartment Vehicle Fleets for Last-Mile Food Distribution Systems* navigate between the
 research methodology and its open-source implementation.
 

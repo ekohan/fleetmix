@@ -7,10 +7,10 @@ cluster-first, fleet-design second heuristic.
 """
 
 import itertools
+import os
 from dataclasses import replace
 from multiprocessing import Manager
 
-import pandas as pd
 from joblib import Parallel, delayed
 
 from fleetmix.config.parameters import Parameters
@@ -126,8 +126,16 @@ def generate_feasible_clusters(
                 f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---"
             )
 
+            # Determine level of parallelism: obey FLEETMIX_N_JOBS env var if set
+            n_jobs_env = os.getenv("FLEETMIX_N_JOBS")
+            try:
+                n_jobs = int(n_jobs_env) if n_jobs_env is not None else -1
+            except ValueError:
+                # Fallback to default behaviour if parsing fails
+                n_jobs = -1
+
             # Run clustering for all configurations using these context in parallel, process-based
-            clusters_by_config = Parallel(n_jobs=-1, backend="loky")(
+            clusters_by_config = Parallel(n_jobs=n_jobs, backend="loky")(
                 delayed(process_configuration)(
                     config,
                     customers,
@@ -187,19 +195,17 @@ def generate_feasible_clusters(
             lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
         )
 
-    # TODO: tidy up parameter hand-off
-    pre_params = replace(
-        params,
-        nearest_merge_candidates=params.pre_nearest_merge_candidates,
-        small_cluster_size=params.pre_small_cluster_size,
-        post_optimization=False,
-    )
+    # Neighbour‐merge candidate generation ahead of the MILP uses tighter
+    # thresholds than the post-optimization step.  Pass those overrides
+    # explicitly instead of mutating the Parameters object.
 
     merged_df = generate_merge_phase_clusters(
         selected_clusters=base_df,
         configurations=configurations,
         customers_df=customers_df,
-        params=pre_params,
+        params=params,
+        small_cluster_size=params.pre_small_cluster_size,
+        nearest_merge_candidates=params.pre_nearest_merge_candidates,
     )
 
     if not merged_df.empty:

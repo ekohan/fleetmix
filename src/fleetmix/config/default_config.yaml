@@ -1,24 +1,28 @@
 # Vehicle Types and Capacities
 vehicles:
-  A:
+  A: # MCV - Carries all goods by default
     capacity: 2700
     fixed_cost: 100
     avg_speed: 30  # km/h
     service_time: 25  # minutes per customer
     max_route_time: 10  # hours
-  B:
+  B: # MCV - Carries chilled and frozen goods
     capacity: 3300
     fixed_cost: 175
     avg_speed: 30  # km/h
     service_time: 25  # minutes per customer
     max_route_time: 10  # hours
-  C:
+    allowed_goods:
+      - Chilled
+      - Frozen
+  C: # SCV - Carries frozen goods only
     capacity: 4500
     fixed_cost: 225
     avg_speed: 30  # km/h
     service_time: 25  # minutes per customer
     max_route_time: 10  # hours
-
+    allowed_goods:
+      - Frozen
 # Cost Parameters
 variable_cost_per_hour: 10.00
 

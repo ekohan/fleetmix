@@ -38,3 +38,4 @@ src/*.egg-info/
 
 # TODO: do add the paper
 paper_wip.txt
+paper/*

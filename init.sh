@@ -30,13 +30,9 @@ else
   exit 1
 fi
 
-# Install requirements
-echo "Installing requirements..."
-pip install -r requirements.txt
-
 # Install the fleetmix package in editable mode
 echo "Installing fleetmix package in editable mode..."
-pip install -e .
+pip install -e ".[test,dev]" --index-url https://pypi.org/simple/
 
 # Create database and import sales data
 echo "Creating database and importing sales data..."

@@ -1,13 +1,8 @@
 """Heterogeneous-fleet demo for *FleetMix*.
 
-Highlights
-==========
-1. Builds a **mixed fleet** (drones → refrigerated trucks) entirely in-memory – no YAML editing required.
-2. Uses the bundled ``mini_demand.csv`` test file for convenience – edit the path as you like.
-3. Stays <50 lines while still showcasing FleetMix's high-level API.
+Builds a **mixed fleet** (drones → refrigerated trucks) entirely in-memory – no YAML editing required.
 
-Run it:
-    $ python examples/heterogeneous_fleet.py
+Run it: $ python examples/heterogeneous_fleet.py
 
 """
 
@@ -69,11 +64,10 @@ def build_demo_parameters() -> FleetmixParams:
 def main() -> None:  # pragma: no cover – example script
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
 
-    params = build_demo_parameters()
+    params_with_heterogeneous_fleet = build_demo_parameters()
 
-    solution = fm.optimize(demand=demand_file, config=params)
+    solution = fm.optimize(demand=demand_file, config=params_with_heterogeneous_fleet)
 
-    # --- Pretty print results -------------------------------------------------
     print("\n=== Fleet Composition ===")
     for vehicle, count in solution.vehicles_used.items():
         print(f"{vehicle:>20}: {count}")

@@ -38,8 +38,9 @@ class ProblemParams:
     light_load_threshold: float = 0.0
     compartment_setup_cost: float = 0.0
     allow_split_stops: bool = False
-    expected_vehicles: int = -1
-    # TODO: agregar expected_vehicles aca, tal vez con un parametro que indique es un benchmark
+    expected_vehicles: int = (
+        -1
+    )  # Only relevant for benchmarking with CVRP and MCVRP instances
 
     # Basic validation to surface common configuration errors early.
     def __post_init__(self):

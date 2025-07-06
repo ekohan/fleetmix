@@ -282,6 +282,9 @@ The plugin system supports:
 - **Route time estimators**: Legacy, BHH, TSP-based, or custom (e.g., with traffic data)
 - **Solvers**: Gurobi, CBC, or any PuLP-compatible solver
 
+> **Tip:** A plugin becomes available as soon as Python imports the module that holds the `@register_*` decorator.  
+> Add something like `import my_package.my_plugin  # noqa: F401` near application start (before invoking `fleetmix.optimize(...)`) and FleetMix will automatically recognise the new plugin.
+
 ---
 
 ## 📊 Benchmarking Suite

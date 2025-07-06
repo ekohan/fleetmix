@@ -32,14 +32,16 @@ def main() -> None:  # pragma: no cover – example script
     # Start with default config
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     # Update route time estimation using dataclasses.replace for immutable params
-    params = dataclasses.replace(
+    params_with_custom_route_time_estimator = dataclasses.replace(
         params,
         algorithm=dataclasses.replace(
             params.algorithm, route_time_estimation="straight_line"
         ),
     )
 
-    solution = fm.optimize(demand=demand_file, config=params)
+    solution = fm.optimize(
+        demand=demand_file, config=params_with_custom_route_time_estimator
+    )
 
     print("\nSolved using *straight_line* estimator – total cost:", solution.total_cost)
 

@@ -13,8 +13,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Import plugin for side-effect registration
 import fleetmix as fm
+
+# Import plugin for side-effect registration
 import fleetmix_example_plugins.naive_solver  # noqa: F401
 
 from fleetmix.config import load_fleetmix_params
@@ -27,12 +28,12 @@ def main() -> None:  # pragma: no cover – example script
     # Start with default config
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     # Update solver using dataclasses.replace for immutable params
-    params = dataclasses.replace(
+    params_with_custom_solver = dataclasses.replace(
         params,
         runtime=dataclasses.replace(params.runtime, solver="naive"),
     )
 
-    solution = fm.optimize(demand=demand_file, config=params)
+    solution = fm.optimize(demand=demand_file, config=params_with_custom_solver)
 
     print("\nSolved using *naive* CBC adapter – total cost:", solution.total_cost)
     print("Solver used:", solution.solver_name)

@@ -15,8 +15,9 @@ from pathlib import Path
 # Ensure the plugin is visible (serial mode) *before* FleetMix import, see docs/parallelism.md.
 os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 
-# Plugin module import – executed for its side-effect of registering itself.
 import fleetmix as fm
+
+# Plugin module import – executed for its side-effect of registering itself.
 import fleetmix_example_plugins.round_robin  # noqa: F401
 from fleetmix.config import load_fleetmix_params
 import dataclasses
@@ -24,23 +25,20 @@ import dataclasses
 
 def main():
     """Main execution function."""
-    # Custom round-robin clusterer (demo)
-    # The plugin is imported above; nothing to define here
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
 
     # Start with default config
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     # Update clustering method using dataclasses.replace for immutable params
-    params = dataclasses.replace(
+    params_with_custom_clusterer = dataclasses.replace(
         params,
         algorithm=dataclasses.replace(
             params.algorithm, clustering_method="round_robin"
         ),
     )
 
-    solution = fm.optimize(demand=demand_file, config=params)
+    solution = fm.optimize(demand=demand_file, config=params_with_custom_clusterer)
 
-    # Display selected clusters
     print("Selected clusters (ID -> customers):")
     for cluster in solution.selected_clusters:
         print(

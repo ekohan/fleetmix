@@ -59,7 +59,9 @@ def _get_merged_route_time(
         return _merged_route_time_cache[key]
 
     # Create RouteTimeContext using the factory
-    rt_context = make_rt_context(config, params.problem.depot, params.algorithm.prune_tsp)
+    rt_context = make_rt_context(
+        config, params.problem.depot, params.algorithm.prune_tsp
+    )
 
     # Use the new interface with RouteTimeContext
     estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(
@@ -105,7 +107,9 @@ def generate_merge_phase_clusters(
         DataFrame of merged cluster candidates
     """
     small_limit = small_cluster_size or params.algorithm.small_cluster_size
-    neighbour_cap = nearest_merge_candidates or params.algorithm.nearest_merge_candidates
+    neighbour_cap = (
+        nearest_merge_candidates or params.algorithm.nearest_merge_candidates
+    )
 
     new_clusters = []
     stats = {
@@ -174,7 +178,9 @@ def generate_merge_phase_clusters(
             target = target_meta.iloc[idx]
 
             # Get total demand for target cluster
-            target_demand_total = sum(target["Total_Demand"][g] for g in params.problem.goods)
+            target_demand_total = sum(
+                target["Total_Demand"][g] for g in params.problem.goods
+            )
 
             # Check if merging would exceed capacity (from memory)
             if total_small_sum + target_demand_total > target["Capacity"]:

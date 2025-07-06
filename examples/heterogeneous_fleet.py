@@ -62,8 +62,7 @@ def build_demo_parameters() -> FleetmixParams:
 
     # Update the fleet using dataclasses.replace for immutable params
     params = dataclasses.replace(
-        params,
-        problem=dataclasses.replace(params.problem, vehicles=fleet)
+        params, problem=dataclasses.replace(params.problem, vehicles=fleet)
     )
     return params
 

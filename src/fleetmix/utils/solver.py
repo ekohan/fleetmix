@@ -36,7 +36,7 @@ class GurobiAdapter:
         time_limit = params.time_limit if params.time_limit is not None else 180
         if time_limit > 0:  # 0 means no limit
             options.append(("TimeLimit", time_limit))
-        
+
         if options:
             kwargs["options"] = options
 
@@ -98,7 +98,7 @@ class CbcAdapter:
         params: RuntimeParams,
     ) -> pulp.LpSolver:
         """Return a configured CBC solver instance.
-        
+
         Args:
             params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
         """
@@ -106,11 +106,11 @@ class CbcAdapter:
         kwargs: dict[str, Any] = {"msg": msg}
         if params.gap_rel is not None:
             kwargs["gapRel"] = params.gap_rel
-        
+
         # CBC uses maxSeconds for time limit
         if params.time_limit is not None and params.time_limit > 0:
             kwargs["maxSeconds"] = params.time_limit
-            
+
         return pulp.PULP_CBC_CMD(**kwargs)
 
     @property
@@ -128,7 +128,7 @@ class CbcAdapter:
 def pick_solver(params: RuntimeParams):
     """
     Return a PuLP solver instance based on RuntimeParams.
-    
+
     Priority:
     1. FSM_SOLVER env-var: 'gurobi' | 'cbc' | 'auto' (overrides params.solver)
     2. params.solver: 'gurobi' | 'cbc' | 'auto'

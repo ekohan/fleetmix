@@ -201,6 +201,7 @@ def load_parameters(args) -> FleetmixParams:
     else:
         # Search for default config in standard locations
         from pathlib import Path
+
         default_paths = [
             Path.cwd() / "config.yaml",
             Path(__file__).parent.parent / "config" / "default_config.yaml",
@@ -224,7 +225,7 @@ def load_parameters(args) -> FleetmixParams:
     # Handle clustering parameters by updating algorithm section
     clustering_override_keys = [
         "clustering_method",
-        "clustering_distance", 
+        "clustering_distance",
         "geo_weight",
         "demand_weight",
         "route_time_estimation",
@@ -232,7 +233,7 @@ def load_parameters(args) -> FleetmixParams:
 
     # TODO ver si conservar o no los overrides
     algorithm_updates = {}
-    
+
     if "clustering_method" in overrides:
         algorithm_updates["clustering_method"] = overrides.pop("clustering_method")
     if "clustering_distance" in overrides:
@@ -242,8 +243,10 @@ def load_parameters(args) -> FleetmixParams:
     if "demand_weight" in overrides:
         algorithm_updates["demand_weight"] = overrides.pop("demand_weight")
     if "route_time_estimation" in overrides:
-        algorithm_updates["route_time_estimation"] = overrides.pop("route_time_estimation")
-    
+        algorithm_updates["route_time_estimation"] = overrides.pop(
+            "route_time_estimation"
+        )
+
     # Handle problem-level parameters
     problem_updates = {}
     if "light_load_penalty" in overrides:
@@ -251,34 +254,33 @@ def load_parameters(args) -> FleetmixParams:
     if "light_load_threshold" in overrides:
         problem_updates["light_load_threshold"] = overrides.pop("light_load_threshold")
     if "compartment_setup_cost" in overrides:
-        problem_updates["compartment_setup_cost"] = overrides.pop("compartment_setup_cost")
-    
+        problem_updates["compartment_setup_cost"] = overrides.pop(
+            "compartment_setup_cost"
+        )
+
     # Handle IO parameters
     io_updates = {}
     if "demand_file" in overrides:
         io_updates["demand_file"] = overrides.pop("demand_file")
     if "format" in overrides:
         io_updates["format"] = overrides.pop("format")
-    
+
     # Apply updates using dataclasses.replace
     if problem_updates:
         params = dataclasses.replace(
-            params,
-            problem=dataclasses.replace(params.problem, **problem_updates)
+            params, problem=dataclasses.replace(params.problem, **problem_updates)
         )
-    
+
     if algorithm_updates:
         params = dataclasses.replace(
-            params,
-            algorithm=dataclasses.replace(params.algorithm, **algorithm_updates)
+            params, algorithm=dataclasses.replace(params.algorithm, **algorithm_updates)
         )
-    
+
     if io_updates:
         params = dataclasses.replace(
-            params,
-            io=dataclasses.replace(params.io, **io_updates)
+            params, io=dataclasses.replace(params.io, **io_updates)
         )
-    
+
     # Handle any remaining overrides (should be empty now, but just in case)
     if overrides:
         raise ValueError(f"Unknown parameter overrides: {list(overrides.keys())}")

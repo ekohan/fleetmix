@@ -44,7 +44,7 @@ class ProblemParams:
     # TODO: agregar expected_vehicles aca, tal vez con un parametro que indique es un benchmark
 
     # Basic validation to surface common configuration errors early.
-    def __post_init__(self):  # type: ignore[override]
+    def __post_init__(self):
         if not self.vehicles:
             raise ValueError("ProblemParams.vehicles cannot be empty.")
 
@@ -59,9 +59,9 @@ class ProblemParams:
                 continue
             invalid = set(spec.allowed_goods) - global_goods
             if invalid:
-                            raise ValueError(
-                f"Vehicle '{name}': allowed_goods contains goods not in global list: {sorted(invalid)}"
-            )
+                raise ValueError(
+                    f"Vehicle '{name}': allowed_goods contains goods not in global list: {sorted(invalid)}"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ class AlgorithmParams:
     pre_nearest_merge_candidates: int = 3
     post_optimization: bool = True
 
-    def __post_init__(self):  # type: ignore[override]
+    def __post_init__(self):
         # Ensure clustering weights sum to 1.
         if abs(self.geo_weight + self.demand_weight - 1.0) > 1e-6:
             raise ValueError(
@@ -125,7 +125,7 @@ class IOParams:
     results_dir: Path
     format: str = "json"  # One of: xlsx, json, csv
 
-    def __post_init__(self):  # type: ignore[override]
+    def __post_init__(self):
         if self.format not in {"xlsx", "json", "csv"}:
             raise ValueError("IOParams.format must be 'xlsx', 'json' or 'csv'.")
 
@@ -150,7 +150,7 @@ class RuntimeParams:
     gap_rel: float = 0.0  # Renamed from solver_gap_rel
     solver: str = "auto"  # "auto" | "gurobi" | "cbc"
     time_limit: int | None = None  # seconds; None = no limit
-    
+
     def __post_init__(self):
         # Validate solver choice
         if self.solver.lower() not in {"auto", "gurobi", "cbc"}:
@@ -186,4 +186,4 @@ class FleetmixParams:
         object.__setattr__(self, "problem", state["problem"])
         object.__setattr__(self, "algorithm", state["algorithm"])
         object.__setattr__(self, "io", state["io"])
-        object.__setattr__(self, "runtime", state["runtime"]) 
+        object.__setattr__(self, "runtime", state["runtime"])

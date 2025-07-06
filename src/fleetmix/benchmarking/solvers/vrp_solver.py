@@ -57,7 +57,7 @@ class VRPSolver:
         expanded_clients = []
 
         # Get vehicle specs to determine timing parameters
-        vehicle_specs = list(self.params.vehicles.values())
+        vehicle_specs = list(self.params.problem.vehicles.values())
         if not vehicle_specs:
             raise ValueError("No vehicle specifications found in parameters")
 
@@ -79,7 +79,9 @@ class VRPSolver:
         else:
             # For multi-compartment, use total demand
             for _, row in self.customers.iterrows():
-                total_demand = sum(row[f"{good}_Demand"] for good in self.params.problem.goods)
+                total_demand = sum(
+                    row[f"{good}_Demand"] for good in self.params.problem.goods
+                )
                 if total_demand > 0:
                     expanded_clients.append(
                         Client(
@@ -149,7 +151,9 @@ class VRPSolver:
 
             # Check if this customer should be included based on benchmark type
             if self.benchmark_type == BenchmarkType.MULTI_COMPARTMENT:
-                total_demand = sum(row[f"{good}_Demand"] for good in self.params.problem.goods)
+                total_demand = sum(
+                    row[f"{good}_Demand"] for good in self.params.problem.goods
+                )
                 if total_demand > 0:
                     client_idx += 1
                     dist = haversine(depot_coords, coords)
@@ -510,7 +514,9 @@ class VRPSolver:
 
         # Calculate total demand for each customer
         mc_customers["Total_Demand"] = mc_customers.apply(
-            lambda row: sum(row.get(f"{good}_Demand", 0) for good in self.params.problem.goods),
+            lambda row: sum(
+                row.get(f"{good}_Demand", 0) for good in self.params.problem.goods
+            ),
             axis=1,
         )
 

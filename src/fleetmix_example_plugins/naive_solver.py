@@ -31,11 +31,11 @@ class RelaxedCbcAdapter:
         # Relaxed relative gap to speed up demo runs
         gap = 0.2 if params.gap_rel is None else params.gap_rel  # 20 % default for demo
         kwargs = {"msg": msg, "gapRel": gap}
-        
+
         # CBC uses maxSeconds for time limit
         if params.time_limit is not None and params.time_limit > 0:
             kwargs["maxSeconds"] = params.time_limit
-            
+
         return pulp.PULP_CBC_CMD(**kwargs)
 
     @property

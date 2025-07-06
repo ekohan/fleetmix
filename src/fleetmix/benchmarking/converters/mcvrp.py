@@ -11,7 +11,12 @@ import pandas as pd
 
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.config import load_fleetmix_params
-from fleetmix.config.params import FleetmixParams, ProblemParams, AlgorithmParams, IOParams
+from fleetmix.config.params import (
+    FleetmixParams,
+    ProblemParams,
+    AlgorithmParams,
+    IOParams,
+)
 from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
@@ -84,7 +89,7 @@ def convert_mcvrp_to_fsm(
     # Set depot location
     depot_lat, depot_lon = geo_coords[instance.depot_id]
     depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
-    
+
     # Single multi-compartment vehicle
     vehicles = {
         "MCVRP": VehicleSpec(
@@ -97,7 +102,7 @@ def convert_mcvrp_to_fsm(
             max_route_time=24 * 7,  # 1 week ~ no time limit
         )
     }
-    
+
     # Update params with MCVRP-specific settings
     params = dataclasses.replace(
         params,
@@ -106,7 +111,7 @@ def convert_mcvrp_to_fsm(
             depot=depot,
             vehicles=vehicles,
             expected_vehicles=instance.vehicles,
-        )
+        ),
     )
 
     return customers_df, params

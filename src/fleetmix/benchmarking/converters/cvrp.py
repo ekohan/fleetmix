@@ -98,9 +98,8 @@ def _convert_normal(instance) -> tuple:
     total_converted = df["Dry_Demand"].sum()
     log_detail(f"Total converted demand: {total_converted}")
 
-
     params = _create_base_params(instance)
-    
+
     # Override the default vehicles with just our CVRP vehicle
     vehicles = {
         "CVRP": VehicleSpec(
@@ -113,10 +112,12 @@ def _convert_normal(instance) -> tuple:
             max_route_time=24 * 7,  # 1 week ~ no time limit
         )
     }
-    
+
     params = dataclasses.replace(
         params,
-        problem=dataclasses.replace(params.problem, vehicles=vehicles, expected_vehicles=instance.num_vehicles)
+        problem=dataclasses.replace(
+            params.problem, vehicles=vehicles, expected_vehicles=instance.num_vehicles
+        ),
     )
 
     log_detail("\nVehicle Configuration:")
@@ -155,10 +156,12 @@ def _convert_split(instance, split_ratios: dict[str, float]) -> tuple:
             max_route_time=24 * 7,  # 1 week ~ no time limit
         )
     }
-    
+
     params = dataclasses.replace(
         params,
-        problem=dataclasses.replace(params.problem, vehicles=vehicles, expected_vehicles=instance.num_vehicles)
+        problem=dataclasses.replace(
+            params.problem, vehicles=vehicles, expected_vehicles=instance.num_vehicles
+        ),
     )
 
     return pd.DataFrame(customers_data), params
@@ -176,7 +179,7 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
     )
 
     params = _create_base_params(instance)
-    
+
     # Override vehicles with scaled CVRP vehicle
     vehicles = {
         "CVRP_Scaled": VehicleSpec(
@@ -189,10 +192,14 @@ def _convert_scaled(instance, num_goods: int) -> tuple:
             max_route_time=24 * 7,  # 1 week ~ no time limit
         )
     }
-    
+
     params = dataclasses.replace(
         params,
-        problem=dataclasses.replace(params.problem, vehicles=vehicles, expected_vehicles=instance.num_vehicles*num_goods)
+        problem=dataclasses.replace(
+            params.problem,
+            vehicles=vehicles,
+            expected_vehicles=instance.num_vehicles * num_goods,
+        ),
     )
 
     return pd.DataFrame(customers_data), params
@@ -238,10 +245,12 @@ def _convert_combined(instances: list) -> tuple:
             zip(instances, goods, strict=False)
         )
     }
-    
+
     params = dataclasses.replace(
         params,
-        problem=dataclasses.replace(params.problem, vehicles=vehicles, expected_vehicles=expected_vehicles)
+        problem=dataclasses.replace(
+            params.problem, vehicles=vehicles, expected_vehicles=expected_vehicles
+        ),
     )
 
     return pd.DataFrame(customers_data), params
@@ -277,15 +286,13 @@ def _create_base_params(instance) -> FleetmixParams:
     geo_coords = converter.convert_all_coordinates(instance.coordinates)
     depot_coords = geo_coords[instance.depot_id]
 
-    
-
     # Update depot using dataclasses.replace for immutable params
     params = dataclasses.replace(
         params,
         problem=dataclasses.replace(
             params.problem,
             depot=DepotLocation(latitude=depot_coords[0], longitude=depot_coords[1]),
-        )
+        ),
     )
 
     return params

@@ -66,7 +66,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Import sales data into unified table."
     )
-    parser.add_argument("--db", default="case_study.db", help="Path to SQLite database.")
+    parser.add_argument(
+        "--db", default="case_study.db", help="Path to SQLite database."
+    )
     args = parser.parse_args()
 
     # Get the script's directory relative to where it's being invoked

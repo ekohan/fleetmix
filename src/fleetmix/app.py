@@ -47,8 +47,7 @@ def _find_config_by_id(
 
 
 def _get_default_config() -> FleetmixParams | None:
-    """Load default configuration via the structured loader.
-    """
+    """Load default configuration via the structured loader."""
 
     from pathlib import Path
 
@@ -171,27 +170,28 @@ def _run_single_instance(
         # Override output directory if specified
         if output_dir:
             params = dataclasses.replace(
-                params,
-                io=dataclasses.replace(params.io, results_dir=output_dir)
+                params, io=dataclasses.replace(params.io, results_dir=output_dir)
             )
 
         # Set allow_split_stops explicitly (don't rely on default config)
         # TODO check this flag
         params = dataclasses.replace(
             params,
-            problem=dataclasses.replace(params.problem, allow_split_stops=allow_split_stops)
+            problem=dataclasses.replace(
+                params.problem, allow_split_stops=allow_split_stops
+            ),
         )
 
         # Use the unified pipeline interface for optimization
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
-        )
+        solution, configs = run_optimization(customers_df=customers_df, params=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
         if config_path:
             config_name = config_path.stem
-            output_path = params.io.results_dir / f"mcvrp_{config_name}-{instance}.{ext}"
+            output_path = (
+                params.io.results_dir / f"mcvrp_{config_name}-{instance}.{ext}"
+            )
         else:
             output_path = params.io.results_dir / f"mcvrp_{instance}.{ext}"
 
@@ -285,8 +285,7 @@ def _run_single_instance(
         # Override output directory if specified
         if output_dir:
             params = dataclasses.replace(
-                params,
-                io=dataclasses.replace(params.io, results_dir=output_dir)
+                params, io=dataclasses.replace(params.io, results_dir=output_dir)
             )
 
         # Ignore split-stop flag for single-product CVRP NORMAL benchmarks
@@ -296,9 +295,7 @@ def _run_single_instance(
             )
 
         # Use the unified pipeline interface for optimization
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
-        )
+        solution, configs = run_optimization(customers_df=customers_df, params=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -399,14 +396,15 @@ def _run_single_instance(
         # Override output directory if specified
         if output_dir:
             params = dataclasses.replace(
-                params,
-                io=dataclasses.replace(params.io, results_dir=output_dir)
+                params, io=dataclasses.replace(params.io, results_dir=output_dir)
             )
 
         # Set allow_split_stops explicitly
         params = dataclasses.replace(
             params,
-            problem=dataclasses.replace(params.problem, allow_split_stops=allow_split_stops)
+            problem=dataclasses.replace(
+                params.problem, allow_split_stops=allow_split_stops
+            ),
         )
 
         # Load customer data using the data processing utility
@@ -416,18 +414,16 @@ def _run_single_instance(
 
         # Update demand_file to reflect the actual file being used
         params = dataclasses.replace(
-            params,
-            io=dataclasses.replace(params.io, demand_file=str(csv_path))
+            params, io=dataclasses.replace(params.io, demand_file=str(csv_path))
         )
 
         # Generate vehicle configurations
-        configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
+        configs = generate_vehicle_configurations(
+            params.problem.vehicles, params.problem.goods
+        )
 
         # Run optimization using the same approach as MCVRP/CVRP
-        solution, configs = run_optimization(
-            customers_df=customers_df,
-            params=params
-        )
+        solution, configs = run_optimization(customers_df=customers_df, params=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -489,14 +485,15 @@ def _run_all_mcvrp_instances(
             # Override output directory if specified
             if output_dir:
                 params = dataclasses.replace(
-                    params,
-                    io=dataclasses.replace(params.io, results_dir=output_dir)
+                    params, io=dataclasses.replace(params.io, results_dir=output_dir)
                 )
 
             # Set allow_split_stops explicitly (don't rely on default config)
             params = dataclasses.replace(
                 params,
-                problem=dataclasses.replace(params.problem, allow_split_stops=allow_split_stops)
+                problem=dataclasses.replace(
+                    params.problem, allow_split_stops=allow_split_stops
+                ),
             )
 
             # Use the unified pipeline interface for optimization
@@ -560,8 +557,7 @@ def _run_all_cvrp_instances(
             # Override output directory if specified
             if output_dir:
                 params = dataclasses.replace(
-                    params,
-                    io=dataclasses.replace(params.io, results_dir=output_dir)
+                    params, io=dataclasses.replace(params.io, results_dir=output_dir)
                 )
 
             # Ignore split-stop flag for CVRP NORMAL benchmarks (single product)
@@ -629,14 +625,15 @@ def _run_all_case_instances(
             # Override output directory if specified
             if output_dir:
                 params = dataclasses.replace(
-                    params,
-                    io=dataclasses.replace(params.io, results_dir=output_dir)
+                    params, io=dataclasses.replace(params.io, results_dir=output_dir)
                 )
 
             # Set allow_split_stops explicitly
             params = dataclasses.replace(
                 params,
-                problem=dataclasses.replace(params.problem, allow_split_stops=allow_split_stops)
+                problem=dataclasses.replace(
+                    params.problem, allow_split_stops=allow_split_stops
+                ),
             )
 
             # Load customer data using the data processing utility
@@ -646,17 +643,17 @@ def _run_all_case_instances(
 
             # Update demand_file to reflect the actual file being used
             params = dataclasses.replace(
-                params,
-                io=dataclasses.replace(params.io, demand_file=str(csv_path))
+                params, io=dataclasses.replace(params.io, demand_file=str(csv_path))
             )
 
             # Generate vehicle configurations
-            configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
+            configs = generate_vehicle_configurations(
+                params.problem.vehicles, params.problem.goods
+            )
 
             # Run optimization using the same approach as MCVRP/CVRP
             solution, configs = run_optimization(
-                customers_df=customers_df,
-                params=params
+                customers_df=customers_df, params=params
             )
 
             # Save results with appropriate filename
@@ -665,7 +662,9 @@ def _run_all_case_instances(
             if config_path:
                 config_name = config_path.stem
 
-            output_path = params.io.results_dir / f"case_{config_name}-{instance}.{format}"
+            output_path = (
+                params.io.results_dir / f"case_{config_name}-{instance}.{format}"
+            )
 
             save_optimization_results(
                 solution=solution,
@@ -1071,18 +1070,14 @@ def convert(
         # Override output directory if specified
         if output:
             params = dataclasses.replace(
-                params,
-                io=dataclasses.replace(params.io, results_dir=output)
+                params, io=dataclasses.replace(params.io, results_dir=output)
             )
 
         # Run optimization
         if not quiet:
             log_progress("Running optimization on converted instance...")
 
-        solution, configs = run_optimization(
-            customers_df=customers_df,
-            params=params
-        )
+        solution, configs = run_optimization(customers_df=customers_df, params=params)
 
         # Save results
         ext = "xlsx" if format == "xlsx" else "json"
@@ -1095,7 +1090,7 @@ def convert(
             filename=str(results_path),
             format=format,
             is_benchmark=True,
-            expected_vehicles=params.expected_vehicles,
+            expected_vehicles=params.problem.expected_vehicles,
         )
 
         log_success("Conversion and optimization completed!")

@@ -334,7 +334,9 @@ def _create_model(
             if v != "NoVehicle":
                 config = _find_config_by_id(configurations, v)
                 # Calculate load percentage
-                total_demand = sum(cluster["Total_Demand"][g] for g in parameters.problem.goods)
+                total_demand = sum(
+                    cluster["Total_Demand"][g] for g in parameters.problem.goods
+                )
                 capacity = float(config.capacity)
                 load_percentage = total_demand / capacity
 

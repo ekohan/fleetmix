@@ -91,7 +91,9 @@ def init_session_state():
     if "optimization_running" not in st.session_state:
         st.session_state.optimization_running = False
     if "parameters" not in st.session_state:
-        st.session_state.parameters = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+        st.session_state.parameters = load_fleetmix_params(
+            "src/fleetmix/config/default_config.yaml"
+        )
     if "error_info" not in st.session_state:
         st.session_state.error_info = None
 
@@ -139,9 +141,9 @@ def run_optimization_in_process(
 
         # Set output directory
         import dataclasses
+
         params = dataclasses.replace(
-            params,
-            io=dataclasses.replace(params.io, results_dir=Path(output_dir))
+            params, io=dataclasses.replace(params.io, results_dir=Path(output_dir))
         )
 
         # Run optimization
@@ -176,7 +178,7 @@ def run_optimization_in_process(
 def collect_parameters_from_ui() -> FleetmixParams:
     """Build FleetmixParams object from Streamlit widgets."""
     import dataclasses
-    
+
     # Start with defaults
     params = st.session_state.parameters
 
@@ -232,7 +234,7 @@ def collect_parameters_from_ui() -> FleetmixParams:
     problem_updates = {}
     algorithm_updates = {}
     io_updates = {}
-    
+
     # Problem section updates
     if "vehicles" in ui_overrides:
         problem_updates["vehicles"] = vehicles
@@ -241,28 +243,36 @@ def collect_parameters_from_ui() -> FleetmixParams:
     if "depot" in ui_overrides:
         problem_updates["depot"] = ui_overrides["depot"]
     if "variable_cost_per_hour" in ui_overrides:
-        problem_updates["variable_cost_per_hour"] = ui_overrides["variable_cost_per_hour"]
+        problem_updates["variable_cost_per_hour"] = ui_overrides[
+            "variable_cost_per_hour"
+        ]
     if "light_load_penalty" in ui_overrides:
         problem_updates["light_load_penalty"] = ui_overrides["light_load_penalty"]
     if "light_load_threshold" in ui_overrides:
         problem_updates["light_load_threshold"] = ui_overrides["light_load_threshold"]
     if "compartment_setup_cost" in ui_overrides:
-        problem_updates["compartment_setup_cost"] = ui_overrides["compartment_setup_cost"]
+        problem_updates["compartment_setup_cost"] = ui_overrides[
+            "compartment_setup_cost"
+        ]
     if "allow_split_stops" in ui_overrides:
         problem_updates["allow_split_stops"] = ui_overrides["allow_split_stops"]
-    
+
     # Algorithm section updates
     if "post_optimization" in ui_overrides:
         algorithm_updates["post_optimization"] = ui_overrides["post_optimization"]
     if "small_cluster_size" in ui_overrides:
         algorithm_updates["small_cluster_size"] = ui_overrides["small_cluster_size"]
     if "nearest_merge_candidates" in ui_overrides:
-        algorithm_updates["nearest_merge_candidates"] = ui_overrides["nearest_merge_candidates"]
+        algorithm_updates["nearest_merge_candidates"] = ui_overrides[
+            "nearest_merge_candidates"
+        ]
     if "max_improvement_iterations" in ui_overrides:
-        algorithm_updates["max_improvement_iterations"] = ui_overrides["max_improvement_iterations"]
+        algorithm_updates["max_improvement_iterations"] = ui_overrides[
+            "max_improvement_iterations"
+        ]
     if "prune_tsp" in ui_overrides:
         algorithm_updates["prune_tsp"] = ui_overrides["prune_tsp"]
-    
+
     # Handle nested clustering parameters
     for key, value in ui_overrides.items():
         if "." in key:
@@ -278,7 +288,7 @@ def collect_parameters_from_ui() -> FleetmixParams:
                     algorithm_updates["demand_weight"] = value
                 elif parts[1] == "route_time_estimation":
                     algorithm_updates["route_time_estimation"] = value
-    
+
     # IO section updates
     if "demand_file" in ui_overrides:
         io_updates["demand_file"] = ui_overrides["demand_file"]
@@ -286,21 +296,17 @@ def collect_parameters_from_ui() -> FleetmixParams:
         io_updates["format"] = ui_overrides["format"]
 
     # Apply updates using dataclasses.replace
-    new_params = params
     if problem_updates:
-        new_params = dataclasses.replace(
-            new_params,
-            problem=dataclasses.replace(new_params.problem, **problem_updates)
+        params = dataclasses.replace(
+            params, problem=dataclasses.replace(params.problem, **problem_updates)
         )
     if algorithm_updates:
-        new_params = dataclasses.replace(
-            new_params,
-            algorithm=dataclasses.replace(new_params.algorithm, **algorithm_updates)
+        params = dataclasses.replace(
+            params, algorithm=dataclasses.replace(params.algorithm, **algorithm_updates)
         )
     if io_updates:
-        new_params = dataclasses.replace(
-            new_params,
-            io=dataclasses.replace(new_params.io, **io_updates)
+        params = dataclasses.replace(
+            params, io=dataclasses.replace(params.io, **io_updates)
         )
 
     # Persist the updated parameters in the session state so that subsequent
@@ -309,9 +315,9 @@ def collect_parameters_from_ui() -> FleetmixParams:
     # issues where some changes – e.g. per-vehicle average speed – appeared to
     # have no effect because the old configuration was silently restored on
     # rerun.
-    st.session_state.parameters = new_params
+    st.session_state.parameters = params
 
-    return new_params
+    return params
 
 
 def display_results(solution: dict[str, Any], output_dir: Path):
@@ -732,7 +738,9 @@ def main():
             st.session_state.uploaded_data.to_csv(demand_path, index=False)
 
             params = collect_parameters_from_ui()
-            params.demand_file = str(demand_path)  # Update the demand file path
+            params = dataclasses.replace(
+                params, io=dataclasses.replace(params.io, demand_file=str(demand_path))
+            )
 
             # Save parameters to a temporary YAML file for multiprocessing
             params_file = temp_dir / "params.yaml"

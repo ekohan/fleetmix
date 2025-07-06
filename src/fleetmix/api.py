@@ -136,7 +136,8 @@ def _two_phase_solve(
         logger.warning(f"Phase 2 optimization failed: {e}, using baseline solution")
         return baseline_solution
 
-# TODO: config solo string o path, no se puede pasar un objeto, despues simplificar 
+
+# TODO: config solo string o path, no se puede pasar un objeto, despues simplificar
 # handling de config
 def optimize(
     demand: str | Path | pd.DataFrame,
@@ -266,14 +267,20 @@ def optimize(
 
         # Update demand_file and results_dir in params to reflect the actual values being used
         if isinstance(demand, (str, Path)):
-            params = dataclasses.replace(params, io=dataclasses.replace(params.io, demand_file=str(demand)))
-        
+            params = dataclasses.replace(
+                params, io=dataclasses.replace(params.io, demand_file=str(demand))
+            )
+
         # Update results_dir if output_dir is provided
         if output_dir:
-            params = dataclasses.replace(params, io=dataclasses.replace(params.io, results_dir=Path(output_dir)))
+            params = dataclasses.replace(
+                params, io=dataclasses.replace(params.io, results_dir=Path(output_dir))
+            )
 
         if verbose:
-            params = dataclasses.replace(params, runtime=dataclasses.replace(params.runtime, verbose=True))
+            params = dataclasses.replace(
+                params, runtime=dataclasses.replace(params.runtime, verbose=True)
+            )
 
         # Validate demand DataFrame has required columns
         required_columns = ["Customer_ID", "Latitude", "Longitude"]
@@ -293,7 +300,9 @@ def optimize(
         # Step 3: Generate vehicle configurations
         try:
             with time_recorder.measure("vehicle_configuration"):
-                configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
+                configs = generate_vehicle_configurations(
+                    params.problem.vehicles, params.problem.goods
+                )
         except Exception as e:
             raise ValueError(
                 f"Error generating vehicle configurations:\n{e!s}\n"

@@ -153,7 +153,9 @@ def save_optimization_results(
             ("Demand File", parameters.io.demand_file),
             (
                 "Config File",
-                getattr(getattr(parameters, "config_file_path", None), "name", "default"),
+                getattr(
+                    getattr(parameters, "config_file_path", None), "name", "default"
+                ),
             ),
             ("Variable Cost per Hour", parameters.problem.variable_cost_per_hour),
             ("Max Split Depth", parameters.algorithm.clustering_max_depth),
@@ -378,7 +380,10 @@ def save_optimization_results(
 
         # Only create visualization for optimization results
         if not is_benchmark:
-            depot_coords = (parameters.problem.depot.latitude, parameters.problem.depot.longitude)
+            depot_coords = (
+                parameters.problem.depot.latitude,
+                parameters.problem.depot.longitude,
+            )
             visualize_clusters(clusters_df, depot_coords, str(output_filename))
 
     except Exception as e:

@@ -38,9 +38,8 @@ def main() -> None:  # pragma: no cover – example script
     params = dataclasses.replace(
         params,
         algorithm=dataclasses.replace(
-            params.algorithm,
-            route_time_estimation="straight_line"
-        )
+            params.algorithm, route_time_estimation="straight_line"
+        ),
     )
 
     solution = fm.optimize(demand=demand_file, config=params)

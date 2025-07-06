@@ -166,7 +166,7 @@ def improve_solution(
             configurations,
             customers,
             internal_params,
-            solver=exact_solver
+            solver=exact_solver,
         )
 
         trial_cost = (

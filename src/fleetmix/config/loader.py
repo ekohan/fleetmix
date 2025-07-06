@@ -16,7 +16,13 @@ import yaml
 from fleetmix.core_types import VehicleSpec, DepotLocation
 from fleetmix.utils.logging import FleetmixLogger
 
-from .params import ProblemParams, AlgorithmParams, IOParams, RuntimeParams, FleetmixParams
+from .params import (
+    ProblemParams,
+    AlgorithmParams,
+    IOParams,
+    RuntimeParams,
+    FleetmixParams,
+)
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -42,15 +48,17 @@ def _parse_vehicles(raw: Dict[str, Dict[str, Any]]) -> Dict[str, VehicleSpec]:
         # Optional allowed_goods with validation
         if "allowed_goods" in details:
             allowed_goods = details.pop("allowed_goods")
-            
+
             # Validate allowed_goods is not empty
             if isinstance(allowed_goods, list) and len(allowed_goods) == 0:
                 raise ValueError(f"Vehicle '{name}': allowed_goods cannot be empty")
-            
+
             # Validate allowed_goods has no duplicates
-            if isinstance(allowed_goods, list) and len(set(allowed_goods)) != len(allowed_goods):
+            if isinstance(allowed_goods, list) and len(set(allowed_goods)) != len(
+                allowed_goods
+            ):
                 raise ValueError(f"Vehicle '{name}': allowed_goods contains duplicates")
-            
+
             spec_kwargs["allowed_goods"] = allowed_goods
 
         # Remaining extra fields
@@ -80,8 +88,7 @@ def load_yaml(path: str | Path) -> FleetmixParams:
         with cfg_path.open() as f:
             data: Dict[str, Any] = yaml.safe_load(f) or {}
     except yaml.YAMLError as exc:
-        raise ValueError(
-            f"Error parsing YAML configuration {cfg_path}: {exc}") from exc
+        raise ValueError(f"Error parsing YAML configuration {cfg_path}: {exc}") from exc
 
     # ---------------------------------------------------------------------
     # Extract problem definition
@@ -104,7 +111,7 @@ def load_yaml(path: str | Path) -> FleetmixParams:
     goods = data.pop("goods", None)
     if goods is None:
         raise ValueError("YAML missing required key 'goods'.")
-    
+
     variable_cph = data.pop("variable_cost_per_hour", None)
     if variable_cph is None:
         raise ValueError("Missing required configuration field: variable_cost_per_hour")
@@ -166,7 +173,7 @@ def load_yaml(path: str | Path) -> FleetmixParams:
     # ---------------------------------------------------------------------
     # Runtime parameters (optional, with defaults)
     # ---------------------------------------------------------------------
-    
+
     runtime = RuntimeParams(
         verbose=data.pop("verbose", False),
         debug=data.pop("debug", False),
@@ -178,9 +185,7 @@ def load_yaml(path: str | Path) -> FleetmixParams:
     # Any remaining unknown keys will raise an error to avoid silent mistakes.
     if data:
         unknown_keys = ", ".join(sorted(data.keys()))
-        raise ValueError(
-            f"Unknown configuration fields: {unknown_keys}"
-        )
+        raise ValueError(f"Unknown configuration fields: {unknown_keys}")
 
     logger.debug(
         "Loaded configuration – problem: %s algorithm: %s io: %s runtime: %s",
@@ -190,4 +195,6 @@ def load_yaml(path: str | Path) -> FleetmixParams:
         runtime,
     )
 
-    return FleetmixParams(problem=problem, algorithm=algorithm, io=io_params, runtime=runtime) 
+    return FleetmixParams(
+        problem=problem, algorithm=algorithm, io=io_params, runtime=runtime
+    )

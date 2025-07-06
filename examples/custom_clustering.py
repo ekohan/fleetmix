@@ -37,7 +37,7 @@ def main():
     # 2.  Prepare demand file
     # ---------------------------------------------------------------------------
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
-    
+
     # ---------------------------------------------------------------------------
     # 3.  Run optimisation with custom clusterer
     # ---------------------------------------------------------------------------
@@ -48,9 +48,8 @@ def main():
     params = dataclasses.replace(
         params,
         algorithm=dataclasses.replace(
-            params.algorithm,
-            clustering_method="round_robin"
-        )
+            params.algorithm, clustering_method="round_robin"
+        ),
     )
 
     solution = fm.optimize(demand=demand_file, config=params)

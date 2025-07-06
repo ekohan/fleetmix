@@ -44,9 +44,7 @@ class RouteTimeEstimator(Protocol):
 class SolverAdapter(Protocol):
     """Thin wrapper around PuLP solvers to provide a consistent interface."""
 
-    def get_pulp_solver(
-        self, params: RuntimeParams
-    ) -> pulp.LpSolver:
+    def get_pulp_solver(self, params: RuntimeParams) -> pulp.LpSolver:
         """Return the underlying PuLP solver instance configured and ready to use."""
         ...
 

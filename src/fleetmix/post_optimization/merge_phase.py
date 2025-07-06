@@ -157,10 +157,7 @@ def improve_solution(
 
         # Force exact optimality (gap = 0) in the improvement iterations to avoid
         # early convergence due to tolerance.
-        internal_params = replace(
-            params, 
-            runtime=replace(params.runtime, gap_rel=0.0)
-        )
+        internal_params = replace(params, runtime=replace(params.runtime, gap_rel=0.0))
         exact_solver = pick_solver(internal_params.runtime)
 
         trial_solution = optimize_fleet(

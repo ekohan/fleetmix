@@ -47,7 +47,11 @@ class MiniBatchKMeansClusterer:
     """MiniBatch KMeans clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
+        self,
+        customers: pd.DataFrame,
+        *,
+        context: CapacitatedClusteringContext,
+        n_clusters: int,
     ) -> list[int]:
         """Cluster customers using MiniBatch KMeans."""
         data = compute_cluster_metric_input(customers, context, "minibatch_kmeans")
@@ -62,7 +66,11 @@ class KMedoidsClusterer:
     """K-Medoids clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
+        self,
+        customers: pd.DataFrame,
+        *,
+        context: CapacitatedClusteringContext,
+        n_clusters: int,
     ) -> list[int]:
         """Cluster customers using K-Medoids."""
         data = compute_cluster_metric_input(customers, context, "kmedoids")
@@ -84,7 +92,11 @@ class AgglomerativeClusterer:
     """Agglomerative clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
+        self,
+        customers: pd.DataFrame,
+        *,
+        context: CapacitatedClusteringContext,
+        n_clusters: int,
     ) -> list[int]:
         """Cluster customers using Agglomerative clustering."""
         # Agglomerative clustering needs precomputed distance matrix
@@ -102,7 +114,11 @@ class GaussianMixtureClusterer:
     """Gaussian Mixture Model clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
+        self,
+        customers: pd.DataFrame,
+        *,
+        context: CapacitatedClusteringContext,
+        n_clusters: int,
     ) -> list[int]:
         """Cluster customers using Gaussian Mixture Model."""
         data = compute_cluster_metric_input(customers, context, "gaussian_mixture")

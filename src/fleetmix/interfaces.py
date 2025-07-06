@@ -23,7 +23,11 @@ class Clusterer(Protocol):
     """
 
     def fit(
-        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
+        self,
+        customers: pd.DataFrame,
+        *,
+        context: CapacitatedClusteringContext,
+        n_clusters: int,
     ) -> list[int]:
         """Cluster customers into n_clusters groups. Returns cluster labels."""
         ...

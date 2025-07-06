@@ -2,10 +2,10 @@
 
 Demonstrates how to plug in a *custom* PuLP solver adapter via the FleetMix
 registry.  This adapter simply forwards to CBC but is registered under the key
-``naive``. 
+``naive``.
 
 This file is *only* for demonstration purposes, it shows how a user can add
-custom components without modifying FleetMix's source code. 
+custom components without modifying FleetMix's source code.
 See examples/custom_solver_adapter.py.
 """
 
@@ -15,6 +15,7 @@ import pulp
 
 from fleetmix.config.params import RuntimeParams
 from fleetmix.registry import register_solver_adapter
+
 
 @register_solver_adapter("naive")
 class RelaxedCbcAdapter:

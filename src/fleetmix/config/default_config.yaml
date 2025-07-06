@@ -1,3 +1,4 @@
+# TODO: add comments
 # Vehicle Types and Capacities
 vehicles:
   A: # MCV - Carries all goods by default
@@ -79,3 +80,9 @@ allow_split_stops: false  # Allow customers to be served by multiple vehicles
 
 # Output format
 format: 'json'  # Output format (excel or json)
+
+# TODO: add solver parameters
+# Runtime parameters
+#verbose: false
+#debug: false
+#solver_gap_rel: 0.0

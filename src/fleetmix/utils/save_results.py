@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     BenchmarkType,
     FleetmixSolution,
@@ -42,19 +42,22 @@ logger = FleetmixLogger.get_logger(__name__)
 def save_optimization_results(
     solution: FleetmixSolution,
     configurations: list[VehicleConfiguration],
-    parameters: Parameters,
+    parameters: FleetmixParams,
     filename: str | None = None,
-    format: str = "excel",
+    format: str = "json",
     is_benchmark: bool = False,
     expected_vehicles: int | None = None,
 ) -> None:
     """Save optimization results to a file (Excel or JSON) and create visualization"""
 
-    base_results_dir = parameters.results_dir
+    base_results_dir = parameters.io.results_dir
 
     if filename is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        extension = ".xlsx" if format == "excel" else ".json"
+        if format == "xlsx":
+            extension = ".xlsx"
+        else:
+            extension = ".json"
         output_filename = (
             base_results_dir / f"optimization_results_{timestamp}{extension}"
         )
@@ -77,7 +80,7 @@ def save_optimization_results(
         # For reporting purposes we want to treat each origin customer only once so
         # that the "Customers per Cluster" statistics and the JSON/Excel exports
         # stay human-readable.
-        if parameters.allow_split_stops:
+        if parameters.problem.allow_split_stops:
 
             def _n_unique_origins(customers: list[str] | tuple[str, ...] | str) -> int:
                 """Return the number of *origin* customers, ignoring goods suffixes."""
@@ -147,14 +150,12 @@ def save_optimization_results(
             ("Truck Load % (Avg)", f"{load_percentages.mean():.1f}"),
             ("Truck Load % (Median)", f"{load_percentages.median():.1f}"),
             ("---Parameters---", ""),
-            ("Demand File", parameters.demand_file),
+            ("Demand File", parameters.io.demand_file),
             (
                 "Config File",
-                parameters.config_file_path.name
-                if parameters.config_file_path
-                else "default",
+                getattr(getattr(parameters, "config_file_path", None), "name", "default"),
             ),
-            ("Variable Cost per Hour", parameters.variable_cost_per_hour),
+            ("Variable Cost per Hour", parameters.problem.variable_cost_per_hour),
             ("Max Split Depth", parameters.clustering["max_depth"]),
             ("Clustering Method", parameters.clustering["method"]),
             ("Clustering Distance", parameters.clustering["distance"]),
@@ -164,14 +165,14 @@ def save_optimization_results(
                 "Route Time Estimation Method",
                 parameters.clustering["route_time_estimation"],
             ),
-            ("Light Load Penalty", parameters.light_load_penalty),
-            ("Light Load Threshold", parameters.light_load_threshold),
-            ("Compartment Setup Cost", parameters.compartment_setup_cost),
+            ("Light Load Penalty", parameters.problem.light_load_penalty),
+            ("Light Load Threshold", parameters.problem.light_load_threshold),
+            ("Compartment Setup Cost", parameters.problem.compartment_setup_cost),
         ]
     )
 
     # Add vehicle types
-    for v_type, specs in parameters.vehicles.items():
+    for v_type, specs in parameters.problem.vehicles.items():
         summary_metrics.append((f"Vehicle Type {v_type} Capacity", specs.capacity))
         summary_metrics.append((f"Vehicle Type {v_type} Fixed Cost", specs.fixed_cost))
         summary_metrics.append((f"Vehicle Type {v_type} Avg Speed", specs.avg_speed))
@@ -195,7 +196,7 @@ def save_optimization_results(
     cluster_details = clusters_df.copy()
     if "Customers" in cluster_details.columns:
         # Deduplicate customer IDs for clearer reporting when split-stops are enabled
-        if parameters.allow_split_stops:
+        if parameters.problem.allow_split_stops:
 
             def _deduplicate_customer_ids(customers):
                 """Return a list with at most one entry per *origin* customer."""
@@ -237,14 +238,14 @@ def save_optimization_results(
             total_demand_sum = sum(total_demand.values())
 
             # Calculate demand percentage for each product type first
-            for good in parameters.goods:
+            for good in parameters.problem.goods:
                 demand_column_name = f"Demand_{good}_pct"
                 cluster_details.at[cluster_idx, demand_column_name] = (
                     total_demand[good] / total_demand_sum if total_demand_sum > 0 else 0
                 )
 
             # Then calculate load percentage for each product type
-            for good in parameters.goods:
+            for good in parameters.problem.goods:
                 load_column_name = f"Load_{good}_pct"
                 cluster_details.at[cluster_idx, load_column_name] = (
                     total_demand[good] / config.capacity
@@ -313,7 +314,7 @@ def save_optimization_results(
             ("Light Load Penalties", solution.total_light_load_penalties),
             ("Compartment Setup Penalties", solution.total_compartment_penalties),
             ("Total Cost", solution.total_cost),
-            ("Demand File", parameters.demand_file),
+            ("Demand File", parameters.io.demand_file),
         ],
     }
 
@@ -370,14 +371,14 @@ def save_optimization_results(
             _write_to_json(
                 str(output_filename), data
             )  # _write_to_json will use data['time_measurements_json']
-        else:
+        else:  # xlsx format
             _write_to_excel(
                 str(output_filename), data
             )  # _write_to_excel will use data['time_measurements_excel']
 
         # Only create visualization for optimization results
         if not is_benchmark:
-            depot_coords = (parameters.depot["latitude"], parameters.depot["longitude"])
+            depot_coords = (parameters.problem.depot.latitude, parameters.problem.depot.longitude)
             visualize_clusters(clusters_df, depot_coords, str(output_filename))
 
     except Exception as e:

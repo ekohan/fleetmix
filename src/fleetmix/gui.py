@@ -19,7 +19,8 @@ import pandas as pd
 import streamlit as st
 
 from fleetmix import api
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 
 # Page configuration
 st.set_page_config(
@@ -90,7 +91,7 @@ def init_session_state():
     if "optimization_running" not in st.session_state:
         st.session_state.optimization_running = False
     if "parameters" not in st.session_state:
-        st.session_state.parameters = Parameters.from_yaml()
+        st.session_state.parameters = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     if "error_info" not in st.session_state:
         st.session_state.error_info = None
 
@@ -130,21 +131,25 @@ def run_optimization_in_process(
             json.dump({"stage": "Initializing...", "progress": 0}, f)
 
         # Load parameters from YAML file
-        params = Parameters.from_yaml(params_file)
+        params = load_fleetmix_params(params_file)
 
         # Update status - generating clusters
         with open(status_file, "w") as f:
             json.dump({"stage": "Generating clusters...", "progress": 25}, f)
 
         # Set output directory
-        params.results_dir = Path(output_dir)
+        import dataclasses
+        params = dataclasses.replace(
+            params,
+            io=dataclasses.replace(params.io, results_dir=Path(output_dir))
+        )
 
         # Run optimization
         solution = api.optimize(
             demand=demand_path,
             config=params,
             output_dir=output_dir,
-            format="excel",
+            format="json",
             verbose=False,
         )
 
@@ -168,50 +173,25 @@ def run_optimization_in_process(
         raise
 
 
-def collect_parameters_from_ui() -> Parameters:
-    """Build Parameters object from Streamlit widgets."""
+def collect_parameters_from_ui() -> FleetmixParams:
+    """Build FleetmixParams object from Streamlit widgets."""
+    import dataclasses
+    
     # Start with defaults
     params = st.session_state.parameters
 
-    # Create a dictionary with all parameters
-    params_dict = {
-        "vehicles": params.vehicles,
-        "goods": params.goods,
-        "depot": params.depot,
-        "demand_file": params.demand_file,
-        "clustering": params.clustering,
-        "variable_cost_per_hour": params.variable_cost_per_hour,
-        "light_load_penalty": params.light_load_penalty,
-        "light_load_threshold": params.light_load_threshold,
-        "compartment_setup_cost": params.compartment_setup_cost,
-        "format": params.format,
-        "post_optimization": params.post_optimization,
-        "small_cluster_size": params.small_cluster_size,
-        "nearest_merge_candidates": params.nearest_merge_candidates,
-        "max_improvement_iterations": params.max_improvement_iterations,
-        "prune_tsp": params.prune_tsp,
-        "allow_split_stops": params.allow_split_stops,
-    }
-
-    # TODO: allow_split_stops doesn't work in the gui.
-
-    # Override with UI values stored in session state
+    # Collect UI overrides
+    ui_overrides = {}
     for key in st.session_state:
         if key.startswith("param_"):
             param_name = key[6:]  # Remove 'param_' prefix
-            if param_name in params_dict:
-                params_dict[param_name] = st.session_state[key]
-            elif "." in param_name:
-                # Handle nested parameters like clustering.method
-                parts = param_name.split(".")
-                if parts[0] in params_dict:
-                    if isinstance(params_dict[parts[0]], dict):
-                        params_dict[parts[0]][parts[1]] = st.session_state[key]
+            ui_overrides[param_name] = st.session_state[key]
 
     # Convert vehicle dictionaries to VehicleSpec objects if needed
-    if "vehicles" in params_dict and isinstance(params_dict["vehicles"], dict):
+    vehicles = params.problem.vehicles
+    if "vehicles" in ui_overrides and isinstance(ui_overrides["vehicles"], dict):
         vehicles_converted = {}
-        for vtype, vdata in params_dict["vehicles"].items():
+        for vtype, vdata in ui_overrides["vehicles"].items():
             if (
                 isinstance(vdata, dict)
                 and "capacity" in vdata
@@ -246,10 +226,82 @@ def collect_parameters_from_ui() -> Parameters:
             else:
                 # Already a VehicleSpec object
                 vehicles_converted[vtype] = vdata
-        params_dict["vehicles"] = vehicles_converted
+        vehicles = vehicles_converted
 
-    # Create and return Parameters object
-    new_params = Parameters(**params_dict)
+    # Build updates for each section
+    problem_updates = {}
+    algorithm_updates = {}
+    io_updates = {}
+    
+    # Problem section updates
+    if "vehicles" in ui_overrides:
+        problem_updates["vehicles"] = vehicles
+    if "goods" in ui_overrides:
+        problem_updates["goods"] = ui_overrides["goods"]
+    if "depot" in ui_overrides:
+        problem_updates["depot"] = ui_overrides["depot"]
+    if "variable_cost_per_hour" in ui_overrides:
+        problem_updates["variable_cost_per_hour"] = ui_overrides["variable_cost_per_hour"]
+    if "light_load_penalty" in ui_overrides:
+        problem_updates["light_load_penalty"] = ui_overrides["light_load_penalty"]
+    if "light_load_threshold" in ui_overrides:
+        problem_updates["light_load_threshold"] = ui_overrides["light_load_threshold"]
+    if "compartment_setup_cost" in ui_overrides:
+        problem_updates["compartment_setup_cost"] = ui_overrides["compartment_setup_cost"]
+    if "allow_split_stops" in ui_overrides:
+        problem_updates["allow_split_stops"] = ui_overrides["allow_split_stops"]
+    
+    # Algorithm section updates
+    if "post_optimization" in ui_overrides:
+        algorithm_updates["post_optimization"] = ui_overrides["post_optimization"]
+    if "small_cluster_size" in ui_overrides:
+        algorithm_updates["small_cluster_size"] = ui_overrides["small_cluster_size"]
+    if "nearest_merge_candidates" in ui_overrides:
+        algorithm_updates["nearest_merge_candidates"] = ui_overrides["nearest_merge_candidates"]
+    if "max_improvement_iterations" in ui_overrides:
+        algorithm_updates["max_improvement_iterations"] = ui_overrides["max_improvement_iterations"]
+    if "prune_tsp" in ui_overrides:
+        algorithm_updates["prune_tsp"] = ui_overrides["prune_tsp"]
+    
+    # Handle nested clustering parameters
+    for key, value in ui_overrides.items():
+        if "." in key:
+            parts = key.split(".")
+            if parts[0] == "clustering":
+                if parts[1] == "method":
+                    algorithm_updates["clustering_method"] = value
+                elif parts[1] == "distance":
+                    algorithm_updates["clustering_distance"] = value
+                elif parts[1] == "geo_weight":
+                    algorithm_updates["geo_weight"] = value
+                elif parts[1] == "demand_weight":
+                    algorithm_updates["demand_weight"] = value
+                elif parts[1] == "route_time_estimation":
+                    algorithm_updates["route_time_estimation"] = value
+    
+    # IO section updates
+    if "demand_file" in ui_overrides:
+        io_updates["demand_file"] = ui_overrides["demand_file"]
+    if "format" in ui_overrides:
+        io_updates["format"] = ui_overrides["format"]
+
+    # Apply updates using dataclasses.replace
+    new_params = params
+    if problem_updates:
+        new_params = dataclasses.replace(
+            new_params,
+            problem=dataclasses.replace(new_params.problem, **problem_updates)
+        )
+    if algorithm_updates:
+        new_params = dataclasses.replace(
+            new_params,
+            algorithm=dataclasses.replace(new_params.algorithm, **algorithm_updates)
+        )
+    if io_updates:
+        new_params = dataclasses.replace(
+            new_params,
+            io=dataclasses.replace(new_params.io, **io_updates)
+        )
 
     # Persist the updated parameters in the session state so that subsequent
     # reruns (triggered automatically by Streamlit) remember the user's

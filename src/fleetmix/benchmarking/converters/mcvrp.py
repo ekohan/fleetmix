@@ -4,12 +4,14 @@ Converter for MCVRP instances into FSM format.
 
 __all__ = ["convert_mcvrp_to_fsm"]
 
+import dataclasses
 from pathlib import Path
 
 import pandas as pd
 
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams, ProblemParams, AlgorithmParams, IOParams
 from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
@@ -30,7 +32,7 @@ def convert_mcvrp_to_fsm(
     -------
     pd.DataFrame
         Customer demand table.
-    Parameters
+    FleetmixParams
         Parameter set pre-filled with depot, capacity, and expected vehicles.
 
     Raises
@@ -77,13 +79,14 @@ def convert_mcvrp_to_fsm(
         )
     customers_df = pd.DataFrame(customers)
 
-    # Create parameters clone
-    params = Parameters.from_yaml()
+    # Create parameters with defaults
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     # Set depot location
     depot_lat, depot_lon = geo_coords[instance.depot_id]
-    params.depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
+    depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
+    
     # Single multi-compartment vehicle
-    params.vehicles = {
+    vehicles = {
         "MCVRP": VehicleSpec(
             capacity=instance.capacity,
             fixed_cost=1000,
@@ -94,7 +97,16 @@ def convert_mcvrp_to_fsm(
             max_route_time=24 * 7,  # 1 week ~ no time limit
         )
     }
-    # Expected vehicles from instance
-    params.expected_vehicles = instance.vehicles
+    
+    # Update params with MCVRP-specific settings
+    params = dataclasses.replace(
+        params,
+        problem=dataclasses.replace(
+            params.problem,
+            depot=depot,
+            vehicles=vehicles,
+            expected_vehicles=instance.vehicles,
+        )
+    )
 
     return customers_df, params

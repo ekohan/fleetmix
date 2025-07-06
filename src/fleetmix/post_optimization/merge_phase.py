@@ -40,7 +40,7 @@ from dataclasses import replace
 
 import pandas as pd
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     Cluster,
     Customer,
@@ -67,7 +67,7 @@ def improve_solution(
     initial_solution: FleetmixSolution,
     configurations: list[VehicleConfiguration],
     customers: list[CustomerBase],
-    params: Parameters,
+    params: FleetmixParams,
 ) -> FleetmixSolution:
     """Iteratively merge small clusters to lower total cost.
 
@@ -107,9 +107,9 @@ def improve_solution(
     customers_df = Customer.to_dataframe(customers)
 
     # Iterate with explicit counter to correctly log attempts
-    for iters in range(1, params.max_improvement_iterations + 1):
+    for iters in range(1, params.algorithm.max_improvement_iterations + 1):
         logger.debug(
-            f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.max_improvement_iterations}"
+            f"\n{Symbols.CHECK} Merge phase iteration {iters}/{params.algorithm.max_improvement_iterations}"
         )
 
         selected_clusters = best_solution.selected_clusters
@@ -125,7 +125,7 @@ def improve_solution(
 
         # Ensure goods columns exist
         config_lookup = _create_config_lookup(configurations)
-        for good in params.goods:
+        for good in params.problem.goods:
             if good not in selected_clusters_df.columns:
                 selected_clusters_df[good] = selected_clusters_df["Config_ID"].map(
                     lambda x: config_lookup[str(x)][good]
@@ -149,21 +149,23 @@ def improve_solution(
         # Convert back to list[Cluster]
         combined_clusters = dataframe_to_clusters(combined_clusters_df)
 
-        # Call solver without triggering another merge phase
-        internal_params = replace(params, post_optimization=False)
+        # Disable further post-optimization inside recursive optimize_fleet call
+        internal_params = replace(
+            params,
+            algorithm=replace(params.algorithm, post_optimization=False),
+        )
 
         # Use the internal solver that accepts DataFrames. Force exact optimality
         # (gap = 0) in the improvement iterations to avoid early convergence
         # due to tolerance.
-        exact_solver = pick_solver(verbose=True, gap_rel=0.0)
+        exact_solver = pick_solver(verbose=params.runtime.verbose, gap_rel=params.runtime.solver_gap_rel)
 
         trial_solution = optimize_fleet(
             combined_clusters,
             configurations,
             customers,
             internal_params,
-            solver=exact_solver,
-            verbose=True,
+            solver=exact_solver
         )
 
         trial_cost = (
@@ -195,7 +197,7 @@ def improve_solution(
     else:
         # Loop completed without breaks
         reason = "iteration cap reached"
-        iters = params.max_improvement_iterations
+        iters = params.algorithm.max_improvement_iterations
 
     logger.debug(f"Merge phase finished after {iters} iteration(s): {reason}")
     return best_solution

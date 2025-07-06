@@ -19,7 +19,7 @@ from pyvrp import (
 )
 from pyvrp.stop import MaxIterations
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import BenchmarkType, VRPSolution
 from fleetmix.utils.logging import (
     Colors,
@@ -41,7 +41,7 @@ class VRPSolver:
     def __init__(
         self,
         customers: pd.DataFrame,
-        params: Parameters,
+        params: FleetmixParams,
         time_limit: int = 300,
         benchmark_type: BenchmarkType = BenchmarkType.SINGLE_COMPARTMENT,
     ):
@@ -49,7 +49,7 @@ class VRPSolver:
         self.params = params
         self.time_limit = time_limit
         self.benchmark_type = benchmark_type
-        self.route_time_estimation = params.clustering["route_time_estimation"]
+        self.route_time_estimation = params.algorithm.route_time_estimation
         self.model = self._prepare_model()
 
     def _prepare_model(self) -> Model:
@@ -116,8 +116,8 @@ class VRPSolver:
             clients=expanded_clients,
             depots=[
                 Depot(
-                    x=int(self.params.depot["latitude"] * 10000),
-                    y=int(self.params.depot["longitude"] * 10000),
+                    x=int(self.params.problem.depot.latitude * 10000),
+                    y=int(self.params.problem.depot.longitude * 10000),
                 )
             ],
             vehicle_types=vehicle_types,
@@ -137,8 +137,8 @@ class VRPSolver:
 
         # Add depot coordinates at index 0
         depot_coords = (
-            float(self.params.depot["latitude"]),
-            float(self.params.depot["longitude"]),
+            float(self.params.problem.depot.latitude),
+            float(self.params.problem.depot.longitude),
         )
         client_coords_list[0] = depot_coords
 

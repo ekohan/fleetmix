@@ -49,7 +49,6 @@ from typing import Any
 import pandas as pd
 import pulp
 
-from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import (
     Cluster,
     Customer,
@@ -62,6 +61,7 @@ from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
 from fleetmix.utils.solver import pick_solver
+from fleetmix.config.params import FleetmixParams
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -93,9 +93,8 @@ def optimize_fleet(
     clusters: list[Cluster],
     configurations: list[VehicleConfiguration],
     customers: list[CustomerBase],
-    parameters: Parameters,
+    parameters: FleetmixParams,
     solver=None,
-    verbose: bool = False,
     time_recorder=None,
     warm_start_solution: FleetmixSolution | None = None,
 ) -> FleetmixSolution:
@@ -141,6 +140,7 @@ def optimize_fleet(
     clusters_df = Cluster.to_dataframe(clusters)
     customers_df = Customer.to_dataframe(customers)
 
+    # TODO: solver es parte de fleetmixparams.runtime, no usar pick_solver
     # Call internal implementation
     return _solve_internal(
         clusters_df,
@@ -148,7 +148,6 @@ def optimize_fleet(
         customers_df,
         parameters,
         solver,
-        verbose,
         time_recorder,
         warm_start_solution,
     )
@@ -158,9 +157,8 @@ def _solve_internal(
     clusters_df: pd.DataFrame,
     configurations: list[VehicleConfiguration],
     customers_df: pd.DataFrame,
-    parameters: Parameters,
+    parameters: FleetmixParams,
     solver=None,
-    verbose: bool = False,
     time_recorder=None,
     warm_start_solution: FleetmixSolution | None = None,
 ) -> FleetmixSolution:
@@ -171,7 +169,6 @@ def _solve_internal(
         configurations,
         customers_df,
         parameters,
-        verbose,
         warm_start_solution,
     )
 
@@ -196,14 +193,14 @@ def _solve_internal(
         return empty_solution
 
     # Select solver: use provided or pick based on FSM_SOLVER env
-    solver = solver or pick_solver(verbose, gap_rel=0.0)
+    solver = solver or pick_solver(parameters.runtime.verbose, gap_rel=parameters.runtime.solver_gap_rel)
     logger.info(f"Using solver: {solver.name}")
     start_time = time.time()
     model.solve(solver)
     end_time = time.time()
     solver_time = end_time - start_time
 
-    if verbose:
+    if parameters.runtime.verbose:
         print(f"Optimization completed in {solver_time:.2f} seconds.")
 
     # Dump model artifacts if debugging is enabled
@@ -252,8 +249,7 @@ def _create_model(
     clusters_df: pd.DataFrame,
     configurations: list[VehicleConfiguration],
     customers_df: pd.DataFrame,
-    parameters: Parameters,
-    verbose: bool = False,
+    parameters: FleetmixParams,
     warm_start_solution: FleetmixSolution | None = None,
 ) -> tuple[
     pulp.LpProblem,
@@ -556,7 +552,7 @@ def _validate_solution(
     selected_clusters: pd.DataFrame,
     customers_df: pd.DataFrame,
     configurations: list[VehicleConfiguration],
-    parameters: Parameters,
+    parameters: FleetmixParams,
 ) -> set:
     """
     Validate that all customers are served in the solution.
@@ -596,7 +592,7 @@ def _validate_solution(
 def _calculate_solution_statistics(
     selected_clusters: pd.DataFrame,
     configurations: list[VehicleConfiguration],
-    parameters: Parameters,
+    parameters: FleetmixParams,
     model: pulp.LpProblem,
     x_vars: dict,
     c_vk: dict,
@@ -674,7 +670,7 @@ def _calculate_solution_statistics(
 
 
 def _calculate_cluster_cost(
-    cluster: pd.Series, config: VehicleConfiguration, parameters: Parameters
+    cluster: pd.Series, config: VehicleConfiguration, parameters: FleetmixParams
 ) -> float:
     """
     Calculate the base cost for serving a cluster with a vehicle configuration.

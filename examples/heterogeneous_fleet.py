@@ -19,14 +19,17 @@ from typing import Dict
 
 import fleetmix as fm
 from fleetmix.core_types import VehicleSpec
+from fleetmix.config import load_fleetmix_params, FleetmixParams
+import dataclasses
 
 
-def build_demo_parameters() -> fm.Parameters:
-    """Return a :class:`fleetmix.Parameters` instance with a heterogeneous fleet."""
+def build_demo_parameters() -> FleetmixParams:
+    """Return a :class:`FleetmixParams` instance with a heterogeneous fleet."""
 
-    params = fm.Parameters.from_yaml("src/fleetmix/config/default_config.yaml")
+    # Start with default config
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
 
-    # Define mixed fleet    – deliberately diverse to showcase capability
+    # Define mixed fleet
     fleet: Dict[str, VehicleSpec] = {
         "Drone": VehicleSpec(
             capacity=5,
@@ -57,7 +60,11 @@ def build_demo_parameters() -> fm.Parameters:
         ),
     }
 
-    params.vehicles = fleet
+    # Update the fleet using dataclasses.replace for immutable params
+    params = dataclasses.replace(
+        params,
+        problem=dataclasses.replace(params.problem, vehicles=fleet)
+    )
     return params
 
 

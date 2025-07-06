@@ -22,6 +22,8 @@ os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 # Plugin module import – executed for its side-effect of registering itself.
 import fleetmix as fm
 import fleetmix_example_plugins.round_robin  # noqa: F401
+from fleetmix.config import load_fleetmix_params
+import dataclasses
 
 
 def main():
@@ -35,14 +37,32 @@ def main():
     # 2.  Prepare demand file
     # ---------------------------------------------------------------------------
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
-
+    
     # ---------------------------------------------------------------------------
     # 3.  Run optimisation with custom clusterer
     # ---------------------------------------------------------------------------
-    params = fm.Parameters.from_yaml("src/fleetmix/config/default_config.yaml")
-    params.clustering["method"] = "round_robin"
+
+    # Start with default config
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    # Update clustering method using dataclasses.replace for immutable params
+    params = dataclasses.replace(
+        params,
+        algorithm=dataclasses.replace(
+            params.algorithm,
+            clustering_method="round_robin"
+        )
+    )
 
     solution = fm.optimize(demand=demand_file, config=params)
+
+    # ---------------------------------------------------------------------------
+    # 4.  Display selected clusters
+    # ---------------------------------------------------------------------------
+    print("Selected clusters (ID -> customers):")
+    for cluster in solution.selected_clusters:
+        print(
+            f"  Cluster {cluster.cluster_id} (Config {cluster.config_id}): {cluster.customers} | Total Demand: {cluster.total_demand}"
+        )
 
     print(
         "Optimisation complete with custom clusterer – total cost:", solution.total_cost

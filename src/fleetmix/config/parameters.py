@@ -9,6 +9,7 @@ import yaml
 from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils import PROJECT_ROOT
 from fleetmix.utils.logging import FleetmixLogger
+from .params import RuntimeParams  # for temporary interoperability
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -36,6 +37,10 @@ class Parameters:
     allow_split_stops: bool = False
     pre_small_cluster_size: int = 5
     pre_nearest_merge_candidates: int = 3
+
+    # Minimal runtime section so legacy Parameters remain usable with new
+    # internal APIs expecting `params.runtime`.
+    runtime: RuntimeParams = field(default_factory=RuntimeParams, repr=False)
 
     config_file_path: Path | None = field(default=None, repr=False)
     results_dir: Path = field(

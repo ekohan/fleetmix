@@ -1,6 +1,6 @@
 # Process-Level Parallelism in FleetMix
 
-FleetMix accelerates the **clustering stage** with Joblib's `loky` backend. `loky` uses separate OS processes; each worker starts with a clean Python interpreter, so nothing created at run-time in the parent is automatically visible inside workers.
+FleetMix speeds up the **clustering stage** with Joblib's `loky` backend, which runs tasks in separate OS processes. Because each worker launches a fresh Python interpreter, any objects created at runtime in the parent process are not automatically available inside the workers.
 
 ## Plugin visibility
 

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from haversine import Unit, haversine_vector
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.registry import ROUTE_TIME_ESTIMATOR_REGISTRY
 from fleetmix.utils.logging import FleetmixLogger
@@ -48,7 +48,7 @@ def _configs_to_dataframe(configurations: list[VehicleConfiguration]) -> pd.Data
 
 
 def _get_merged_route_time(
-    customers: pd.DataFrame, config: VehicleConfiguration, params: Parameters
+    customers: pd.DataFrame, config: VehicleConfiguration, params: FleetmixParams
 ) -> tuple[float, list | None]:
     """
     Estimate (and cache) the route time and sequence for a merged cluster of customers.
@@ -59,15 +59,15 @@ def _get_merged_route_time(
         return _merged_route_time_cache[key]
 
     # Create RouteTimeContext using the factory
-    rt_context = make_rt_context(config, params.depot, params.prune_tsp)
+    rt_context = make_rt_context(config, params.problem.depot, params.algorithm.prune_tsp)
 
     # Use the new interface with RouteTimeContext
     estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(
-        params.clustering["route_time_estimation"]
+        params.algorithm.route_time_estimation
     )
     if estimator_class is None:
         raise ValueError(
-            f"Unknown route time estimation method: {params.clustering['route_time_estimation']}"
+            f"Unknown route time estimation method: {params.algorithm.route_time_estimation}"
         )
 
     estimator = estimator_class()
@@ -82,7 +82,7 @@ def generate_merge_phase_clusters(
     selected_clusters: pd.DataFrame,
     configurations: list[VehicleConfiguration],
     customers_df: pd.DataFrame,
-    params: Parameters,
+    params: FleetmixParams,
     *,
     small_cluster_size: int | None = None,
     nearest_merge_candidates: int | None = None,
@@ -104,8 +104,8 @@ def generate_merge_phase_clusters(
     Returns:
         DataFrame of merged cluster candidates
     """
-    small_limit = small_cluster_size or params.small_cluster_size
-    neighbour_cap = nearest_merge_candidates or params.nearest_merge_candidates
+    small_limit = small_cluster_size or params.algorithm.small_cluster_size
+    neighbour_cap = nearest_merge_candidates or params.algorithm.nearest_merge_candidates
 
     new_clusters = []
     stats = {
@@ -134,7 +134,7 @@ def generate_merge_phase_clusters(
     logger.debug(f"→ Found {len(small_meta)} small clusters")
 
     # Precompute numpy arrays for vectorized capacity & goods checks
-    goods_arr = target_meta[params.goods].to_numpy()
+    goods_arr = target_meta[params.problem.goods].to_numpy()
     cap_arr = target_meta["Capacity"].to_numpy()
     ids = target_meta["Cluster_ID"].to_numpy()
     lat_arr = target_meta["Centroid_Latitude"].to_numpy()
@@ -142,7 +142,7 @@ def generate_merge_phase_clusters(
 
     # Vectorized filtering loop
     for _, small in small_meta.iterrows():
-        sd = np.array([small["Total_Demand"][g] for g in params.goods])
+        sd = np.array([small["Total_Demand"][g] for g in params.problem.goods])
         peak = sd.max()
         total_small = sd.sum()
         needs = sd > 0
@@ -174,7 +174,7 @@ def generate_merge_phase_clusters(
             target = target_meta.iloc[idx]
 
             # Get total demand for target cluster
-            target_demand_total = sum(target["Total_Demand"][g] for g in params.goods)
+            target_demand_total = sum(target["Total_Demand"][g] for g in params.problem.goods)
 
             # Check if merging would exceed capacity (from memory)
             if total_small_sum + target_demand_total > target["Capacity"]:
@@ -297,7 +297,7 @@ def validate_merged_cluster(
     cluster2: pd.Series,
     config: VehicleConfiguration,
     customers_df: pd.DataFrame,
-    params: Parameters,
+    params: FleetmixParams,
 ) -> tuple[bool, float, dict, list | None]:
     """Validate if two clusters can be merged using the given vehicle configuration.
 

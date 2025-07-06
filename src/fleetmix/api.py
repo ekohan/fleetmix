@@ -7,7 +7,9 @@ from pathlib import Path
 import pandas as pd
 
 from fleetmix.clustering import generate_feasible_clusters
-from fleetmix.config.parameters import Parameters
+
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import optimize_fleet
 from fleetmix.post_optimization import improve_solution
@@ -18,6 +20,7 @@ from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
+import dataclasses
 
 logger = FleetmixLogger.get_logger("fleetmix.api")
 
@@ -25,15 +28,16 @@ logger = FleetmixLogger.get_logger("fleetmix.api")
 def _two_phase_solve(
     customers_df: pd.DataFrame,
     configs: list[VehicleConfiguration],
-    params: Parameters,
+    params: FleetmixParams,
     time_recorder: TimeRecorder,
     verbose: bool = False,
 ) -> FleetmixSolution:
     """Run two-phase optimization for split-stop mode."""
     # Phase 1: Baseline (no split stops)
     logger.info("Phase 1: Solving baseline problem without split stops")
-    baseline_params = Parameters(**params.__dict__)
-    baseline_params.allow_split_stops = False
+    # Build a copy of params with allow_split_stops disabled
+    baseline_problem = dataclasses.replace(params.problem, allow_split_stops=False)
+    baseline_params = dataclasses.replace(params, problem=baseline_problem)
 
     # For phase 1, use the original customers without explosion
     baseline_customers_df = maybe_explode(
@@ -52,12 +56,11 @@ def _two_phase_solve(
             configurations=configs,
             customers=baseline_customers,
             parameters=baseline_params,
-            verbose=verbose,
             time_recorder=time_recorder,
         )
 
     # Apply post-optimization to phase 1 if enabled
-    if params.post_optimization:
+    if params.algorithm.post_optimization:
         with time_recorder.measure("fsm_post_optimization_phase1"):
             baseline_solution = improve_solution(
                 baseline_solution, configs, baseline_customers, baseline_params
@@ -75,8 +78,8 @@ def _two_phase_solve(
     logger.info("Phase 2: Solving split-stop problem with warm start")
 
     # Create a copy of parameters for phase 2
-    phase2_params = Parameters(**params.__dict__)
-    phase2_params.allow_split_stops = True
+    phase2_problem = dataclasses.replace(params.problem, allow_split_stops=True)
+    phase2_params = dataclasses.replace(params, problem=phase2_problem)
 
     # For phase 2, use the exploded customers
     phase2_customers_df = maybe_explode(
@@ -96,13 +99,12 @@ def _two_phase_solve(
                 configurations=configs,
                 customers=phase2_customers,
                 parameters=phase2_params,
-                verbose=verbose,
                 time_recorder=time_recorder,
                 warm_start_solution=baseline_solution if baseline_valid else None,
             )
 
         # Apply post-optimization to phase 2 if enabled
-        if params.post_optimization:
+        if params.algorithm.post_optimization:
             with time_recorder.measure("fsm_post_optimization_phase2"):
                 phase2_solution = improve_solution(
                     phase2_solution, configs, phase2_customers, phase2_params
@@ -134,12 +136,13 @@ def _two_phase_solve(
         logger.warning(f"Phase 2 optimization failed: {e}, using baseline solution")
         return baseline_solution
 
-
+# TODO: config solo string o path, no se puede pasar un objeto, despues simplificar 
+# handling de config
 def optimize(
     demand: str | Path | pd.DataFrame,
-    config: str | Path | Parameters | None = None,
+    config: str | Path | FleetmixParams | None = None,
     output_dir: str = "results",
-    format: str = "excel",
+    format: str = "json",
     verbose: bool = False,
     allow_split_stops: bool = False,
 ) -> FleetmixSolution:
@@ -155,7 +158,7 @@ def optimize(
             - Parameters object
             - None (uses default configuration)
         output_dir: Directory to save results (default: "results")
-        format: Output format - "excel" or "json" (default: "excel")
+        format: Output format - "xlsx" or "json" (default: "json")
         verbose: Enable verbose logging (default: False)
         allow_split_stops: Allow customers to be served by multiple vehicles (default: False)
 
@@ -172,10 +175,10 @@ def optimize(
         >>> print(f"Total cost: ${solution.total_cost:,.2f}")
         >>> print(f"Vehicles used: {solution.total_vehicles}")
 
-        >>> # Optimize using DataFrame and Parameters object
+        >>> # Optimize using DataFrame and FleetmixParams object
         >>> import pandas as pd
         >>> demand_df = pd.read_csv("demand.csv")
-        >>> params = Parameters.from_yaml("config.yaml")
+        >>> params = load_fleetmix_params("config.yaml")
         >>> solution = optimize(demand_df, params, verbose=True)
     """
 
@@ -221,9 +224,21 @@ def optimize(
 
         # Step 2: Load parameters
         if config is None:
-            # Use default parameters by loading from default config file
-            params = Parameters.from_yaml()
-        elif isinstance(config, Parameters):
+            # Search default locations
+            default_paths = [
+                Path.cwd() / "config.yaml",
+                Path(__file__).parent / "config" / "default_config.yaml",
+                Path(__file__).parent / "config" / "baseline_config.yaml",
+            ]
+            for p in default_paths:
+                if p.exists():
+                    params = load_fleetmix_params(p)
+                    break
+            else:
+                raise FileNotFoundError(
+                    "No configuration file provided and no default config found."
+                )
+        elif isinstance(config, FleetmixParams):
             params = config
         else:
             config_path = Path(config)
@@ -233,7 +248,7 @@ def optimize(
                     f"Please check the file path and ensure it exists."
                 )
             try:
-                params = Parameters.from_yaml(str(config_path))
+                params = load_fleetmix_params(config_path)
             except Exception as e:
                 raise ValueError(
                     f"Error loading configuration from {config_path}:\n{e!s}\n"
@@ -241,16 +256,28 @@ def optimize(
                 )
 
         # Override allow_split_stops if provided via API
-        if allow_split_stops != params.allow_split_stops:
-            params.allow_split_stops = allow_split_stops
+        if allow_split_stops != params.problem.allow_split_stops:
+            params = dataclasses.replace(
+                params,
+                problem=dataclasses.replace(
+                    params.problem, allow_split_stops=allow_split_stops
+                ),
+            )
 
-        # Update demand_file in params to reflect the actual file being used
+        # Update demand_file and results_dir in params to reflect the actual values being used
         if isinstance(demand, (str, Path)):
-            params.demand_file = str(demand)
+            params = dataclasses.replace(params, io=dataclasses.replace(params.io, demand_file=str(demand)))
+        
+        # Update results_dir if output_dir is provided
+        if output_dir:
+            params = dataclasses.replace(params, io=dataclasses.replace(params.io, results_dir=Path(output_dir)))
+
+        if verbose:
+            params = dataclasses.replace(params, runtime=dataclasses.replace(params.runtime, verbose=True))
 
         # Validate demand DataFrame has required columns
         required_columns = ["Customer_ID", "Latitude", "Longitude"]
-        demand_columns = [f"{good}_Demand" for good in params.goods]
+        demand_columns = [f"{good}_Demand" for good in params.problem.goods]
         required_columns.extend(demand_columns)
 
         missing_columns = [
@@ -266,7 +293,7 @@ def optimize(
         # Step 3: Generate vehicle configurations
         try:
             with time_recorder.measure("vehicle_configuration"):
-                configs = generate_vehicle_configurations(params.vehicles, params.goods)
+                configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
         except Exception as e:
             raise ValueError(
                 f"Error generating vehicle configurations:\n{e!s}\n"
@@ -275,7 +302,7 @@ def optimize(
 
         # Step 4: Solve optimization problem
         # Use two-phase approach if split stops are enabled
-        if params.allow_split_stops:
+        if params.problem.allow_split_stops:
             solution = _two_phase_solve(
                 customers_df=customers_df,
                 configs=configs,
@@ -287,7 +314,7 @@ def optimize(
             # Standard single-phase optimization
             # Apply split-stop preprocessing if needed
             customers_df = maybe_explode(
-                customers_df, params.allow_split_stops, configurations=configs
+                customers_df, params.problem.allow_split_stops, configurations=configs
             )
             customers = Customer.from_dataframe(customers_df)
 
@@ -323,12 +350,11 @@ def optimize(
                         configurations=configs,
                         customers=customers,
                         parameters=params,
-                        verbose=verbose,
                         time_recorder=time_recorder,
                     )
 
                 # Step 5: Post-optimization improvement if enabled
-                if params.post_optimization:
+                if params.algorithm.post_optimization:
                     with time_recorder.measure("fsm_post_optimization"):
                         solution = improve_solution(
                             solution, configs, customers, params

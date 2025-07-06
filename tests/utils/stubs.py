@@ -130,7 +130,7 @@ def stub_save_results(monkeypatch, output_dir):
         print(f"Using stubbed save_results to save {format} output")
 
         # Create appropriate file extension
-        ext = "xlsx" if format == "excel" else "json"
+        ext = "xlsx" if format in ("excel", "xlsx") else "json"
         (Path(output_dir) / f"output.{ext}").write_text("dummy")
 
     monkeypatch.setattr(save_module_local, "save_optimization_results", fake_save)

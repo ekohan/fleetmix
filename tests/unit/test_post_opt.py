@@ -2,16 +2,16 @@
 
 import pandas as pd
 import pytest
+import dataclasses
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import Cluster, FleetmixSolution, VehicleConfiguration
 from fleetmix.post_optimization import merge_phase
 
 
 def make_cluster_df(cluster_id):
-    # Get the goods from parameters
-    goods = Parameters.from_yaml().goods
-
+    goods = ["Dry", "Chilled", "Frozen"]
     # Create demand dict for Total_Demand column
     demand_dict = dict.fromkeys(goods, 1)
 
@@ -75,8 +75,8 @@ def test_improve_solution_basic():
     )
     configs = make_configs()
     customers = make_test_customers()
-    params = Parameters.from_yaml()
-    params.max_improvement_iterations = 1  # Keep it quick
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    params = dataclasses.replace(params, algorithm=dataclasses.replace(params.algorithm, max_improvement_iterations=1))
     
     # This should not raise an exception
     result = merge_phase.improve_solution(initial_solution, configs, customers, params)
@@ -95,9 +95,9 @@ def test_improve_solution_no_post_optimization():
     )
     configs = make_configs()
     customers = make_test_customers()
-    params = Parameters.from_yaml()
-    params.post_optimization = False  # Disable post-optimization in params (though this test bypasses that)
-    params.max_improvement_iterations = 1
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    params = dataclasses.replace(params, algorithm=dataclasses.replace(params.algorithm, post_optimization=False))
+    params = dataclasses.replace(params, algorithm=dataclasses.replace(params.algorithm, max_improvement_iterations=1))
     
     # Call improve_solution - it should still work even if post_optimization=False in params
     # because improve_solution is called directly
@@ -114,8 +114,8 @@ def test_improve_solution_empty_clusters():
     )
     configs = make_configs()
     customers = make_test_customers()
-    params = Parameters.from_yaml()
-    params.max_improvement_iterations = 1
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    params = dataclasses.replace(params, algorithm=dataclasses.replace(params.algorithm, max_improvement_iterations=1))
     
     # Should handle empty clusters gracefully
     result = merge_phase.improve_solution(initial_solution, configs, customers, params)

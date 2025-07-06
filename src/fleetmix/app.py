@@ -13,7 +13,7 @@ from rich.table import Table
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params, FleetmixParams
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.logging import (
@@ -45,13 +45,24 @@ def _find_config_by_id(
     raise KeyError(f"Configuration {config_id} not found")
 
 
-def _get_default_config() -> Parameters | None:
-    """Load default configuration to get default values for CLI parameters."""
-    try:
-        return Parameters.from_yaml()
-    except Exception:
-        # Fallback to hardcoded defaults if config loading fails
-        return None
+def _get_default_config() -> FleetmixParams | None:
+    """Load default configuration via the structured loader.
+    """
+
+    from pathlib import Path
+
+    candidate_paths: list[Path] = [
+        Path(__file__).parent / "config" / "default_config.yaml",
+    ]
+
+    for cfg in candidate_paths:
+        if cfg.exists():
+            try:
+                return load_fleetmix_params(cfg)
+            except Exception:
+                continue
+
+    return None
 
 
 # Load default config once at module level
@@ -136,7 +147,7 @@ def _run_single_instance(
         ):
             placeholder_dir = output_dir or Path("results")
             placeholder_dir.mkdir(parents=True, exist_ok=True)
-            ext = "xlsx" if format == "excel" else "json"
+            ext = "xlsx" if format == "xlsx" else "json"
             if config_path:
                 config_name = config_path.stem
                 placeholder_file = (
@@ -154,14 +165,22 @@ def _run_single_instance(
 
         # Override with provided config if given
         if config_path:
-            params = Parameters.from_yaml(config_path)
+            params = load_fleetmix_params(config_path)
 
         # Override output directory if specified
         if output_dir:
-            params.results_dir = output_dir
+            import dataclasses
+            params = dataclasses.replace(
+                params,
+                io=dataclasses.replace(params.io, results_dir=output_dir)
+            )
 
         # Set allow_split_stops explicitly (don't rely on default config)
-        params.allow_split_stops = allow_split_stops
+        # TODO check this flag
+        params = dataclasses.replace(
+            params,
+            problem=dataclasses.replace(params.problem, allow_split_stops=allow_split_stops)
+        )
 
         # Use the unified pipeline interface for optimization
         solution, configs = run_optimization(
@@ -169,12 +188,12 @@ def _run_single_instance(
         )
 
         # Save results with specified format
-        ext = "xlsx" if format == "excel" else "json"
+        ext = "xlsx" if format == "xlsx" else "json"
         if config_path:
             config_name = config_path.stem
-            output_path = params.results_dir / f"mcvrp_{config_name}-{instance}.{ext}"
+            output_path = params.io.results_dir / f"mcvrp_{config_name}-{instance}.{ext}"
         else:
-            output_path = params.results_dir / f"mcvrp_{instance}.{ext}"
+            output_path = params.io.results_dir / f"mcvrp_{instance}.{ext}"
 
         save_optimization_results(
             solution=solution,
@@ -183,7 +202,7 @@ def _run_single_instance(
             filename=str(output_path),
             format=format,
             is_benchmark=True,
-            expected_vehicles=params.expected_vehicles,
+            expected_vehicles=params.problem.expected_vehicles,
         )
 
         # Display results summary table
@@ -196,7 +215,7 @@ def _run_single_instance(
         table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
         table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
         table.add_row("Vehicles Used", str(solution.vehicles_used))
-        table.add_row("Expected Vehicles", str(params.expected_vehicles))
+        table.add_row("Expected Vehicles", str(params.problem.expected_vehicles))
         table.add_row("Missing Customers", str(len(solution.missing_customers)))
         table.add_row("Solver Status", solution.solver_status)
         table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
@@ -238,7 +257,7 @@ def _run_single_instance(
         ):
             placeholder_dir = output_dir or Path("results")
             placeholder_dir.mkdir(parents=True, exist_ok=True)
-            ext = "xlsx" if format == "excel" else "json"
+            ext = "xlsx" if format == "xlsx" else "json"
             if config_path:
                 config_name = config_path.stem
                 placeholder_file = (
@@ -261,11 +280,15 @@ def _run_single_instance(
 
         # Override with provided config if given
         if config_path:
-            params = Parameters.from_yaml(config_path)
+            params = load_fleetmix_params(config_path)
 
         # Override output directory if specified
         if output_dir:
-            params.results_dir = output_dir
+            import dataclasses
+            params = dataclasses.replace(
+                params,
+                io=dataclasses.replace(params.io, results_dir=output_dir)
+            )
 
         # Ignore split-stop flag for single-product CVRP NORMAL benchmarks
         if allow_split_stops:
@@ -279,14 +302,14 @@ def _run_single_instance(
         )
 
         # Save results with specified format
-        ext = "xlsx" if format == "excel" else "json"
+        ext = "xlsx" if format == "xlsx" else "json"
         if config_path:
             config_name = config_path.stem
             output_path = (
-                params.results_dir / f"cvrp_{config_name}-{instance}_normal.{ext}"
+                params.io.results_dir / f"cvrp_{config_name}-{instance}_normal.{ext}"
             )
         else:
-            output_path = params.results_dir / f"cvrp_{instance}_normal.{ext}"
+            output_path = params.io.results_dir / f"cvrp_{instance}_normal.{ext}"
         save_optimization_results(
             solution=solution,
             configurations=configs,
@@ -294,7 +317,7 @@ def _run_single_instance(
             filename=str(output_path),
             format=format,
             is_benchmark=True,
-            expected_vehicles=params.expected_vehicles,
+            expected_vehicles=params.problem.expected_vehicles,
         )
 
         # Display results summary table
@@ -307,7 +330,7 @@ def _run_single_instance(
         table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
         table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
         table.add_row("Vehicles Used", str(solution.vehicles_used))
-        table.add_row("Expected Vehicles", str(params.expected_vehicles))
+        table.add_row("Expected Vehicles", str(params.problem.expected_vehicles))
         table.add_row("Missing Customers", str(len(solution.missing_customers)))
         table.add_row("Solver Status", solution.solver_status)
         table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
@@ -352,7 +375,7 @@ def _run_single_instance(
         ):
             placeholder_dir = output_dir or Path("results")
             placeholder_dir.mkdir(parents=True, exist_ok=True)
-            ext = "xlsx" if format == "excel" else "json"
+            ext = "xlsx" if format == "xlsx" else "json"
             if config_path:
                 config_name = config_path.stem
                 placeholder_file = (
@@ -367,9 +390,12 @@ def _run_single_instance(
 
         # Load parameters
         if config_path:
-            params = Parameters.from_yaml(config_path)
+            params = load_fleetmix_params(config_path)
         else:
-            params = Parameters.from_yaml()  # Use default
+            # Use default config
+            if _DEFAULT_CONFIG is None:
+                raise RuntimeError("No default configuration found")
+            params = _DEFAULT_CONFIG
 
         # Override output directory if specified
         if output_dir:
@@ -397,7 +423,7 @@ def _run_single_instance(
         )
 
         # Save results with specified format
-        ext = "xlsx" if format == "excel" else "json"
+        ext = "xlsx" if format == "xlsx" else "json"
         config_name = "default"
         if config_path:
             config_name = config_path.stem
@@ -451,7 +477,7 @@ def _run_all_mcvrp_instances(
 
             # Override with provided config if given
             if config_path:
-                params = Parameters.from_yaml(config_path)
+                params = load_fleetmix_params(config_path)
 
             # Override output directory if specified
             if output_dir:
@@ -516,7 +542,7 @@ def _run_all_cvrp_instances(
 
             # Override with provided config if given
             if config_path:
-                params = Parameters.from_yaml(config_path)
+                params = load_fleetmix_params(config_path)
 
             # Override output directory if specified
             if output_dir:
@@ -577,9 +603,12 @@ def _run_all_case_instances(
         try:
             # Load parameters
             if config_path:
-                params = Parameters.from_yaml(config_path)
+                params = load_fleetmix_params(config_path)
             else:
-                params = Parameters.from_yaml()  # Use default
+                # Use default config
+                if _DEFAULT_CONFIG is None:
+                    raise RuntimeError("No default configuration found")
+                params = _DEFAULT_CONFIG
 
             # Override output directory if specified
             if output_dir:
@@ -641,10 +670,10 @@ def optimize(
     ),
     output: Path = typer.Option("results", "--output", "-o", help="Output directory"),
     format: str = typer.Option(
-        _DEFAULT_CONFIG.format if _DEFAULT_CONFIG else "excel",
+        _DEFAULT_CONFIG.io.format if _DEFAULT_CONFIG else "json",
         "--format",
         "-f",
-        help="Output format (excel or json)",
+        help="Output format (xlsx, json, csv)",
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
@@ -691,14 +720,14 @@ def optimize(
         log_error(f"Config file not found: {config}")
         raise typer.Exit(1)
 
-    if format not in ["excel", "json"]:
-        log_error("Invalid format. Choose 'excel' or 'json'")
+    if format not in ["xlsx", "json", "csv"]:
+        log_error("Invalid format. Choose 'xlsx', 'json', or 'csv'")
         raise typer.Exit(1)
 
     # Parse config early to catch YAML syntax errors even in skip mode
     if config is not None:
         try:
-            Parameters.from_yaml(config)
+            load_fleetmix_params(config)
         except Exception as e:
             log_error(str(e))
             raise typer.Exit(1)
@@ -802,10 +831,10 @@ def benchmark(
         None, "--config", "-c", help="Path to configuration YAML file"
     ),
     format: str = typer.Option(
-        _DEFAULT_CONFIG.format if _DEFAULT_CONFIG else "json",
+        _DEFAULT_CONFIG.io.format if _DEFAULT_CONFIG else "json",
         "--format",
         "-f",
-        help="Output format (excel or json)",
+        help="Output format (xlsx, json, csv)",
     ),
     list_instances: bool = typer.Option(
         False, "--list", "-l", help="List available instances and exit"
@@ -847,8 +876,8 @@ def benchmark(
         log_error(f"Invalid suite '{suite}'. Choose 'mcvrp', 'cvrp', or 'case'")
         raise typer.Exit(1)
 
-    if format not in ["excel", "json"]:
-        log_error("Invalid format. Choose 'excel' or 'json'")
+    if format not in ["xlsx", "json", "csv"]:
+        log_error("Invalid format. Choose 'xlsx', 'json', or 'csv'")
         raise typer.Exit(1)
 
     # Handle --list flag early (doesn't need heavy compute)
@@ -911,10 +940,10 @@ def convert(
     ),
     output: Path | None = typer.Option(None, "--output", "-o", help="Output directory"),
     format: str = typer.Option(
-        _DEFAULT_CONFIG.format if _DEFAULT_CONFIG else "excel",
+        _DEFAULT_CONFIG.io.format if _DEFAULT_CONFIG else "json",
         "--format",
         "-f",
-        help="Output format (excel or json)",
+        help="Output format (xlsx, json, csv)",
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
@@ -1030,7 +1059,7 @@ def convert(
         )
 
         # Save results
-        ext = "xlsx" if format == "excel" else "json"
+        ext = "xlsx" if format == "xlsx" else "json"
         results_path = params.results_dir / f"{filename_stub}.{ext}"
 
         save_optimization_results(

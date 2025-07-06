@@ -21,7 +21,7 @@ try:
     import streamlit as st
 
     from fleetmix import gui
-    from fleetmix.config.parameters import Parameters
+    from fleetmix.config import load_fleetmix_params, FleetmixParams
     from fleetmix.core_types import FleetmixSolution
 
     STREAMLIT_AVAILABLE = True
@@ -143,7 +143,7 @@ class TestRunOptimizationInProcess(unittest.TestCase):
                 "light_load_penalty": 20,
                 "light_load_threshold": 0.5,
                 "compartment_setup_cost": 10,
-                "format": "excel",
+                "format": "xlsx",
                 "post_optimization": False,
                 "small_cluster_size": 3,
                 "nearest_merge_candidates": 10,
@@ -207,7 +207,7 @@ class TestRunOptimizationInProcess(unittest.TestCase):
                 "light_load_penalty": 20,
                 "light_load_threshold": 0.5,
                 "compartment_setup_cost": 10,
-                "format": "excel",
+                "format": "xlsx",
             }
 
             import yaml
@@ -289,7 +289,7 @@ class TestCollectParametersFromUI(unittest.TestCase):
     def test_collect_parameters_basic(self):
         """Test basic parameter collection."""
         # Create mock parameters
-        mock_params = Parameters.from_yaml()
+        mock_params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
 
         # Create a mock session state object
         mock_state = MagicMock()
@@ -310,15 +310,15 @@ class TestCollectParametersFromUI(unittest.TestCase):
         with patch("streamlit.session_state", mock_state):
             result = gui.collect_parameters_from_ui()
 
-        # Check that result is a Parameters object
-        self.assertIsInstance(result, Parameters)
-        self.assertEqual(result.light_load_penalty, 500)
-        self.assertEqual(result.light_load_threshold, 0.3)
-        self.assertEqual(result.compartment_setup_cost, 75)
+        # Check that result is a FleetmixParams object
+        self.assertIsInstance(result, FleetmixParams)
+        self.assertEqual(result.problem.light_load_penalty, 500)
+        self.assertEqual(result.problem.light_load_threshold, 0.3)
+        self.assertEqual(result.problem.compartment_setup_cost, 75)
 
     def test_collect_parameters_nested(self):
         """Test collection of nested parameters like clustering.method."""
-        mock_params = Parameters.from_yaml()
+        mock_params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
 
         # Create a mock session state object
         mock_state = MagicMock()
@@ -337,14 +337,14 @@ class TestCollectParametersFromUI(unittest.TestCase):
         with patch("streamlit.session_state", mock_state):
             result = gui.collect_parameters_from_ui()
 
-        # Check that result is a Parameters object and clustering method was updated
-        self.assertIsInstance(result, Parameters)
-        self.assertEqual(result.clustering["method"], "kmedoids")
+        # Check that result is a FleetmixParams object and clustering method was updated
+        self.assertIsInstance(result, FleetmixParams)
+        self.assertEqual(result.algorithm.clustering_method, "kmedoids")
 
     def test_collect_parameters_vehicle_updates_and_persistence(self):
         """Ensure that vehicle timing updates are converted and persisted."""
 
-        mock_params = Parameters.from_yaml()
+        mock_params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
 
         # Prepare a modified vehicles dictionary mimicking UI input
         updated_vehicles = {
@@ -381,18 +381,18 @@ class TestCollectParametersFromUI(unittest.TestCase):
             new_params = gui.collect_parameters_from_ui()
 
         # Verify that vehicles dict was converted to VehicleSpec with updated values
-        self.assertIn("A", new_params.vehicles)
-        veh_spec = new_params.vehicles["A"]
+        self.assertIn("A", new_params.problem.vehicles)
+        veh_spec = new_params.problem.vehicles["A"]
         self.assertEqual(veh_spec.avg_speed, 42)
         self.assertEqual(veh_spec.capacity, 3000)
 
-        # Ensure that the Parameters object is persisted back to session state
+        # Ensure that the FleetmixParams object is persisted back to session state
         self.assertIs(mock_state.parameters, new_params)
 
     def test_collect_parameters_with_allowed_goods(self):
         """Test that allowed goods are properly handled in parameter collection."""
 
-        mock_params = Parameters.from_yaml()
+        mock_params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
 
         # Prepare vehicles with allowed goods
         updated_vehicles = {
@@ -438,11 +438,11 @@ class TestCollectParametersFromUI(unittest.TestCase):
             new_params = gui.collect_parameters_from_ui()
 
         # Verify that allowed goods are properly set
-        self.assertIn("RefrigeratedTruck", new_params.vehicles)
-        self.assertIn("DryVan", new_params.vehicles)
+        self.assertIn("RefrigeratedTruck", new_params.problem.vehicles)
+        self.assertIn("DryVan", new_params.problem.vehicles)
         
-        ref_truck = new_params.vehicles["RefrigeratedTruck"]
-        dry_van = new_params.vehicles["DryVan"]
+        ref_truck = new_params.problem.vehicles["RefrigeratedTruck"]
+        dry_van = new_params.problem.vehicles["DryVan"]
         
         self.assertEqual(ref_truck.allowed_goods, ["Chilled", "Frozen"])
         self.assertEqual(dry_van.allowed_goods, ["Dry"])
@@ -454,7 +454,7 @@ class TestCollectParametersFromUI(unittest.TestCase):
     def test_collect_parameters_with_split_stops(self):
         """Test that allow_split_stops parameter is properly handled."""
 
-        mock_params = Parameters.from_yaml()
+        mock_params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
 
         # Create mock session state
         mock_state = MagicMock()
@@ -478,7 +478,7 @@ class TestCollectParametersFromUI(unittest.TestCase):
             new_params = gui.collect_parameters_from_ui()
 
         # Verify that allow_split_stops is properly set
-        self.assertTrue(new_params.allow_split_stops)
+        self.assertTrue(new_params.problem.allow_split_stops)
 
 
 @pytest.mark.skipif(not STREAMLIT_AVAILABLE, reason="Streamlit not installed")

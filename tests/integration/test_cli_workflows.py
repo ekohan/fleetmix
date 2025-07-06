@@ -138,7 +138,7 @@ post_optimization: false
                 "--output",
                 str(temp_results_dir),
                 "--format",
-                "excel",
+                "xlsx",
                 "--quiet",
             ],
         )

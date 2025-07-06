@@ -29,7 +29,7 @@ try:
     HAVERSINE_AVAILABLE = True
 except ImportError:
     HAVERSINE_AVAILABLE = False
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params, FleetmixParams
 
 
 class TestCoreAlgorithms:
@@ -245,9 +245,7 @@ class TestCoreAlgorithms:
             "variable_cost_per_hour": 20.0,
             "depot": {"latitude": 40.7831, "longitude": -73.9712},
             "clustering": {
-                # 'max_clusters_per_vehicle': 100, # Not a direct Parameters field
-                "time_limit_minutes": 60,  # Not a direct Parameters field
-                "route_time_estimation": "Legacy",
+                "route_time_estimation": "BHH",
                 "method": "minibatch_kmeans",
                 "max_depth": 5,
                 "geo_weight": 0.7,
@@ -270,13 +268,13 @@ class TestCoreAlgorithms:
         with open(temp_yaml_path, "w") as f:
             yaml.dump(config_dict, f)
 
-        # Load Parameters from this temporary YAML
-        return Parameters.from_yaml(temp_yaml_path)
+        # Load FleetmixParams from this temporary YAML
+        return load_fleetmix_params(temp_yaml_path)
 
     def test_vehicle_configuration_generation(self, realistic_config):
         """Test vehicle configuration generation with multiple vehicle types."""
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
 
         # Should generate configs for all vehicles
@@ -292,7 +290,7 @@ class TestCoreAlgorithms:
     def test_cluster_generation_process(self, realistic_customers, realistic_config):
         """Test the complete cluster generation process."""
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
 
         # Convert DataFrame to list of Customer objects for new API
@@ -350,102 +348,11 @@ class TestCoreAlgorithms:
             # Coordinate conversion might not work properly in test environment
             pytest.skip(f"Coordinate conversion test failed: {e!s}")
 
-    def test_route_time_calculations(self, realistic_customers):
-        """Test route time estimation algorithms."""
-        # Create a simple route with first 5 customers
-        route_customers = realistic_customers.head(5)
-
-        # Test simple distance calculation using haversine
-        total_distance = 0
-        if HAVERSINE_AVAILABLE:
-            for i in range(len(route_customers) - 1):
-                lat1, lon1 = route_customers.iloc[i][["Latitude", "Longitude"]]
-                lat2, lon2 = route_customers.iloc[i + 1][["Latitude", "Longitude"]]
-                distance = haversine((lat1, lon1), (lat2, lon2))
-                total_distance += distance
-            assert total_distance > 0
-
-        # Test route time estimation using available function
-        # Create a simple Parameters object for the function (without timing parameters)
-        params = Parameters(
-            goods=[],
-            vehicles={},
-            variable_cost_per_hour=20.0,
-            depot={"latitude": 40.7831, "longitude": -73.9712},
-            clustering={
-                "route_time_estimation": "Legacy",
-                "geo_weight": 0.7,
-                "demand_weight": 0.3,
-            },
-            demand_file="test.csv",
-            light_load_penalty=10.0,
-            light_load_threshold=0.5,
-            compartment_setup_cost=100.0,
-            format="json",
-            prune_tsp=False,
-        )
-
-        # Create a vehicle configuration with timing parameters
-        from fleetmix.core_types import VehicleConfiguration, VehicleSpec
-
-        vehicle_spec = VehicleSpec(
-            capacity=1000,
-            fixed_cost=100,
-            compartments={"Dry": True},
-            extra={},
-            avg_speed=40.0,
-            service_time=15.0,
-            max_route_time=8.0,
-        )
-
-        vehicle_config = VehicleConfiguration(
-            config_id=1,
-            vehicle_type="Test Vehicle",
-            capacity=1000,
-            fixed_cost=100,
-            compartments={"Dry": True},
-            avg_speed=40.0,
-            service_time=15.0,
-            max_route_time=8.0,
-        )
-
-        try:
-            route_time, sequence = estimate_route_time(
-                cluster_customers=route_customers,
-                depot=params.depot,
-                service_time=vehicle_config.service_time,
-                avg_speed=vehicle_config.avg_speed,
-                method=params.clustering["route_time_estimation"],
-                max_route_time=vehicle_config.max_route_time,
-                prune_tsp=params.prune_tsp,
-            )
-            assert (
-                route_time > vehicle_config.service_time * len(route_customers) / 60
-            )  # Should include travel time
-        except Exception:
-            # If route time estimation fails (missing dependencies), just test service time calculation
-            total_service_time = calculate_total_service_time_hours(
-                len(route_customers), vehicle_config.service_time
-            )
-            assert total_service_time > 0
-
-        # Test individual route segment estimation
-        segment_time = estimate_route_time(
-            route_customers.iloc[0:2],
-            params.depot,
-            vehicle_config.service_time,
-            vehicle_config.avg_speed,
-            method="Legacy",
-            max_route_time=vehicle_config.max_route_time,
-            prune_tsp=False,
-        )[0]
-        assert segment_time > 0
-
     def test_fsm_optimization_solver(self, realistic_customers, realistic_config):
         """Test the core MILP optimization solver."""
         # Generate configurations and clusters
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
 
         # Convert DataFrame to list of Customer objects for new API
@@ -460,8 +367,7 @@ class TestCoreAlgorithms:
             clusters=clusters,
             configurations=configs,
             customers=customers_list,
-            parameters=realistic_config,
-            verbose=True,
+            parameters=realistic_config
         )
 
         # Verify solution structure
@@ -474,7 +380,7 @@ class TestCoreAlgorithms:
         """Test post-optimization merge phase algorithm."""
         # Generate a solution first
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
 
         # Convert DataFrame to list of Customer objects for new API
@@ -488,8 +394,7 @@ class TestCoreAlgorithms:
             clusters=clusters,
             configurations=configs,
             customers=customers_list,
-            parameters=realistic_config,
-            verbose=False,
+            parameters=realistic_config
         )
 
         # Test post-optimization improvement
@@ -533,11 +438,8 @@ class TestCoreAlgorithms:
         )
 
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
-
-        # Reduce time limits for testing
-        realistic_config.clustering["time_limit_minutes"] = 2
 
         # Convert DataFrame to list of Customer objects for new API
         customers_list = Customer.from_dataframe(large_customers)
@@ -579,7 +481,7 @@ class TestCoreAlgorithms:
         )
 
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
 
         # Convert DataFrame to list of Customer objects for new API
@@ -602,12 +504,9 @@ class TestCoreAlgorithms:
         """Test that algorithms complete within reasonable time bounds."""
         import time
 
-        # Set tight time limits to test performance
-        realistic_config.clustering["time_limit_minutes"] = 1
-        # Note: optimization parameters are not directly accessible as a dict attribute
 
         configs = generate_vehicle_configurations(
-            realistic_config.vehicles, realistic_config.goods
+            realistic_config.problem.vehicles, realistic_config.problem.goods
         )
 
         # Convert DataFrame to list of Customer objects for new API

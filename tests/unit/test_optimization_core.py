@@ -6,7 +6,8 @@ import pandas as pd
 import pulp
 import pytest
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.optimization.core import (
     _calculate_cluster_cost,
@@ -76,7 +77,7 @@ def simple_params():
     config_path = (
         Path(__file__).parent.parent / "_assets" / "configs" / "base_test_config.yaml"
     )
-    return Parameters.from_yaml(str(config_path))
+    return load_fleetmix_params(config_path)
 
 
 @pytest.fixture
@@ -88,7 +89,7 @@ def params_with_post_opt():
         / "configs"
         / "test_config_post_opt.yaml"
     )
-    return Parameters.from_yaml(str(config_path))
+    return load_fleetmix_params(config_path)
 
 
 def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
@@ -128,8 +129,7 @@ def test_optimize_fleet_basic(
         clusters=clusters_list,
         configurations=configurations,
         customers=customers_list,
-        parameters=simple_params,
-        verbose=False,
+        parameters=simple_params
     )
 
     # Validate result structure
@@ -160,12 +160,11 @@ def test_optimize_fleet_with_post_optimization(
         clusters=clusters_list,
         configurations=configurations,
         customers=customers_list,
-        parameters=params_with_post_opt,
-        verbose=False,
+        parameters=params_with_post_opt
     )
 
     # Then apply post-optimization if enabled
-    if params_with_post_opt.post_optimization:
+    if params_with_post_opt.algorithm.post_optimization:
         from fleetmix.post_optimization import improve_solution
         result = improve_solution(result, configurations, customers_list, params_with_post_opt)
 
@@ -299,7 +298,7 @@ def test_solve_with_infeasible_clusters():
         / "configs"
         / "test_config_minimal.yaml"
     )
-    params = Parameters.from_yaml(str(config_path))
+    params = load_fleetmix_params(config_path)
 
     configurations = dataframe_to_configurations(configs_df)
 
@@ -318,8 +317,7 @@ def test_solve_with_infeasible_clusters():
             clusters=clusters_list,
             configurations=configurations,
             customers=customers_list,
-            parameters=params,
-            verbose=False,
+            parameters=params
         )
 
 

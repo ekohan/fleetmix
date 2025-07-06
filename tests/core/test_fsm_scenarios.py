@@ -491,7 +491,7 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         customers_list = Customer.from_dataframe(customers_df)
 
         result = optimize_fleet(
-            clusters_list, configurations, customers_list, params, verbose=False
+            clusters_list, configurations, customers_list, params
         )
         # Compare expected
         assert result.missing_customers == exp["missing_customers"]

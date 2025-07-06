@@ -259,6 +259,7 @@ class VehicleOperationContext:
 
 @dataclass
 class ClusteringContext(VehicleOperationContext):
+    # TODO: rename to CapacitatedClusteringContext
     """Context for customer clustering algorithms."""
 
     goods: list[str]

@@ -3,7 +3,8 @@ import logging
 import sqlite3
 from pathlib import Path
 
-# TODO: importante, anonimizar Opperar
+
+# TODO: considerar eliminar este modulo y usar solo el dataset de /benchmarks/data/case
 
 # Configure logging
 logging.basicConfig(
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Import sales data into unified table."
     )
-    parser.add_argument("--db", default="opperar.db", help="Path to SQLite database.")
+    parser.add_argument("--db", default="case_study.db", help="Path to SQLite database.")
     args = parser.parse_args()
 
     # Get the script's directory relative to where it's being invoked

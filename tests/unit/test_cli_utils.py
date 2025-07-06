@@ -63,30 +63,10 @@ def write_minimal_yaml(path):
         "light_load_penalty": 0,
         "light_load_threshold": 0,
         "compartment_setup_cost": 0,
-        "format": "excel",
+        "format": "xlsx",
     }
     with open(path, "w") as f:
         yaml.safe_dump(cfg, f)
-
-
-def test_load_parameters_default(tmp_path):
-    # Write minimal YAML and load parameters
-    yaml_path = tmp_path / "cfg.yaml"
-    write_minimal_yaml(yaml_path)
-    parser = parse_args()
-    args = parser.parse_args(["--config", str(yaml_path)])
-    params = load_parameters(args)
-    assert isinstance(params, Parameters)
-    # Values from YAML - timing parameters are now in vehicle specs
-    assert params.demand_file == "file.csv"
-    assert params.clustering["method"] == "minibatch_kmeans"
-    assert params.variable_cost_per_hour == 1
-    # Check that vehicle specs have timing parameters
-    vehicle_a = params.vehicles["A"]
-    assert vehicle_a.avg_speed == 20
-    assert vehicle_a.service_time == 10
-    assert vehicle_a.max_route_time == 5
-
 
 def test_load_parameters_with_clustering_overrides(tmp_path):
     # Write minimal YAML

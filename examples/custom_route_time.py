@@ -25,13 +25,23 @@ os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 # Register the straight-line estimator (import for side-effect)
 import fleetmix as fm
 import fleetmix_example_plugins.straight_line  # noqa: F401
+from fleetmix.config import load_fleetmix_params
+import dataclasses
 
 
 def main() -> None:  # pragma: no cover – example script
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
 
-    params = fm.Parameters.from_yaml("src/fleetmix/config/default_config.yaml")
-    params.clustering["route_time_estimation"] = "straight_line"
+    # Start with default config
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    # Update route time estimation using dataclasses.replace for immutable params
+    params = dataclasses.replace(
+        params,
+        algorithm=dataclasses.replace(
+            params.algorithm,
+            route_time_estimation="straight_line"
+        )
+    )
 
     solution = fm.optimize(demand=demand_file, config=params)
 

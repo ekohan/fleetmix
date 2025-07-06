@@ -15,7 +15,7 @@ from sklearn.cluster import AgglomerativeClustering, MiniBatchKMeans
 from sklearn.metrics import pairwise_distances
 from sklearn.mixture import GaussianMixture
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     Cluster,
     ClusteringContext,
@@ -257,7 +257,7 @@ def get_cached_route_time(
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
     route_time_cache: dict[Any, tuple[float, list[str]]],
-    main_params: Parameters,
+    main_params: FleetmixParams,
 ) -> tuple[float, list[str]]:
     """Get route time and sequence (if TSP) from cache or compute and cache it."""
     key = tuple(sorted(customer.customer_id for customer in customers))
@@ -307,7 +307,7 @@ def create_initial_clusters(
     customers_subset: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
-    main_params: Parameters,
+    main_params: FleetmixParams,
     method_name: str = "minibatch_kmeans",
 ) -> list[list[CustomerBase]]:
     """Create initial clusters for the given customer subset."""
@@ -331,7 +331,7 @@ def create_normal_dataset_clusters(
     customers_subset: list[CustomerBase],
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
-    main_params: Parameters,
+    main_params: FleetmixParams,
     method_name: str,
 ) -> list[list[CustomerBase]]:
     """Create clusters for normal-sized datasets."""
@@ -384,7 +384,7 @@ def check_constraints(
     clustering_context: ClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
-    main_params: Parameters,
+    main_params: FleetmixParams,
 ) -> tuple[bool, bool]:
     """
     Check if cluster violates capacity or time constraints.
@@ -416,7 +416,7 @@ def should_split_cluster(
     depth: int,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
-    main_params: Parameters,
+    main_params: FleetmixParams,
 ) -> bool:
     """Determine if a cluster should be split based on constraints."""
     capacity_violated, time_violated = check_constraints(
@@ -493,7 +493,7 @@ def create_cluster(
     clustering_context: ClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
-    main_params: Parameters,
+    main_params: FleetmixParams,
     method_name: str,
 ) -> Cluster:
     """Create a Cluster object from customer data."""
@@ -540,7 +540,7 @@ def process_clusters_recursively(
     clustering_context: ClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
-    main_params: Parameters | None = None,
+    main_params: FleetmixParams | None = None,
     method_name: str = "minibatch_kmeans",
 ) -> list[Cluster]:
     """Process clusters recursively to ensure constraints are satisfied."""
@@ -640,7 +640,7 @@ def estimate_num_initial_clusters(
     customers: pd.DataFrame,
     config: VehicleConfiguration,
     clustering_context: ClusteringContext,
-    main_params: Parameters | None = None,
+    main_params: FleetmixParams | None = None,
 ) -> int:
     """
     Estimate the number of initial clusters needed based on capacity and time constraints.

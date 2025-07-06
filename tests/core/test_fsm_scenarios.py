@@ -2,8 +2,10 @@
 
 import pandas as pd
 import pytest
+from dataclasses import replace
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.loader import load_yaml
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.optimization import optimize_fleet
 
@@ -465,11 +467,36 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
         )
 
     # Load & override params
-    params = Parameters.from_yaml()
-    # Explicitly set split-stops to False to ensure consistent test behavior
-    params.allow_split_stops = False
+    params = load_yaml("src/fleetmix/config/default_config.yaml")
+    
+    # Create modified problem params with split-stops disabled
+    problem_updates = {"allow_split_stops": False}
+    
+    # Map the update keys to the correct parameter sections
     for k, v in upd.items():
-        setattr(params, k, v)
+        if k in ["variable_cost_per_hour", "light_load_penalty", "light_load_threshold", "compartment_setup_cost"]:
+            problem_updates[k] = v
+    
+    # Create new params with updated values
+    params = replace(
+        params,
+        problem=replace(params.problem, **problem_updates)
+    )
+    
+    # Handle any algorithm or runtime updates if present
+    algorithm_updates = {}
+    runtime_updates = {}
+    for k, v in upd.items():
+        if hasattr(params.algorithm, k):
+            algorithm_updates[k] = v
+        elif hasattr(params.runtime, k):
+            runtime_updates[k] = v
+    
+    if algorithm_updates:
+        params = replace(params, algorithm=replace(params.algorithm, **algorithm_updates))
+    if runtime_updates:
+        params = replace(params, runtime=replace(params.runtime, **runtime_updates))
+    
     # Solve or validate infeasible
     from fleetmix.optimization.core import (
         _create_model,

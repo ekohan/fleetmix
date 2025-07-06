@@ -158,7 +158,8 @@ def improve_solution(
         # Use the internal solver that accepts DataFrames. Force exact optimality
         # (gap = 0) in the improvement iterations to avoid early convergence
         # due to tolerance.
-        exact_solver = pick_solver(verbose=params.runtime.verbose, gap_rel=params.runtime.solver_gap_rel)
+        # TODO: check why solver is passed as argument
+        exact_solver = pick_solver(params.runtime)
 
         trial_solution = optimize_fleet(
             combined_clusters,

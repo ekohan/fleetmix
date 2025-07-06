@@ -147,7 +147,16 @@ class IOParams:
 class RuntimeParams:
     verbose: bool = False
     debug: bool = False
-    solver_gap_rel: float = 0.0
+    gap_rel: float = 0.0  # Renamed from solver_gap_rel
+    solver: str = "auto"  # "auto" | "gurobi" | "cbc"
+    time_limit: int | None = None  # seconds; None = no limit
+    
+    def __post_init__(self):
+        # Validate solver choice
+        if self.solver.lower() not in {"auto", "gurobi", "cbc"}:
+            raise ValueError(
+                f"RuntimeParams.solver must be 'auto', 'gurobi', or 'cbc', got '{self.solver}'"
+            )
 
 
 # ---------------------------------------------------------------------------

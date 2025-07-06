@@ -83,6 +83,9 @@ format: 'json'  # Output format (excel or json)
 
 # TODO: add solver parameters
 # Runtime parameters
-#verbose: false
-#debug: false
-#solver_gap_rel: 0.0
+verbose: false      # Enable verbose output
+debug: false        # Enable debug mode 
+# TODO: check debug-milp mode
+solver: auto        # auto | gurobi | cbc
+gap_rel: 0.0        # relative MIP gap
+time_limit: 180     # seconds; None = no limit

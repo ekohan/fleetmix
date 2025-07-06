@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pulp
 
+from fleetmix.config.params import RuntimeParams
 from fleetmix.registry import register_solver_adapter
 
 # Override the default CBC adapter with a demo variant ----------------------------------
@@ -25,11 +26,17 @@ from fleetmix.registry import register_solver_adapter
 class RelaxedCbcAdapter:
     """Thin wrapper around PuLP's CBC with relaxed settings for speed."""
 
-    def get_pulp_solver(self, *, verbose: bool = False, gap_rel: float | None = 0):  # noqa: D401,E501
-        msg = 1 if verbose else 0
+    def get_pulp_solver(self, params: RuntimeParams) -> pulp.LpSolver:  # noqa: D401,E501
+        msg = 1 if params.verbose else 0
         # Relaxed relative gap to speed up demo runs
-        gap = 0.2 if gap_rel is None else gap_rel  # 20 % default for demo
-        return pulp.PULP_CBC_CMD(msg=msg, gapRel=gap)
+        gap = 0.2 if params.gap_rel is None else params.gap_rel  # 20 % default for demo
+        kwargs = {"msg": msg, "gapRel": gap}
+        
+        # CBC uses maxSeconds for time limit
+        if params.time_limit is not None and params.time_limit > 0:
+            kwargs["maxSeconds"] = params.time_limit
+            
+        return pulp.PULP_CBC_CMD(**kwargs)
 
     @property
     def name(self) -> str:  # noqa: D401

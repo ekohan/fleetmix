@@ -16,7 +16,7 @@ import yaml
 from fleetmix.core_types import VehicleSpec, DepotLocation
 from fleetmix.utils.logging import FleetmixLogger
 
-from .params import ProblemParams, AlgorithmParams, IOParams, FleetmixParams
+from .params import ProblemParams, AlgorithmParams, IOParams, RuntimeParams, FleetmixParams
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -148,6 +148,18 @@ def load_yaml(path: str | Path) -> FleetmixParams:
         format=fmt,
     )
 
+    # ---------------------------------------------------------------------
+    # Runtime parameters (optional, with defaults)
+    # ---------------------------------------------------------------------
+    
+    runtime = RuntimeParams(
+        verbose=data.pop("verbose", False),
+        debug=data.pop("debug", False),
+        gap_rel=data.pop("gap_rel", 0.0),
+        solver=data.pop("solver", "auto"),
+        time_limit=data.pop("time_limit", None),
+    )
+
     # Any remaining unknown keys will raise an error to avoid silent mistakes.
     if data:
         unknown_keys = ", ".join(sorted(data.keys()))
@@ -156,10 +168,11 @@ def load_yaml(path: str | Path) -> FleetmixParams:
         )
 
     logger.debug(
-        "Loaded configuration – problem: %s algorithm: %s io: %s",
+        "Loaded configuration – problem: %s algorithm: %s io: %s runtime: %s",
         problem,
         algorithm,
         io_params,
+        runtime,
     )
 
-    return FleetmixParams(problem=problem, algorithm=algorithm, io=io_params) 
+    return FleetmixParams(problem=problem, algorithm=algorithm, io=io_params, runtime=runtime) 

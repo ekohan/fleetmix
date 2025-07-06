@@ -193,7 +193,8 @@ def _solve_internal(
         return empty_solution
 
     # Select solver: use provided or pick based on FSM_SOLVER env
-    solver = solver or pick_solver(parameters.runtime.verbose, gap_rel=parameters.runtime.solver_gap_rel)
+    solver = solver or pick_solver(parameters.runtime)
+    # TODO: check why solver is passed as argument
     logger.info(f"Using solver: {solver.name}")
     start_time = time.time()
     model.solve(solver)

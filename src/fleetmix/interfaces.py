@@ -5,6 +5,7 @@ from typing import Protocol
 import pandas as pd
 import pulp
 
+from fleetmix.config.params import RuntimeParams
 from fleetmix.core_types import ClusteringContext, RouteTimeContext
 
 __all__ = [
@@ -44,7 +45,7 @@ class SolverAdapter(Protocol):
     """Thin wrapper around PuLP solvers to provide a consistent interface."""
 
     def get_pulp_solver(
-        self, *, verbose: bool = False, gap_rel: float | None = 0
+        self, params: RuntimeParams
     ) -> pulp.LpSolver:
         """Return the underlying PuLP solver instance configured and ready to use."""
         ...

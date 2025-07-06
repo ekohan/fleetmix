@@ -3,12 +3,10 @@
 Provides a minimal example of a custom :class:`RouteTimeEstimator` that assumes
 vehicles travel in straight lines at the configuration's *avg_speed*.
 
-To activate in a FleetMix run set::
+This file is *only* for demonstration purposes, it shows how a user can add
+custom components without modifying FleetMix's source code.
 
-    params.algorithm.route_time_estimation = "straight_line"
-
-and make sure the module is imported (or installed as a package) **before**
-worker processes spawn – see ``docs/parallelism.md``.
+See examples/custom_route_time.py.
 """
 
 from __future__ import annotations

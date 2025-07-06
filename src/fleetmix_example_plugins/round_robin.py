@@ -1,7 +1,9 @@
 """Example plugin module registering a trivial round-robin clusterer.
 
-This file is *only* for demonstration purposes – it shows how a user can add
+This file is *only* for demonstration purposes, it shows how a user can add
 custom components without modifying FleetMix's source code.
+
+See examples/custom_clustering.py.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from typing import List
 
 import pandas as pd
 
+from fleetmix.core_types import CapacitatedClusteringContext
 from fleetmix.registry import register_clusterer
 
 
@@ -21,7 +24,7 @@ class RoundRobinClusterer:
         self,
         customers: pd.DataFrame,
         *,
-        context,  # ClusteringContext – left untyped to avoid heavyweight import
+        context: CapacitatedClusteringContext,
         n_clusters: int,
     ) -> List[int]:
         if n_clusters <= 0:

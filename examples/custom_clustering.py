@@ -6,17 +6,13 @@ Demonstrates how to register a user-defined clustering algorithm through the
 Run with:
     python examples/custom_clustering.py
 """
-# ---------------------------------------------------------------------------
-# Example script needs to run serially so the dynamically-registered clusterer
-# is visible.  Setting the env-var **before** importing FleetMix ensures this.
-# Details: docs/parallelism.md
-# ---------------------------------------------------------------------------
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
+# Ensure the plugin is visible (serial mode) *before* FleetMix import, see docs/parallelism.md.
 os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 
 # Plugin module import – executed for its side-effect of registering itself.
@@ -28,19 +24,9 @@ import dataclasses
 
 def main():
     """Main execution function."""
-    # ---------------------------------------------------------------------------
-    # 1.  Custom round-robin clusterer (demo)
-    # ---------------------------------------------------------------------------
+    # Custom round-robin clusterer (demo)
     # The plugin is imported above; nothing to define here
-
-    # ---------------------------------------------------------------------------
-    # 2.  Prepare demand file
-    # ---------------------------------------------------------------------------
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
-
-    # ---------------------------------------------------------------------------
-    # 3.  Run optimisation with custom clusterer
-    # ---------------------------------------------------------------------------
 
     # Start with default config
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
@@ -54,9 +40,7 @@ def main():
 
     solution = fm.optimize(demand=demand_file, config=params)
 
-    # ---------------------------------------------------------------------------
-    # 4.  Display selected clusters
-    # ---------------------------------------------------------------------------
+    # Display selected clusters
     print("Selected clusters (ID -> customers):")
     for cluster in solution.selected_clusters:
         print(

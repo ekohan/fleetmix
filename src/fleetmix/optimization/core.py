@@ -140,7 +140,6 @@ def optimize_fleet(
     clusters_df = Cluster.to_dataframe(clusters)
     customers_df = Customer.to_dataframe(customers)
 
-    # TODO: solver es parte de fleetmixparams.runtime, no usar pick_solver
     # Call internal implementation
     return _solve_internal(
         clusters_df,
@@ -192,9 +191,8 @@ def _solve_internal(
         )
         return empty_solution
 
-    # Select solver: use provided or pick based on FSM_SOLVER env
+    # Select solver: use provided or pick based on runtime.solver
     solver = solver or pick_solver(parameters.runtime)
-    # TODO: check why solver is passed as argument
     logger.info(f"Using solver: {solver.name}")
     start_time = time.time()
     model.solve(solver)

@@ -18,7 +18,7 @@ from sklearn.mixture import GaussianMixture
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     Cluster,
-    ClusteringContext,
+    CapacitatedClusteringContext,
     Customer,
     CustomerBase,
     VehicleConfiguration,
@@ -47,7 +47,7 @@ class MiniBatchKMeansClusterer:
     """MiniBatch KMeans clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
+        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
     ) -> list[int]:
         """Cluster customers using MiniBatch KMeans."""
         data = compute_cluster_metric_input(customers, context, "minibatch_kmeans")
@@ -62,7 +62,7 @@ class KMedoidsClusterer:
     """K-Medoids clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
+        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
     ) -> list[int]:
         """Cluster customers using K-Medoids."""
         data = compute_cluster_metric_input(customers, context, "kmedoids")
@@ -84,7 +84,7 @@ class AgglomerativeClusterer:
     """Agglomerative clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
+        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
     ) -> list[int]:
         """Cluster customers using Agglomerative clustering."""
         # Agglomerative clustering needs precomputed distance matrix
@@ -102,7 +102,7 @@ class GaussianMixtureClusterer:
     """Gaussian Mixture Model clustering algorithm."""
 
     def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
+        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
     ) -> list[int]:
         """Cluster customers using Gaussian Mixture Model."""
         data = compute_cluster_metric_input(customers, context, "gaussian_mixture")
@@ -115,7 +115,7 @@ class GaussianMixtureClusterer:
 
 
 def compute_cluster_metric_input(
-    customers: pd.DataFrame, context: ClusteringContext, method: str
+    customers: pd.DataFrame, context: CapacitatedClusteringContext, method: str
 ) -> np.ndarray:
     """Get appropriate input for clustering algorithm."""
     # Methods that need precomputed distance matrix
@@ -255,7 +255,7 @@ def get_cached_demand(
 def get_cached_route_time(
     customers: list[CustomerBase],
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     route_time_cache: dict[Any, tuple[float, list[str]]],
     main_params: FleetmixParams,
 ) -> tuple[float, list[str]]:
@@ -306,7 +306,7 @@ def get_feasible_customers_subset(
 def create_initial_clusters(
     customers_subset: list[CustomerBase],
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     main_params: FleetmixParams,
     method_name: str = "minibatch_kmeans",
 ) -> list[list[CustomerBase]]:
@@ -330,7 +330,7 @@ def create_small_dataset_clusters(
 def create_normal_dataset_clusters(
     customers_subset: list[CustomerBase],
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     main_params: FleetmixParams,
     method_name: str,
 ) -> list[list[CustomerBase]]:
@@ -381,7 +381,7 @@ def generate_cluster_id_base(config_id: str | int) -> int:
 def check_constraints(
     cluster_customers: list[CustomerBase],
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
     main_params: FleetmixParams,
@@ -412,7 +412,7 @@ def check_constraints(
 def should_split_cluster(
     cluster_customers: list[CustomerBase],
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     depth: int,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
@@ -442,7 +442,7 @@ def should_split_cluster(
 
 def split_cluster(
     cluster_customers: list[CustomerBase],
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     method_name: str,
 ) -> list[list[CustomerBase]]:
     """Split an oversized cluster into smaller ones."""
@@ -490,7 +490,7 @@ def create_cluster(
     cluster_customers: list[CustomerBase],
     config: VehicleConfiguration,
     cluster_id: int,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
     main_params: FleetmixParams,
@@ -537,7 +537,7 @@ def create_cluster(
 def process_clusters_recursively(
     initial_clusters: list[list[CustomerBase]],
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     demand_cache: dict[Any, dict[str, float]],
     route_time_cache: dict[Any, tuple[float, list[str]]],
     main_params: FleetmixParams | None = None,
@@ -639,7 +639,7 @@ def process_clusters_recursively(
 def estimate_num_initial_clusters(
     customers: pd.DataFrame,
     config: VehicleConfiguration,
-    clustering_context: ClusteringContext,
+    clustering_context: CapacitatedClusteringContext,
     main_params: FleetmixParams | None = None,
 ) -> int:
     """

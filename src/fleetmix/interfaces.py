@@ -6,7 +6,7 @@ import pandas as pd
 import pulp
 
 from fleetmix.config.params import RuntimeParams
-from fleetmix.core_types import ClusteringContext, RouteTimeContext
+from fleetmix.core_types import CapacitatedClusteringContext, RouteTimeContext
 
 __all__ = [
     "Clusterer",
@@ -23,7 +23,7 @@ class Clusterer(Protocol):
     """
 
     def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
+        self, customers: pd.DataFrame, *, context: CapacitatedClusteringContext, n_clusters: int
     ) -> list[int]:
         """Cluster customers into n_clusters groups. Returns cluster labels."""
         ...

@@ -171,7 +171,6 @@ def test_optimize_fleet_with_post_optimization(
     # Validate result structure
     assert hasattr(result, "total_cost")
     assert hasattr(result, "selected_clusters")
-    # Note: post_optimization_runtime_sec is now set by improve_solution, not optimize_fleet
 
 
 def test_create_model(simple_clusters_df, simple_configs_df, simple_customers_df, simple_params):

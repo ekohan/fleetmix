@@ -3,6 +3,7 @@ Streamlit GUI for fleetmix optimizer.
 All GUI code in one file to minimize changes.
 """
 
+import dataclasses
 import json
 import multiprocessing
 import shutil
@@ -12,7 +13,7 @@ import traceback
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -124,7 +125,12 @@ def convert_numpy_types(obj):
 
 
 def run_optimization_in_process(
-    demand_path: str, params_file: str, output_dir: str, status_file: str
+    demand_path: str,
+    params_source: Union[
+        FleetmixParams, str, Path
+    ],  # FleetmixParams instance or YAML file path
+    output_dir: str,
+    status_file: str,
 ):
     """Runs optimization in separate process to support multiprocessing."""
     try:
@@ -132,8 +138,12 @@ def run_optimization_in_process(
         with open(status_file, "w") as f:
             json.dump({"stage": "Initializing...", "progress": 0}, f)
 
-        # Load parameters from YAML file
-        params = load_fleetmix_params(params_file)
+        # Obtain FleetmixParams either directly or by loading from a YAML file path
+        if isinstance(params_source, (str, Path)):
+            params = load_fleetmix_params(str(params_source))
+        else:
+            # Assume a FleetmixParams instance
+            params = params_source
 
         # Update status - generating clusters
         with open(status_file, "w") as f:
@@ -180,7 +190,7 @@ def collect_parameters_from_ui() -> FleetmixParams:
     import dataclasses
 
     # Start with defaults
-    params = st.session_state.parameters
+    params: FleetmixParams = st.session_state.parameters
 
     # Collect UI overrides
     ui_overrides = {}
@@ -190,9 +200,12 @@ def collect_parameters_from_ui() -> FleetmixParams:
             ui_overrides[param_name] = st.session_state[key]
 
     # Convert vehicle dictionaries to VehicleSpec objects if needed
-    vehicles = params.problem.vehicles
+    from fleetmix.core_types import VehicleSpec
+    from typing import Dict
+
+    vehicles: Dict[str, VehicleSpec] = params.problem.vehicles
     if "vehicles" in ui_overrides and isinstance(ui_overrides["vehicles"], dict):
-        vehicles_converted = {}
+        vehicles_converted: Dict[str, VehicleSpec] = {}
         for vtype, vdata in ui_overrides["vehicles"].items():
             if (
                 isinstance(vdata, dict)
@@ -200,8 +213,6 @@ def collect_parameters_from_ui() -> FleetmixParams:
                 and "fixed_cost" in vdata
             ):
                 # Convert dict to VehicleSpec
-                from fleetmix.core_types import VehicleSpec
-
                 vehicles_converted[vtype] = VehicleSpec(
                     capacity=vdata["capacity"],
                     fixed_cost=vdata["fixed_cost"],
@@ -231,9 +242,11 @@ def collect_parameters_from_ui() -> FleetmixParams:
         vehicles = vehicles_converted
 
     # Build updates for each section
-    problem_updates = {}
-    algorithm_updates = {}
-    io_updates = {}
+    from typing import Any
+
+    problem_updates: Dict[str, Any] = {}
+    algorithm_updates: Dict[str, Any] = {}
+    io_updates: Dict[str, Any] = {}
 
     # Problem section updates
     if "vehicles" in ui_overrides:
@@ -297,9 +310,45 @@ def collect_parameters_from_ui() -> FleetmixParams:
 
     # Apply updates using dataclasses.replace
     if problem_updates:
-        params = dataclasses.replace(
-            params, problem=dataclasses.replace(params.problem, **problem_updates)
-        )
+        # Update problem parameters directly to avoid mypy type issues
+        new_problem = params.problem
+        if "vehicles" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem, vehicles=problem_updates["vehicles"]
+            )
+        if "goods" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem, goods=problem_updates["goods"]
+            )
+        if "depot" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem, depot=problem_updates["depot"]
+            )
+        if "variable_cost_per_hour" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem,
+                variable_cost_per_hour=problem_updates["variable_cost_per_hour"],
+            )
+        if "light_load_penalty" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem, light_load_penalty=problem_updates["light_load_penalty"]
+            )
+        if "light_load_threshold" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem,
+                light_load_threshold=problem_updates["light_load_threshold"],
+            )
+        if "compartment_setup_cost" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem,
+                compartment_setup_cost=problem_updates["compartment_setup_cost"],
+            )
+        if "allow_split_stops" in problem_updates:
+            new_problem = dataclasses.replace(
+                new_problem, allow_split_stops=problem_updates["allow_split_stops"]
+            )
+
+        params = dataclasses.replace(params, problem=new_problem)
     if algorithm_updates:
         params = dataclasses.replace(
             params, algorithm=dataclasses.replace(params.algorithm, **algorithm_updates)
@@ -742,10 +791,6 @@ def main():
                 params, io=dataclasses.replace(params.io, demand_file=str(demand_path))
             )
 
-            # Save parameters to a temporary YAML file for multiprocessing
-            params_file = temp_dir / "params.yaml"
-            params.to_yaml(params_file)
-
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_dir = Path("results") / f"gui_run_{timestamp}"
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -764,7 +809,7 @@ def main():
                     target=run_optimization_in_process,
                     args=(
                         str(demand_path),
-                        str(params_file),
+                        params,
                         str(output_dir),
                         str(status_file),
                     ),

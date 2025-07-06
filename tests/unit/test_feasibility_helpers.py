@@ -3,7 +3,7 @@ import pandas as pd
 
 from fleetmix.clustering.generator import _is_customer_feasible
 from fleetmix.clustering.heuristics import get_cached_demand
-from fleetmix.core_types import ClusteringContext, Customer, VehicleConfiguration
+from fleetmix.core_types import CapacitatedClusteringContext, Customer, VehicleConfiguration
 
 
 def test_is_customer_feasible_all_goods_fit():

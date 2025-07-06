@@ -9,7 +9,6 @@ Highlights
 Run it:
     $ python examples/heterogeneous_fleet.py
 
-Tip: afterwards launch ``fleetmix gui`` to visualise routes.
 """
 
 from __future__ import annotations

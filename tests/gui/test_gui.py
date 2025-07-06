@@ -104,8 +104,6 @@ class TestRunOptimizationInProcess(unittest.TestCase):
             solver_runtime_sec=1.5,
             selected_clusters=pd.DataFrame(),
         )
-        # Add post_optimization_runtime_sec as an attribute (not in constructor)
-        mock_solution.post_optimization_runtime_sec = 0.5
         mock_optimize.return_value = mock_solution
 
         with tempfile.TemporaryDirectory() as tmpdir:

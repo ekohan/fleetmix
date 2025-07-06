@@ -16,10 +16,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Ensure the plugin is visible (serial mode) *before* FleetMix import.
-# ---------------------------------------------------------------------------
-
+# Ensure the plugin is visible (serial mode) *before* FleetMix import, see docs/parallelism.md.
 os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 
 # Register the straight-line estimator (import for side-effect)

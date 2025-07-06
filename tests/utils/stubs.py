@@ -108,7 +108,6 @@ def stub_solver(monkeypatch):
             solver_status="Optimal",
             total_vehicles=0,  # Ensure all fields have a default
             solver_runtime_sec=0.0,
-            post_optimization_runtime_sec=None,
             time_measurements=None,
         )
 
@@ -130,7 +129,7 @@ def stub_save_results(monkeypatch, output_dir):
         print(f"Using stubbed save_results to save {format} output")
 
         # Create appropriate file extension
-        ext = "xlsx" if format in ("excel", "xlsx") else "json"
+        ext = "xlsx" if format == "excel" else "json"
         (Path(output_dir) / f"output.{ext}").write_text("dummy")
 
     monkeypatch.setattr(save_module_local, "save_optimization_results", fake_save)

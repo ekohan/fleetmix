@@ -13,23 +13,25 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Use our relaxed CBC adapter
-os.environ["FSM_SOLVER"] = "cbc"
-
 # Import plugin for side-effect registration
 import fleetmix as fm
 import fleetmix_example_plugins.naive_solver  # noqa: F401
 
 from fleetmix.config import load_fleetmix_params
+import dataclasses
 
 
 def main() -> None:  # pragma: no cover – example script
     demand_file = Path("tests/_assets/smoke/mini_demand.csv")
 
+    # Start with default config
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    # Update solver using dataclasses.replace for immutable params
+    params = dataclasses.replace(
+        params,
+        runtime=dataclasses.replace(params.runtime, solver="naive"),
+    )
 
-    # TODO: esto está mal, para ser coherente con el resto de ejemplos, se debería usar dataclasses.replace
-    # TODO: con solver siendo un campo de fleetmixparams.runtime
     solution = fm.optimize(demand=demand_file, config=params)
 
     print("\nSolved using *naive* CBC adapter – total cost:", solution.total_cost)

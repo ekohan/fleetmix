@@ -2,12 +2,11 @@
 
 Demonstrates how to plug in a *custom* PuLP solver adapter via the FleetMix
 registry.  This adapter simply forwards to CBC but is registered under the key
-``naive`` so it can be activated with::
+``naive``. 
 
-    export FSM_SOLVER=naive
-
-(or programmatically ``os.environ['FSM_SOLVER'] = 'naive'`` **before** the first
-FleetMix import).
+This file is *only* for demonstration purposes, it shows how a user can add
+custom components without modifying FleetMix's source code. 
+See examples/custom_solver_adapter.py.
 """
 
 from __future__ import annotations
@@ -17,12 +16,7 @@ import pulp
 from fleetmix.config.params import RuntimeParams
 from fleetmix.registry import register_solver_adapter
 
-# Override the default CBC adapter with a demo variant ----------------------------------
-# Registering under the *same* key ('cbc') makes `FSM_SOLVER=cbc` pick this adapter.
-# ------------------------------------------------------------------------------------
-
-
-@register_solver_adapter("cbc")
+@register_solver_adapter("naive")
 class RelaxedCbcAdapter:
     """Thin wrapper around PuLP's CBC with relaxed settings for speed."""
 

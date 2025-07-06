@@ -16,7 +16,7 @@ from joblib import Parallel, delayed
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     Cluster,
-    ClusteringContext,
+    CapacitatedClusteringContext,
     Customer,
     CustomerBase,
     DepotLocation,
@@ -237,7 +237,7 @@ def process_configuration(
     config: VehicleConfiguration,
     customers: list[CustomerBase],
     feasible_customers: dict,
-    context: ClusteringContext,
+    context: CapacitatedClusteringContext,
     demand_cache: dict | None = None,
     route_time_cache: dict | None = None,
     main_params: FleetmixParams | None = None,
@@ -361,12 +361,12 @@ def _deduplicate_clusters(clusters: list[Cluster]) -> list[Cluster]:
 
 def _get_clustering_context_list(
     params: FleetmixParams,
-) -> list[tuple[ClusteringContext, str]]:
+) -> list[tuple[CapacitatedClusteringContext, str]]:
     """Generates a list of (ClusteringContext, method_name) tuples for all runs."""
     context_list = []
 
     # Create base context object with common parameters
-    base_context = ClusteringContext(
+    base_context = CapacitatedClusteringContext(
         goods=params.problem.goods,
         depot=params.problem.depot,
         max_depth=params.algorithm.clustering_max_depth,

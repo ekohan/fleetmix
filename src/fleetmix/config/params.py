@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-"""Parameter container dataclasses for the new FleetMix configuration system.
+"""Parameter container dataclasses for the FleetMix configuration system.
 
-The new parameter organisation separates problem definition, algorithm settings and
-I/O related options into individual immutable dataclasses.  A small mutable
-`RuntimeParams` bucket captures flags that are never serialised to YAML but can
-be toggled programmatically.
+The parameter organisation separates problem definition, algorithm settings, runtime settings and
+I/O related options into individual immutable dataclasses.
 """
 
 from dataclasses import dataclass, field
@@ -139,7 +137,7 @@ class IOParams:
 
 
 # ---------------------------------------------------------------------------
-# Runtime parameters – toggles that are never serialized to yaml
+# Runtime parameters
 # ---------------------------------------------------------------------------
 
 
@@ -151,18 +149,10 @@ class RuntimeParams:
     solver: str = "auto"  # "auto" | "gurobi" | "cbc"
     time_limit: int | None = None  # seconds; None = no limit
 
-    def __post_init__(self):
-        # Validate solver choice
-        if self.solver.lower() not in {"auto", "gurobi", "cbc"}:
-            raise ValueError(
-                f"RuntimeParams.solver must be 'auto', 'gurobi', or 'cbc', got '{self.solver}'"
-            )
-
 
 # ---------------------------------------------------------------------------
 # Aggregate container
 # ---------------------------------------------------------------------------
-
 
 @dataclass(slots=True)
 class FleetmixParams:

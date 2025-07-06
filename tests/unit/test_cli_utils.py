@@ -3,7 +3,6 @@ from argparse import Namespace
 import pytest
 import yaml
 
-from fleetmix.config.parameters import Parameters
 from fleetmix.utils.cli import get_parameter_overrides, load_parameters, parse_args
 
 

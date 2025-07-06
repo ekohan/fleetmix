@@ -227,7 +227,7 @@ def _solve_internal(
 
     # Add goods columns from configurations before calculating statistics
     config_lookup = _create_config_lookup(configurations)
-    for good in parameters.goods:
+    for good in parameters.problem.goods:
         selected_clusters[good] = selected_clusters["Config_ID"].map(
             lambda x: config_lookup[str(x)][good]
         )
@@ -295,7 +295,7 @@ def _create_model(
         V_k[k] = set()
         cluster = clusters_df.loc[clusters_df["Cluster_ID"] == k].iloc[0]
         cluster_goods_required = set(
-            g for g in parameters.goods if cluster["Total_Demand"][g] > 0
+            g for g in parameters.problem.goods if cluster["Total_Demand"][g] > 0
         )
         q_k = sum(cluster["Total_Demand"].values())
 
@@ -334,14 +334,14 @@ def _create_model(
             if v != "NoVehicle":
                 config = _find_config_by_id(configurations, v)
                 # Calculate load percentage
-                total_demand = sum(cluster["Total_Demand"][g] for g in parameters.goods)
+                total_demand = sum(cluster["Total_Demand"][g] for g in parameters.problem.goods)
                 capacity = float(config.capacity)
                 load_percentage = total_demand / capacity
 
                 # Apply fixed penalty if under threshold
                 penalty_amount = (
-                    float(parameters.light_load_penalty)
-                    if load_percentage < parameters.light_load_threshold
+                    float(parameters.problem.light_load_penalty)
+                    if load_percentage < parameters.problem.light_load_threshold
                     else 0.0
                 )
                 base_cost = _calculate_cluster_cost(
@@ -361,7 +361,7 @@ def _create_model(
     # Constraints
 
     # 1. Customer Allocation Constraint (Exact Assignment or Split-Stop Exclusivity)
-    if parameters.allow_split_stops:
+    if parameters.problem.allow_split_stops:
         # Build mapping tables for split-stop constraints
         # First, convert customer IDs to Customer objects to use proper methods
         customers = Customer.from_dataframe(customers_df)
@@ -443,7 +443,7 @@ def _create_model(
     # ------------------------------------------------------------------
 
     # TODO: check warm-start logic, flags, etc.
-    if parameters.allow_split_stops:
+    if parameters.problem.allow_split_stops:
         # Identify baseline clusters (those without "::" pseudo-customers)
         baseline_cluster_ids = []
         for k in K:
@@ -559,7 +559,7 @@ def _validate_solution(
     Validate that all customers are served in the solution.
     """
     # In split-stop mode, MILP ensures per-good coverage; skip validation of pseudo-customers
-    if parameters.allow_split_stops:
+    if parameters.problem.allow_split_stops:
         return set()
     all_customers_set = set(customers_df["Customer_ID"])
     served_customers = set()
@@ -607,10 +607,10 @@ def _calculate_solution_statistics(
 
     # Calculate compartment penalties
     total_compartment_penalties = sum(
-        parameters.compartment_setup_cost
-        * (sum(1 for g in parameters.goods if row[g] == 1) - 1)
+        parameters.problem.compartment_setup_cost
+        * (sum(1 for g in parameters.problem.goods if row[g] == 1) - 1)
         for _, row in selected_clusters.iterrows()
-        if sum(1 for g in parameters.goods if row[g] == 1) > 1
+        if sum(1 for g in parameters.problem.goods if row[g] == 1) > 1
     )
 
     # Get vehicle statistics and fixed costs
@@ -637,7 +637,7 @@ def _calculate_solution_statistics(
     # Calculate base costs (without penalties)
     total_fixed_cost = selected_clusters["Fixed_Cost"].sum()
     total_variable_cost = (
-        selected_clusters["Route_Time"] * parameters.variable_cost_per_hour
+        selected_clusters["Route_Time"] * parameters.problem.variable_cost_per_hour
     ).sum()
 
     # Total cost from optimization
@@ -692,13 +692,13 @@ def _calculate_cluster_cost(
     # Base costs
     fixed_cost = float(config.fixed_cost)
     route_time = float(cluster["Route_Time"])
-    variable_cost = float(parameters.variable_cost_per_hour) * route_time
+    variable_cost = float(parameters.problem.variable_cost_per_hour) * route_time
 
     # Compartment setup cost
-    num_compartments = sum(1 for g in parameters.goods if config[g])
+    num_compartments = sum(1 for g in parameters.problem.goods if config[g])
     compartment_cost = 0.0
     if num_compartments > 1:
-        compartment_cost = float(parameters.compartment_setup_cost) * (
+        compartment_cost = float(parameters.problem.compartment_setup_cost) * (
             num_compartments - 1
         )
 

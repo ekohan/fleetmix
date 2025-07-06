@@ -39,9 +39,19 @@ def _parse_vehicles(raw: Dict[str, Dict[str, Any]]) -> Dict[str, VehicleSpec]:
             "max_route_time": details.pop("max_route_time"),
         }
 
-        # Optional allowed_goods
+        # Optional allowed_goods with validation
         if "allowed_goods" in details:
-            spec_kwargs["allowed_goods"] = details.pop("allowed_goods")
+            allowed_goods = details.pop("allowed_goods")
+            
+            # Validate allowed_goods is not empty
+            if isinstance(allowed_goods, list) and len(allowed_goods) == 0:
+                raise ValueError(f"Vehicle '{name}': allowed_goods cannot be empty")
+            
+            # Validate allowed_goods has no duplicates
+            if isinstance(allowed_goods, list) and len(set(allowed_goods)) != len(allowed_goods):
+                raise ValueError(f"Vehicle '{name}': allowed_goods contains duplicates")
+            
+            spec_kwargs["allowed_goods"] = allowed_goods
 
         # Remaining extra fields
         spec_kwargs["extra"] = details
@@ -91,8 +101,13 @@ def load_yaml(path: str | Path) -> FleetmixParams:
 
     depot = DepotLocation(**depot_raw)
 
-    goods = data.pop("goods", [])
-    variable_cph = data.pop("variable_cost_per_hour", 0.0)
+    goods = data.pop("goods", None)
+    if goods is None:
+        raise ValueError("YAML missing required key 'goods'.")
+    
+    variable_cph = data.pop("variable_cost_per_hour", None)
+    if variable_cph is None:
+        raise ValueError("Missing required configuration field: variable_cost_per_hour")
     light_load_penalty = data.pop("light_load_penalty", 0.0)
     light_load_threshold = data.pop("light_load_threshold", 0.0)
     compartment_setup_cost = data.pop("compartment_setup_cost", 0.0)
@@ -164,7 +179,7 @@ def load_yaml(path: str | Path) -> FleetmixParams:
     if data:
         unknown_keys = ", ".join(sorted(data.keys()))
         raise ValueError(
-            f"Unknown top-level configuration keys in YAML: {unknown_keys}"
+            f"Unknown configuration fields: {unknown_keys}"
         )
 
     logger.debug(

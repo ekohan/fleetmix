@@ -5,7 +5,7 @@ vehicles travel in straight lines at the configuration's *avg_speed*.
 
 To activate in a FleetMix run set::
 
-    params.clustering["route_time_estimation"] = "straight_line"
+    params.algorithm.route_time_estimation = "straight_line"
 
 and make sure the module is imported (or installed as a package) **before**
 worker processes spawn – see ``docs/parallelism.md``.

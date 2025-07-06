@@ -91,9 +91,8 @@ def test_load_parameters_with_clustering_overrides(tmp_path):
         ]
     )
     params = load_parameters(args)
-    c = params.clustering
-    assert c["method"] == "agglomerative"
-    assert c["distance"] == "composite"
-    assert c["geo_weight"] == 0.8
-    assert c["demand_weight"] == 0.2
-    assert c["route_time_estimation"] == "TSP"
+    assert params.algorithm.clustering_method == "agglomerative"
+    assert params.algorithm.clustering_distance == "composite"
+    assert params.algorithm.geo_weight == 0.8
+    assert params.algorithm.demand_weight == 0.2
+    assert params.algorithm.route_time_estimation == "TSP"

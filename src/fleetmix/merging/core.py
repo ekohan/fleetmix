@@ -258,7 +258,7 @@ def generate_merge_phase_clusters(
             }
             if tsp_sequence is not None:
                 new_cluster["TSP_Sequence"] = tsp_sequence
-            for good in params.goods:
+            for good in params.problem.goods:
                 new_cluster[good] = target_config[good]
             new_clusters.append(new_cluster)
 
@@ -285,7 +285,7 @@ def generate_merge_phase_clusters(
         "Centroid_Latitude",
         "Centroid_Longitude",
         "TSP_Sequence",
-    ] + list(params.goods)
+    ] + list(params.problem.goods)
 
     # Build and dedupe merged clusters
     df = pd.DataFrame(new_clusters, columns=minimal_columns)
@@ -318,7 +318,7 @@ def validate_merged_cluster(
         customers_indexed = customers_df
     # Check compartment compatibility
     merged_goods = {}
-    for g in params.goods:
+    for g in params.problem.goods:
         # Handle case where Total_Demand might be a dict or series
         demand1 = (
             cluster1["Total_Demand"][g]

@@ -59,9 +59,9 @@ class ProblemParams:
                 continue
             invalid = set(spec.allowed_goods) - global_goods
             if invalid:
-                raise ValueError(
-                    f"Vehicle '{name}': allowed_goods contains goods not present in global goods list: {sorted(invalid)}"
-                )
+                            raise ValueError(
+                f"Vehicle '{name}': allowed_goods contains goods not in global list: {sorted(invalid)}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -172,38 +172,6 @@ class FleetmixParams:
     algorithm: AlgorithmParams
     io: IOParams
     runtime: RuntimeParams = field(default_factory=RuntimeParams)
-
-    # Convenience accessors so calling code can use `params.X` like before.
-    # TODO: eliminar este metodo para que el llamado sea mas explicito
-    def __getattr__(self, item):
-        # Delegate lookup to contained dataclasses.
-        for section in (self.problem, self.algorithm, self.io, self.runtime):
-            if hasattr(section, item):
-                return getattr(section, item)
-        raise AttributeError(item)
-
-    # ------------------------------------------------------------------
-    # Legacy helpers – provide backward-compatibility for code that still
-    # expects the old flat/dict style attributes.
-    # ------------------------------------------------------------------
-
-    @property
-    def clustering(self) -> dict[str, object]:
-        """Return a dict equivalent of the old `clustering` section.
-
-        This helper lets existing modules that access `params.clustering[...]`
-        continue to function until they are fully migrated to the structured
-        `AlgorithmParams` API.
-        """
-
-        return {
-            "max_depth": self.algorithm.clustering_max_depth,
-            "method": self.algorithm.clustering_method,
-            "distance": self.algorithm.clustering_distance,
-            "geo_weight": self.algorithm.geo_weight,
-            "demand_weight": self.algorithm.demand_weight,
-            "route_time_estimation": self.algorithm.route_time_estimation,
-        }
 
     # Make the object picklable when using joblib (loky backend)
     def __getstate__(self):

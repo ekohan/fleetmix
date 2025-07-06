@@ -65,7 +65,7 @@ class VRPSolver:
             # For single product solving, create a client for each product demand
             # Note: We'll use vehicle-specific service times later when processing routes
             for _, row in self.customers.iterrows():
-                for good in self.params.goods:
+                for good in self.params.problem.goods:
                     demand = row[f"{good}_Demand"]
                     if demand > 0:
                         expanded_clients.append(
@@ -79,7 +79,7 @@ class VRPSolver:
         else:
             # For multi-compartment, use total demand
             for _, row in self.customers.iterrows():
-                total_demand = sum(row[f"{good}_Demand"] for good in self.params.goods)
+                total_demand = sum(row[f"{good}_Demand"] for good in self.params.problem.goods)
                 if total_demand > 0:
                     expanded_clients.append(
                         Client(
@@ -92,7 +92,7 @@ class VRPSolver:
 
         # Create vehicle types with proper capacities and vehicle-specific timing parameters
         vehicle_types = []
-        for vt_name, vt_spec in self.params.vehicles.items():
+        for vt_name, vt_spec in self.params.problem.vehicles.items():
             vehicle_types.append(
                 VehicleType(
                     num_available=len(expanded_clients),
@@ -107,7 +107,7 @@ class VRPSolver:
 
         # Create duration matrices for each vehicle type based on their specific avg_speed
         duration_matrices = []
-        for vt_spec in self.params.vehicles.values():
+        for vt_spec in self.params.problem.vehicles.values():
             duration_matrix = (base_distance_matrix / vt_spec.avg_speed) * 3600
             duration_matrices.append(duration_matrix)
 
@@ -149,7 +149,7 @@ class VRPSolver:
 
             # Check if this customer should be included based on benchmark type
             if self.benchmark_type == BenchmarkType.MULTI_COMPARTMENT:
-                total_demand = sum(row[f"{good}_Demand"] for good in self.params.goods)
+                total_demand = sum(row[f"{good}_Demand"] for good in self.params.problem.goods)
                 if total_demand > 0:
                     client_idx += 1
                     dist = haversine(depot_coords, coords)
@@ -157,7 +157,7 @@ class VRPSolver:
                     distance_matrix[client_idx, 0] = dist
                     client_coords_list[client_idx] = coords  # Store coords
             else:  # SINGLE_COMPARTMENT
-                for good in self.params.goods:
+                for good in self.params.problem.goods:
                     if row[f"{good}_Demand"] > 0:
                         client_idx += 1
                         dist = haversine(depot_coords, coords)
@@ -180,13 +180,13 @@ class VRPSolver:
         """Solve VRP instances for each product type in parallel."""
         # Split customers by product type
         product_instances = []
-        for good in self.params.goods:
+        for good in self.params.problem.goods:
             mask = self.customers[f"{good}_Demand"] > 0
             if mask.any():
                 # Create a copy with only this product's demand
                 product_customers = self.customers.copy()
                 # Zero out other products' demands
-                for other_good in self.params.goods:
+                for other_good in self.params.problem.goods:
                     if other_good != good:
                         product_customers[f"{other_good}_Demand"] = 0
                 product_instances.append((good, product_customers))
@@ -274,7 +274,7 @@ class VRPSolver:
             vehicle_capacity = vehicle_type.capacity[0]
 
             # Get the actual vehicle spec from params to access timing parameters
-            vehicle_spec = list(self.params.vehicles.values())[vehicle_type_idx]
+            vehicle_spec = list(self.params.problem.vehicles.values())[vehicle_type_idx]
 
             # Calculate utilization percentage
             utilization = (total_demand / vehicle_capacity) * 100
@@ -294,12 +294,12 @@ class VRPSolver:
             # Calculate route time using vehicle-specific parameters
             route_time, _ = estimate_route_time(
                 cluster_customers=route_customers,
-                depot=self.params.depot.to_dict(),
+                depot=self.params.problem.depot.to_dict(),
                 service_time=vehicle_spec.service_time,
                 avg_speed=vehicle_spec.avg_speed,
                 method="BHH",
                 max_route_time=vehicle_spec.max_route_time,
-                prune_tsp=self.params.prune_tsp,
+                prune_tsp=self.params.algorithm.prune_tsp,
             )
 
             # Check if route is feasible (but include it anyway)
@@ -435,7 +435,7 @@ class VRPSolver:
 
         if benchmark_type == BenchmarkType.SINGLE_COMPARTMENT:
             # Count vehicles by product type
-            vehicles_by_product = dict.fromkeys(self.params.goods, 0)
+            vehicles_by_product = dict.fromkeys(self.params.problem.goods, 0)
             for route in routes:
                 if route:  # If route is not empty
                     # Get product type of first client in route (skip depot)
@@ -450,7 +450,7 @@ class VRPSolver:
                     # Fallback: determine product from customer demands
                     elif first_client_idx < len(self.customers):
                         customer_row = self.customers.iloc[first_client_idx]
-                        for good in self.params.goods:
+                        for good in self.params.problem.goods:
                             if customer_row.get(f"{good}_Demand", 0) > 0:
                                 product = good
                                 break
@@ -505,12 +505,12 @@ class VRPSolver:
                 else str(idx)
             )
             self.original_demands[customer_id] = {
-                good: row.get(f"{good}_Demand", 0) for good in self.params.goods
+                good: row.get(f"{good}_Demand", 0) for good in self.params.problem.goods
             }
 
         # Calculate total demand for each customer
         mc_customers["Total_Demand"] = mc_customers.apply(
-            lambda row: sum(row.get(f"{good}_Demand", 0) for good in self.params.goods),
+            lambda row: sum(row.get(f"{good}_Demand", 0) for good in self.params.problem.goods),
             axis=1,
         )
 
@@ -524,16 +524,16 @@ class VRPSolver:
         Returns dict mapping product types to their required capacity percentage.
         """
         # Calculate total demand per product type for this route
-        route_demands = dict.fromkeys(self.params.goods, 0.0)
+        route_demands = dict.fromkeys(self.params.problem.goods, 0.0)
 
         # Get the vehicle type from the solution
-        vehicle_type = list(self.params.vehicles.values())[vehicle_type_idx]
+        vehicle_type = list(self.params.problem.vehicles.values())[vehicle_type_idx]
         total_vehicle_capacity = (
             vehicle_type.capacity
         )  # Direct attribute access instead of ['capacity']
 
         for customer_id in route_customers:
-            for good in self.params.goods:
+            for good in self.params.problem.goods:
                 route_demands[good] += self.original_demands[customer_id][good]
 
         # Calculate percentage for each product type relative to vehicle capacity
@@ -621,7 +621,7 @@ class VRPSolver:
 
         # Count customers by product type
         customers_by_product = {}
-        for good in self.params.goods:
+        for good in self.params.problem.goods:
             demand_col = f"{good}_Demand"
             if demand_col in customers.columns:
                 count = customers[customers[demand_col] > 0].shape[0]
@@ -634,7 +634,7 @@ class VRPSolver:
 
         # Calculate total demand by product type
         demand_by_product = {}
-        for good in self.params.goods:
+        for good in self.params.problem.goods:
             demand_col = f"{good}_Demand"
             if demand_col in customers.columns:
                 total_demand = customers[demand_col].sum()
@@ -650,7 +650,7 @@ class VRPSolver:
         for good, demand in demand_by_product.items():
             # Get vehicle with smallest capacity that can handle this product
             compatible_vehicles = []
-            for vehicle_name, vehicle_info in self.params.vehicles.items():
+            for vehicle_name, vehicle_info in self.params.problem.vehicles.items():
                 compartments = vehicle_info.compartments  # Direct attribute access
                 if compartments.get(good, False):
                     compatible_vehicles.append((vehicle_name, vehicle_info))
@@ -675,8 +675,8 @@ class VRPSolver:
         log_debug(f"→ Total: {total_vehicles:.0f}")
 
         # Print expected vehicle count
-        if hasattr(self.params, "expected_vehicles"):
-            log_debug(f"Expected Vehicles: {self.params.expected_vehicles}")
+        if hasattr(self.params.problem, "expected_vehicles"):
+            log_debug(f"Expected Vehicles: {self.params.problem.expected_vehicles}")
 
     def solve(self, verbose: bool = False) -> dict[str, VRPSolution]:
         """Solve VRP using appropriate strategy based on benchmark type."""

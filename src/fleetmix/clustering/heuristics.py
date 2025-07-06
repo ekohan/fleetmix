@@ -270,7 +270,7 @@ def get_cached_route_time(
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(
-        config, clustering_context.depot, main_params.prune_tsp
+        config, clustering_context.depot, main_params.algorithm.prune_tsp
     )
 
     # Use the new interface with RouteTimeContext
@@ -649,7 +649,7 @@ def estimate_num_initial_clusters(
         return 0
 
     # Default prune_tsp flag if main_params not provided
-    prune_tsp_val = main_params.prune_tsp if main_params is not None else False
+    prune_tsp_val = main_params.algorithm.prune_tsp if main_params is not None else False
 
     # Convert to CustomerBase objects and determine if they are pseudo-customers
     customers_list = Customer.from_dataframe(customers)

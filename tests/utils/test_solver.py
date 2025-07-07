@@ -46,7 +46,7 @@ class TestPickSolver(unittest.TestCase):
         params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
-        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, maxSeconds=180)
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, timeLimit=180)
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")

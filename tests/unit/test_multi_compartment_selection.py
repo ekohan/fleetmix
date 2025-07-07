@@ -7,35 +7,62 @@ from fleetmix.core_types import (
     DepotLocation,
     PseudoCustomer,
     VehicleConfiguration,
+    VehicleSpec,
 )
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams, ProblemParams, AlgorithmParams, IOParams, RuntimeParams
 from fleetmix.optimization.core import optimize_fleet
+from pathlib import Path
 
 
-def _make_params(variable_cost_per_hour: float = 0.0) -> Parameters:
-    """Create a minimal Parameters instance suitable for unit tests."""
+def _make_params(variable_cost_per_hour: float = 0.0) -> FleetmixParams:
+    """Create a minimal FleetmixParams instance suitable for unit tests."""
 
-    return Parameters(
-        vehicles={},  # Vehicle catalogue not required for this unit test
+    # Create minimal vehicle specs for the test
+    minimal_vehicles = {
+        "TestVehicle": VehicleSpec(
+            capacity=1000,
+            fixed_cost=100.0,
+            compartments={"Dry": True, "Chilled": True, "Frozen": True},
+        )
+    }
+
+    problem = ProblemParams(
+        vehicles=minimal_vehicles,
         variable_cost_per_hour=variable_cost_per_hour,
         depot=DepotLocation(latitude=0.0, longitude=0.0),
         goods=["Dry", "Chilled", "Frozen"],
-        # Minimal clustering section (values irrelevant for this direct MILP test)
-        clustering={
-            "max_depth": 1,
-            "method": "minibatch_kmeans",
-            "distance": "euclidean",
-            "geo_weight": 0.7,
-            "demand_weight": 0.3,
-            "route_time_estimation": "BHH",
-        },
-        demand_file="dummy.csv",
         light_load_penalty=0.0,
         light_load_threshold=0.0,
         compartment_setup_cost=0.0,  # Critical for this test
-        format="json",
         allow_split_stops=True,  # Enable split-stop logic
+    )
+    
+    algorithm = AlgorithmParams(
+        clustering_max_depth=1,
+        clustering_method="minibatch_kmeans",
+        clustering_distance="euclidean",
+        geo_weight=0.7,
+        demand_weight=0.3,
+        route_time_estimation="BHH",
         post_optimization=False,  # Keep solver deterministic for the test
+    )
+    
+    io = IOParams(
+        demand_file="dummy.csv",
+        results_dir=Path("results"),
+        format="json",
+    )
+    
+    runtime = RuntimeParams(
+        verbose=False,
+        debug=False,
+    )
+
+    return FleetmixParams(
+        problem=problem,
+        algorithm=algorithm,
+        io=io,
+        runtime=runtime,
     )
 
 

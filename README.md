@@ -4,6 +4,10 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/ekohan/fleetmix/ci.yml?label=CI)](https://github.com/ekohan/fleetmix/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Coverage](https://img.shields.io/codecov/c/github/ekohan/fleetmix?label=coverage)](https://codecov.io/gh/ekohan/fleetmix)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ekohan/fleetmix)
+<!-- TODO: refresh deepwiki -->
+<!-- TODO: publish PyPI -->
+
 
 *Written for transparent research, hardened for production use.*
 
@@ -12,7 +16,7 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 
 ---
 
-<!-- GIF Demo -->
+<!-- TODO: make GIF Demo -->
 
 <p align="center">
   <img src="docs/images/fleetmix_demo.png" alt="Fleetmix demo animation" width="80%"/>
@@ -34,7 +38,7 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 
 1. [Installation](#installation)
 2. [Quick Start](#quick-start)
-3. [Architecture Overview](#architecture-overview)
+3. [Matheuristic Overview](#matheuristic-overview)
 4. [Command‑Line Usage](#command-line-usage)
 5. [Python API](#python-api)
 6. [Configuration](#configuration)
@@ -118,14 +122,17 @@ The GUI provides:
 
 ---
 
-## 🏗️ Architecture Overview
+## 🏗️ Matheuristic Overview
 
 ```mermaid
 graph LR
-    A[Read Demand] --> B[Generate feasible clusters]
-    B --> C[MILP fleet‑selection]
-    C --> D[Merge improvement phase]
-    D --> E["Results (JSON | XLSX | HTML)"]
+    A["Customer Demand"] --> B["Vehicle Configurations"]
+    B --> C["Feasible Clusters"]
+    C --> D["MILP Fleet-Design"]
+    D --> E["Solution"]
+    B --> F["(Multiple vehicle types)"]
+    C --> G["(Capacity & time feasible)"]
+    D --> H["(Merge improvement)"]
 ```
 
 *Full algorithmic details are in §4 of the paper.*
@@ -274,6 +281,9 @@ The plugin system supports:
 - **Clustering algorithms**: K-means, K-medoids, Agglomerative, Gaussian Mixture, or your own
 - **Route time estimators**: Legacy, BHH, TSP-based, or custom (e.g., with traffic data)
 - **Solvers**: Gurobi, CBC, or any PuLP-compatible solver
+
+> **Tip:** A plugin becomes available as soon as Python imports the module that holds the `@register_*` decorator.  
+> Add something like `import my_package.my_plugin  # noqa: F401` near application start (before invoking `fleetmix.optimize(...)`) and FleetMix will automatically recognise the new plugin.
 
 ---
 

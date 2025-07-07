@@ -124,6 +124,44 @@ def parse_vrp_results(vrp_type: str):
                 "Config File": config_file,
             }
 
+            # Compute total customers (# Customers)
+            selected_clusters = data.get("Selected Clusters", [])
+            customers_served = 0
+            for cluster in selected_clusters:
+                try:
+                    customers_served += int(cluster.get("Num_Customers", 0))
+                except (ValueError, TypeError):
+                    continue
+            unserved_customers = 0
+            try:
+                unserved_customers = int(
+                    data.get("Other Considerations", {}).get(
+                        "Number of Unserved Customers", 0
+                    )
+                    or 0
+                )
+            except (ValueError, TypeError):
+                unserved_customers = 0
+            total_customers = customers_served + unserved_customers
+            row["# Customers"] = total_customers
+
+            # Extract wall_time for key phases and append to row
+            time_measurements = data.get("Time Measurements", {})
+            phase_key_to_column = {
+                "vehicle_configuration": "vehicle_configuration",
+                "clustering": "clustering",
+                "fsm_initial": "milp-opt",
+                "fsm_post_optimization": "post-opt",
+                "global": "global",
+            }
+            for phase_key, column_suffix in phase_key_to_column.items():
+                wall_time = 0.0
+                if phase_key in time_measurements:
+                    wall_time = float(time_measurements[phase_key].get("wall_time", 0))
+                # Column name per spec
+                column_name = f"wall_time_sec-{column_suffix}"
+                row[column_name] = f"{wall_time:.6f}"
+
             rows.append(row)
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
@@ -145,6 +183,12 @@ def main():
         "Fixed Cost ($)",
         "Variable Cost ($)",
         "Config File",
+        "# Customers",
+        "wall_time_sec-vehicle_configuration",
+        "wall_time_sec-clustering",
+        "wall_time_sec-milp-opt",
+        "wall_time_sec-post-opt",
+        "wall_time_sec-global",
     ]
 
     # Parse MCVRP results

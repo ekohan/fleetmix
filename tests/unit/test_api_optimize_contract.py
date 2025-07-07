@@ -2,7 +2,8 @@ import pandas as pd
 import pytest
 from pathlib import Path
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 from fleetmix.api import optimize
 from fleetmix.core_types import FleetmixSolution
 
@@ -23,11 +24,11 @@ def demand_df():
 
 
 @pytest.fixture(scope="module")
-def params() -> Parameters:
+def params() -> FleetmixParams:
     cfg = (
         Path(__file__).resolve().parent.parent / "_assets" / "configs" / "test_config_minimal.yaml"
     )
-    return Parameters.from_yaml(cfg)
+    return load_fleetmix_params(cfg)
 
 
 class DummySolution(FleetmixSolution):

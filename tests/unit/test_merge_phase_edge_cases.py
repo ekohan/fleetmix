@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, Cluster
 from fleetmix.merging.core import (
     _get_merged_route_time,
@@ -44,8 +44,7 @@ def simple_params():
     config_path = (
         Path(__file__).parent.parent / "_assets" / "configs" / "base_test_config.yaml"
     )
-    return Parameters.from_yaml(str(config_path))
-
+    return load_fleetmix_params(config_path)
 
 @pytest.fixture
 def params_with_post_opt():
@@ -56,7 +55,7 @@ def params_with_post_opt():
         / "configs"
         / "test_config_post_opt.yaml"
     )
-    return Parameters.from_yaml(str(config_path))
+    return load_fleetmix_params(config_path)
 
 
 def test_improve_solution_no_clusters(simple_params):

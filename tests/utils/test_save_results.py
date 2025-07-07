@@ -9,7 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams, IOParams, AlgorithmParams, ProblemParams, RuntimeParams
 from fleetmix.core_types import (
     BenchmarkType,
     Cluster,
@@ -93,37 +94,53 @@ class TestSaveOptimizationResults(unittest.TestCase):
             ),
         ]
 
-        self.parameters = MagicMock(spec=Parameters)
-        self.parameters.results_dir = Path(tempfile.gettempdir())
-        self.parameters.demand_file = "test_demand.csv"
-        self.parameters.variable_cost_per_hour = 50
-        self.parameters.clustering = {
-            "max_depth": 3,
-            "method": "kmeans",
-            "distance": "euclidean",
-            "geo_weight": 0.5,
-            "demand_weight": 0.5,
-            "route_time_estimation": "BHH",
-        }
-        self.parameters.light_load_penalty = 10
-        self.parameters.light_load_threshold = 0.5
-        self.parameters.compartment_setup_cost = 5
-        self.parameters.vehicles = {
-            "Type1": VehicleSpec(
-                capacity=1000,
-                fixed_cost=100,
-                compartments={"Dry": True, "Chilled": True, "Frozen": False},
-                extra={},
-            ),
-            "Type2": VehicleSpec(
-                capacity=2000,
-                fixed_cost=200,
-                compartments={"Dry": True, "Frozen": True, "Chilled": False},
-                extra={},
-            ),
-        }
-        self.parameters.goods = ["Dry", "Chilled", "Frozen"]
-        self.parameters.depot = DepotLocation(latitude=4.5, longitude=-74.0)
+        # Create a real FleetmixParams object instead of a mock
+        problem_params = ProblemParams(
+            vehicles={
+                "Type1": VehicleSpec(
+                    capacity=1000,
+                    fixed_cost=100,
+                    compartments={"Dry": True, "Chilled": True, "Frozen": False},
+                    extra={},
+                ),
+                "Type2": VehicleSpec(
+                    capacity=2000,
+                    fixed_cost=200,
+                    compartments={"Dry": True, "Frozen": True, "Chilled": False},
+                    extra={},
+                ),
+            },
+            depot=DepotLocation(latitude=4.5, longitude=-74.0),
+            goods=["Dry", "Chilled", "Frozen"],
+            variable_cost_per_hour=50.0,
+            light_load_penalty=10.0,
+            light_load_threshold=0.5,
+            compartment_setup_cost=5.0,
+        )
+
+        algorithm_params = AlgorithmParams(
+            clustering_max_depth=3,
+            clustering_method="kmeans",
+            clustering_distance="euclidean",
+            geo_weight=0.5,
+            demand_weight=0.5,
+            route_time_estimation="BHH",
+        )
+
+        io_params = IOParams(
+            demand_file="test_demand.csv",
+            results_dir=Path(tempfile.gettempdir()),
+            format="xlsx",
+        )
+
+        runtime_params = RuntimeParams()
+
+        self.parameters = FleetmixParams(
+            problem=problem_params,
+            algorithm=algorithm_params,
+            io=io_params,
+            runtime=runtime_params,
+        )
 
     @patch("fleetmix.utils.save_results._write_to_excel")
     @patch("fleetmix.utils.save_results.visualize_clusters")
@@ -138,7 +155,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
                 configurations=self.configurations,
                 parameters=self.parameters,
                 filename=temp_file,
-                format="excel",
+                format="xlsx",
             )
 
             # Check that write function was called
@@ -187,6 +204,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
             solution=self.solution,
             configurations=self.configurations,
             parameters=self.parameters,
+            format="xlsx",  # Explicitly specify xlsx format to ensure _write_to_excel is called
         )
 
         # Check that filename was generated with timestamp
@@ -197,7 +215,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
     @patch("fleetmix.utils.save_results._write_to_excel")
     @patch("fleetmix.utils.save_results.visualize_clusters")
     def test_save_optimization_results_with_time_measurements(
-        self, mock_visualize, mock_write
+        self, mock_visualize, mock_write_excel
     ):
         """Test saving with time measurements."""
         from fleetmix.utils.time_measurement import TimeMeasurement
@@ -212,6 +230,8 @@ class TestSaveOptimizationResults(unittest.TestCase):
             selected_clusters=self.solution.selected_clusters,
             total_fixed_cost=self.solution.total_fixed_cost,
             total_variable_cost=self.solution.total_variable_cost,
+            total_light_load_penalties=self.solution.total_light_load_penalties,
+            total_compartment_penalties=self.solution.total_compartment_penalties,
             total_penalties=self.solution.total_penalties,
             total_cost=self.solution.total_cost,
             vehicles_used=self.solution.vehicles_used,
@@ -227,10 +247,15 @@ class TestSaveOptimizationResults(unittest.TestCase):
             solution=solution_with_times,
             configurations=self.configurations,
             parameters=self.parameters,
+            format="xlsx",  # Explicitly specify xlsx format to ensure _write_to_excel is called
         )
 
-        # Check that time measurements were included
-        data = mock_write.call_args[0][1]
+        # Check that write function was called
+        mock_write_excel.assert_called_once()
+        
+        # Check that time measurements were included in the call
+        call_args = mock_write_excel.call_args[0]
+        data = call_args[1]
         self.assertIn("time_measurements_excel", data)
         self.assertEqual(
             len(data["time_measurements_excel"]), 12
@@ -273,7 +298,7 @@ class TestWriteToExcel(unittest.TestCase):
 
     def test_write_to_excel_with_time_measurements(self):
         """Test Excel writing with time measurements."""
-        self.data["time_measurements"] = [("time1", 1.0), ("time2", 2.0)]
+        self.data["time_measurements_excel"] = [("time1", 1.0), ("time2", 2.0)]
 
         with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
             temp_file = f.name

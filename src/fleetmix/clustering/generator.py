@@ -7,16 +7,16 @@ cluster-first, fleet-design second heuristic.
 """
 
 import itertools
+import os
 from dataclasses import replace
 from multiprocessing import Manager
 
-import pandas as pd
 from joblib import Parallel, delayed
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
+    CapacitatedClusteringContext,
     Cluster,
-    ClusteringContext,
     Customer,
     CustomerBase,
     DepotLocation,
@@ -46,7 +46,7 @@ class Symbols:
 def generate_feasible_clusters(
     customers: list[CustomerBase],
     configurations: list[VehicleConfiguration],
-    params: Parameters,
+    params: FleetmixParams,
 ) -> list[Cluster]:
     """
     Generate clusters for each vehicle configuration in parallel.
@@ -76,7 +76,7 @@ def generate_feasible_clusters(
         # 1. Generate feasibility mapping
         logger.info("Generating feasibility mapping...")
         feasible_customers = _generate_feasibility_mapping(
-            customers, configurations, params.goods
+            customers, configurations, params.problem.goods
         )
         if not feasible_customers:
             logger.warning(
@@ -105,8 +105,8 @@ def generate_feasible_clusters(
             unique_speeds = set(config.avg_speed for config in configurations)
             for speed in unique_speeds:
                 depot_dict = {
-                    "latitude": params.depot.latitude,
-                    "longitude": params.depot.longitude,
+                    "latitude": params.problem.depot.latitude,
+                    "longitude": params.problem.depot.longitude,
                 }
                 # Convert customers to DataFrame for matrix building (temporary)
                 customers_df = Customer.to_dataframe(customers)
@@ -126,8 +126,16 @@ def generate_feasible_clusters(
                 f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---"
             )
 
+            # Determine level of parallelism: obey FLEETMIX_N_JOBS env var if set
+            n_jobs_env = os.getenv("FLEETMIX_N_JOBS")
+            try:
+                n_jobs = int(n_jobs_env) if n_jobs_env is not None else -1
+            except ValueError:
+                # Fallback to default behaviour if parsing fails
+                n_jobs = -1
+
             # Run clustering for all configurations using these context in parallel, process-based
-            clusters_by_config = Parallel(n_jobs=-1, backend="loky")(
+            clusters_by_config = Parallel(n_jobs=n_jobs, backend="loky")(
                 delayed(process_configuration)(
                     config,
                     customers,
@@ -178,7 +186,7 @@ def generate_feasible_clusters(
 
     # Ensure goods indicator columns exist to satisfy downstream logic
     config_lookup = {str(cfg.config_id): cfg for cfg in configurations}
-    for good in params.goods:
+    for good in params.problem.goods:
         base_df[good] = base_df["Config_ID"].map(
             lambda x: config_lookup[str(x)][good] if str(x) in config_lookup else 0
         )
@@ -187,19 +195,17 @@ def generate_feasible_clusters(
             lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
         )
 
-    # TODO: tidy up parameter hand-off
-    pre_params = replace(
-        params,
-        nearest_merge_candidates=params.pre_nearest_merge_candidates,
-        small_cluster_size=params.pre_small_cluster_size,
-        post_optimization=False,
-    )
+    # Neighbour‐merge candidate generation ahead of the MILP uses tighter
+    # thresholds than the post-optimization step.  Pass those overrides
+    # explicitly instead of mutating the Parameters object.
 
     merged_df = generate_merge_phase_clusters(
         selected_clusters=base_df,
         configurations=configurations,
         customers_df=customers_df,
-        params=pre_params,
+        params=params,
+        small_cluster_size=params.algorithm.pre_small_cluster_size,
+        nearest_merge_candidates=params.algorithm.pre_nearest_merge_candidates,
     )
 
     if not merged_df.empty:
@@ -231,10 +237,10 @@ def process_configuration(
     config: VehicleConfiguration,
     customers: list[CustomerBase],
     feasible_customers: dict,
-    context: ClusteringContext,
+    context: CapacitatedClusteringContext,
     demand_cache: dict | None = None,
     route_time_cache: dict | None = None,
-    main_params: Parameters | None = None,
+    main_params: FleetmixParams | None = None,
     method_name: str = "minibatch_kmeans",
 ) -> list[Cluster]:
     """Process a single vehicle configuration to generate feasible clusters."""
@@ -354,33 +360,29 @@ def _deduplicate_clusters(clusters: list[Cluster]) -> list[Cluster]:
 
 
 def _get_clustering_context_list(
-    params: Parameters,
-) -> list[tuple[ClusteringContext, str]]:
+    params: FleetmixParams,
+) -> list[tuple[CapacitatedClusteringContext, str]]:
     """Generates a list of (ClusteringContext, method_name) tuples for all runs."""
     context_list = []
 
-    # Convert depot dict to DepotLocation
-    depot_location = DepotLocation(
-        latitude=params.depot["latitude"], longitude=params.depot["longitude"]
-    )
-
     # Create base context object with common parameters
-    base_context = ClusteringContext(
-        goods=params.goods,
-        depot=depot_location,
-        max_depth=params.clustering["max_depth"],
-        route_time_estimation=params.clustering["route_time_estimation"],
-        geo_weight=params.clustering["geo_weight"],
-        demand_weight=params.clustering["demand_weight"],
+    base_context = CapacitatedClusteringContext(
+        goods=params.problem.goods,
+        depot=params.problem.depot,
+        max_depth=params.algorithm.clustering_max_depth,
+        route_time_estimation=params.algorithm.route_time_estimation,
+        geo_weight=params.algorithm.geo_weight,
+        demand_weight=params.algorithm.demand_weight,
     )
 
-    method = params.clustering["method"]
+    method = params.algorithm.clustering_method
     if method == "combine":
         logger.info("🔄 Generating context variations for 'combine' method")
 
         # Check if sub_methods are specified in the clustering params
         # TODO: offer this as a parameter
-        sub_methods = params.clustering.get("combine_sub_methods", None)
+        # For now, use default sub_methods since this is not part of the structured params yet
+        sub_methods = None
         if sub_methods is None:
             # Use default sub_methods
             sub_methods = ["minibatch_kmeans", "kmedoids", "gaussian_mixture"]

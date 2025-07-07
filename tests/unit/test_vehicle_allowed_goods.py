@@ -3,7 +3,7 @@
 import pytest
 import yaml
 from pathlib import Path
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.loader import load_yaml as load_fleetmix_params
 from fleetmix.core_types import VehicleSpec
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
@@ -89,11 +89,11 @@ variable_cost_per_hour: 50
         config_file.write_text(config_content)
         
         # Should load without errors
-        params = Parameters.from_yaml(config_file)
+        params = load_fleetmix_params(config_file)
         
-        assert params.vehicles["A"].allowed_goods is None
-        assert params.vehicles["B"].allowed_goods == ["Dry", "Chilled"]
-        assert params.vehicles["C"].allowed_goods == ["Frozen"]
+        assert params.problem.vehicles["A"].allowed_goods is None
+        assert params.problem.vehicles["B"].allowed_goods == ["Dry", "Chilled"]
+        assert params.problem.vehicles["C"].allowed_goods == ["Frozen"]
     
     def test_parameters_validation_invalid_goods(self, tmp_path):
         """Test Parameters validation with goods not in global list."""
@@ -134,7 +134,7 @@ variable_cost_per_hour: 50
         config_file.write_text(config_content)
         
         with pytest.raises(ValueError, match="allowed_goods contains goods not in global list"):
-            Parameters.from_yaml(config_file)
+            load_fleetmix_params(config_file)
     
     def test_parameters_validation_empty_allowed_goods(self, tmp_path):
         """Test Parameters validation with empty allowed_goods list."""
@@ -175,7 +175,7 @@ variable_cost_per_hour: 50
         config_file.write_text(config_content)
         
         with pytest.raises(ValueError, match="allowed_goods cannot be empty"):
-            Parameters.from_yaml(config_file)
+            load_fleetmix_params(config_file)
     
     def test_parameters_validation_duplicate_goods(self, tmp_path):
         """Test Parameters validation with duplicate goods in allowed_goods."""
@@ -216,7 +216,7 @@ variable_cost_per_hour: 50
         config_file.write_text(config_content)
         
         with pytest.raises(ValueError, match="allowed_goods contains duplicates"):
-            Parameters.from_yaml(config_file)
+            load_fleetmix_params(config_file)
     
     def test_generate_vehicle_configurations_with_allowed_goods(self):
         """Test vehicle configuration generation respects allowed_goods."""
@@ -281,51 +281,3 @@ variable_cost_per_hour: 50
         assert config.compartments["Dry"] is True
         assert config.compartments["Chilled"] is False
         assert config.compartments["Frozen"] is False
-    
-    def test_parameters_to_yaml_preserves_allowed_goods(self, tmp_path):
-        """Test that to_yaml preserves allowed_goods."""
-        # Create parameters with allowed_goods
-        vehicles = {
-            "A": VehicleSpec(
-                capacity=2700,
-                fixed_cost=100,
-                allowed_goods=["Dry", "Chilled"]
-            ),
-            "B": VehicleSpec(
-                capacity=3300,
-                fixed_cost=175
-            )
-        }
-        
-        params = Parameters(
-            vehicles=vehicles,
-            variable_cost_per_hour=50,
-            depot={"latitude": 40.7128, "longitude": -74.0060},
-            goods=["Dry", "Chilled", "Frozen"],
-            clustering={
-                "method": "minibatch_kmeans",
-                "max_depth": 3,
-                "route_time_estimation": "TSP",
-                "geo_weight": 0.7,
-                "demand_weight": 0.3
-            },
-            demand_file="test_demand.csv",
-            light_load_penalty=50,
-            light_load_threshold=0.5,
-            compartment_setup_cost=10,
-            format="csv"
-        )
-        
-        # Save to YAML
-        output_file = tmp_path / "output_config.yaml"
-        params.to_yaml(output_file)
-        
-        # Load and verify
-        with open(output_file) as f:
-            loaded_data = yaml.safe_load(f)
-        
-        # Debug: print the loaded data
-        print(f"Vehicle B data: {loaded_data['vehicles']['B']}")
-        
-        assert loaded_data["vehicles"]["A"]["allowed_goods"] == ["Dry", "Chilled"]
-        assert "allowed_goods" not in loaded_data["vehicles"]["B"] 

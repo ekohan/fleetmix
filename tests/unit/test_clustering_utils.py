@@ -8,7 +8,7 @@ from fleetmix.clustering.heuristics import (
     get_cached_demand,
     estimate_num_initial_clusters,
 )
-from fleetmix.core_types import ClusteringContext, DepotLocation, VehicleConfiguration
+from fleetmix.core_types import CapacitatedClusteringContext, DepotLocation, VehicleConfiguration
 
 
 def make_customers(coords, demands, goods):
@@ -69,7 +69,7 @@ def test_estimate_num_initial_clusters_by_capacity():
         max_route_time=100,
     )
     depot_location = DepotLocation(latitude=0, longitude=0)
-    context = ClusteringContext(
+    context = CapacitatedClusteringContext(
         goods=goods,
         depot=depot_location,
         max_depth=1,

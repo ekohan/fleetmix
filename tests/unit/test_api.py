@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from fleetmix.api import optimize
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import FleetmixParams, load_fleetmix_params
 
 
 @pytest.fixture
@@ -90,20 +90,15 @@ def test_optimize_with_csv_file(simple_demand_df, base_config_path, tmp_path):
     assert len(result.missing_customers) == 0
 
 
-def test_optimize_with_parameters_object(simple_demand_df):
-    """Test optimization with Parameters object input."""
-    # Load parameters from YAML file
+def test_optimize_with_fleetmix_params_object(simple_demand_df):
+    """Test optimization with FleetmixParams object input."""
     config_path = (
         Path(__file__).parent.parent / "_assets" / "configs" / "base_test_config.yaml"
     )
-    params = Parameters.from_yaml(str(config_path))
+    params: FleetmixParams = load_fleetmix_params(config_path)
 
-    # Run optimization
-    result = optimize(
-        demand=simple_demand_df, config=params, output_dir=None, verbose=False
-    )
+    result = optimize(demand=simple_demand_df, config=params, output_dir=None, verbose=False)
 
-    # Check result
     assert result.solver_status == "Optimal"
 
 
@@ -154,7 +149,7 @@ def test_optimize_saves_results(simple_demand_df, base_config_path, tmp_path):
         demand=simple_demand_df,
         config=str(base_config_path),
         output_dir=str(output_dir),
-        format="excel",
+        format="xlsx",
         verbose=False,
     )
 

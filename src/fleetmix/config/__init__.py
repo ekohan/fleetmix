@@ -1,5 +1,20 @@
 """Configuration module for FleetMix parameters."""
 
-from .parameters import Parameters
+# Structured parameter system
+from .loader import load_yaml as load_fleetmix_params
+from .params import (
+    AlgorithmParams,
+    FleetmixParams,
+    IOParams,
+    ProblemParams,
+    RuntimeParams,
+)
 
-__all__ = ["Parameters"]
+__all__ = [
+    "ProblemParams",
+    "AlgorithmParams",
+    "IOParams",
+    "RuntimeParams",
+    "FleetmixParams",
+    "load_fleetmix_params",
+]

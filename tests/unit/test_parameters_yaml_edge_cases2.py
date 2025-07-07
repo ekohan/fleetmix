@@ -3,7 +3,7 @@ import yaml
 from pathlib import Path
 import pytest
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config.loader import load_yaml as load_fleetmix_params
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -48,29 +48,16 @@ compartment_setup_cost: 0.0
 
 def test_from_yaml_happy_path(tmp_path):
     cfg_path = _write_yaml(tmp_path, MINIMAL_YAML)
-    params = Parameters.from_yaml(cfg_path)
+    params = load_fleetmix_params(cfg_path)
 
     # basic field assertions
-    assert params.vehicles["van"].capacity == 100
-    assert params.depot.latitude == 0.0
-    assert params.goods == ["dry"]
+    assert params.problem.vehicles["van"].capacity == 100
+    assert params.problem.depot.latitude == 0.0
+    assert params.problem.goods == ["dry"]
 
     # results_dir should be absolute and exist
-    assert params.results_dir.is_absolute()
-    assert params.results_dir.exists()
-
-
-def test_to_yaml_roundtrip(tmp_path):
-    cfg_path = _write_yaml(tmp_path, MINIMAL_YAML)
-    params = Parameters.from_yaml(cfg_path)
-
-    out_path = tmp_path / "exported.yaml"
-    params.to_yaml(out_path)
-
-    assert out_path.exists()
-    loaded_again = Parameters.from_yaml(out_path)
-    # vehicles capacities should match
-    assert loaded_again.vehicles["van"].capacity == params.vehicles["van"].capacity
+    assert params.io.results_dir.is_absolute()
+    assert params.io.results_dir.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -83,21 +70,21 @@ def test_missing_required_fields(tmp_path, missing_field):
     bad_yaml = MINIMAL_YAML.replace(f"{missing_field}:", f"# {missing_field}:")
     cfg_path = _write_yaml(tmp_path, bad_yaml)
     with pytest.raises(ValueError):
-        Parameters.from_yaml(cfg_path)
+        load_fleetmix_params(cfg_path)
 
 
 def test_invalid_yaml_syntax(tmp_path):
     malformed = MINIMAL_YAML + "\nfoo: [unclosed\n"
     cfg_path = _write_yaml(tmp_path, malformed)
     with pytest.raises(ValueError):
-        Parameters.from_yaml(cfg_path)
+        load_fleetmix_params(cfg_path)
 
 
 def test_weight_sum_validation(tmp_path):
     bad_yaml = MINIMAL_YAML.replace("demand_weight: 0.3", "demand_weight: 0.5")
     cfg_path = _write_yaml(tmp_path, bad_yaml)
     with pytest.raises(ValueError):
-        Parameters.from_yaml(cfg_path)
+        load_fleetmix_params(cfg_path)
 
 
 @pytest.mark.parametrize(
@@ -117,7 +104,7 @@ def test_typeerror_branches(tmp_path, yaml_mod, expected_msg):
 
     cfg_path = _write_yaml(tmp_path, modified)
     with pytest.raises(ValueError) as exc:
-        Parameters.from_yaml(cfg_path)
+        load_fleetmix_params(cfg_path)
     assert expected_msg in str(exc.value)
 
 
@@ -161,5 +148,5 @@ def test_allow_split_stops_flag(tmp_path):
     cfg = _basic_yaml_dict()
     cfg["allow_split_stops"] = True
     p = _write_tmp_yaml(tmp_path, cfg)
-    params = Parameters.from_yaml(p)
-    assert params.allow_split_stops is True 
+    params = load_fleetmix_params(p)
+    assert params.problem.allow_split_stops is True 

@@ -4,6 +4,7 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+from fleetmix.config.params import RuntimeParams
 from fleetmix.utils.solver import pick_solver
 
 
@@ -29,9 +30,10 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_gurobi.return_value = mock_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.PULP_CBC_CMD")
@@ -41,9 +43,10 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_cbc.return_value = mock_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_cbc.assert_called_once_with(msg=0, gapRel=0)
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, timeLimit=180)
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -54,9 +57,10 @@ class TestPickSolver(unittest.TestCase):
         mock_gurobi_solver = MagicMock()
         mock_gurobi.return_value = mock_gurobi_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
         mock_cbc.assert_not_called()
         self.assertEqual(result, mock_gurobi_solver)
 
@@ -70,10 +74,11 @@ class TestPickSolver(unittest.TestCase):
         mock_cbc_solver = MagicMock()
         mock_cbc.return_value = mock_cbc_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
-        mock_cbc.assert_called_once_with(msg=0, gapRel=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, timeLimit=180)
         self.assertEqual(result, mock_cbc_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -84,9 +89,10 @@ class TestPickSolver(unittest.TestCase):
         mock_gurobi_solver = MagicMock()
         mock_gurobi.return_value = mock_gurobi_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_gurobi_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -96,9 +102,10 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_gurobi.return_value = mock_solver
 
-        result = pick_solver(verbose=True)
+        params = RuntimeParams(verbose=True, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=1, gapRel=0, options=[('TimeLimit', 180)])
+        mock_gurobi.assert_called_once_with(msg=1, gapRel=0.0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -109,9 +116,10 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_gurobi.return_value = mock_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
         self.assertEqual(result, mock_solver)
 
     @patch("pulp.GUROBI_CMD")
@@ -125,10 +133,11 @@ class TestPickSolver(unittest.TestCase):
         mock_cbc_solver = MagicMock()
         mock_cbc.return_value = mock_cbc_solver
 
-        result = pick_solver(verbose=False)
+        params = RuntimeParams(verbose=False, gap_rel=0.0, time_limit=180)
+        result = pick_solver(params)
 
-        mock_gurobi.assert_called_once_with(msg=0, gapRel=0, options=[('TimeLimit', 180)])
-        mock_cbc.assert_called_once_with(msg=0, gapRel=0)
+        mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, timeLimit=180)
         self.assertEqual(result, mock_cbc_solver)
 
 

@@ -4,7 +4,7 @@ __pycache__/
 *.class
 
 # Data files
-data/opperar.db
+data/case_study.db
 
 # Python virtual environments
 venv/
@@ -38,3 +38,4 @@ src/*.egg-info/
 
 # TODO: do add the paper
 paper_wip.txt
+paper/*

@@ -66,13 +66,22 @@ def test_light_load_threshold_monotonicity(toy_fsm_edge_data):
     configurations = dataframe_to_configurations(config_df)
 
     # Test with light load penalty enabled
-    params.light_load_penalty = 100
-    params.light_load_threshold = 0.5  # 50% threshold
-
-    model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
+    from fleetmix.config.params import ProblemParams
+    base_problem = params.problem
+    
     costs = []
     for thr in [0.0, 0.5, 0.9]:
-        params.light_load_threshold = thr
+        new_problem = ProblemParams(
+            vehicles=base_problem.vehicles,
+            depot=base_problem.depot,
+            goods=base_problem.goods,
+            variable_cost_per_hour=base_problem.variable_cost_per_hour,
+            light_load_penalty=100,  # Set penalty to 100
+            light_load_threshold=thr,  # Vary threshold
+            compartment_setup_cost=base_problem.compartment_setup_cost,
+            allow_split_stops=base_problem.allow_split_stops,
+        )
+        params.problem = new_problem
         model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
         costs.append(c_vk[(1, 1)])
     # Objective cost non-decreasing as threshold increases
@@ -113,7 +122,18 @@ def test_capacity_infeasibility_injects_NoVehicle(toy_fsm_edge_data, caplog):
 def test_extract_and_validate_solution(toy_fsm_edge_data):
     clusters_df, config_df, params = toy_fsm_edge_data
     # Explicitly disable split-stops to ensure consistent behavior
-    params.allow_split_stops = False
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
+    params.problem = new_problem
 
     configurations = dataframe_to_configurations(config_df)
     # Build y_vars: cluster 1 selected

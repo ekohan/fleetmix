@@ -7,6 +7,7 @@ from typing import Any
 import pulp
 import pulp.apis
 
+from fleetmix.config.params import RuntimeParams
 from fleetmix.registry import SOLVER_ADAPTER_REGISTRY, register_solver_adapter
 
 
@@ -16,65 +17,28 @@ class GurobiAdapter:
 
     def get_pulp_solver(
         self,
-        verbose: bool = False,
-        gap_rel: float | None = 0,
+        params: RuntimeParams,
     ) -> pulp.LpSolver:
         """Return a configured Gurobi solver instance.
 
         Args:
-            verbose: If *True* the solver prints progress messages.
-            gap_rel: Relative MIP gap.  ``None`` disables the parameter so the
-                solver aims for an exact solution (gap = 0).  CBC accepts the
-                same keyword so we keep the signature consistent across
-                adapters.
+            params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
         """
-        msg = 1 if verbose else 0
+        msg = 1 if params.verbose else 0
         kwargs: dict[str, Any] = {"msg": msg}
         # Only pass gapRel when an explicit tolerance is requested – omitting
         # it forces the solver to strive for optimality with gap = 0.
-        if gap_rel is not None:
-            kwargs["gapRel"] = gap_rel
+        if params.gap_rel is not None:
+            kwargs["gapRel"] = params.gap_rel
 
         options: list[tuple[str, int | float]] = []
-        # TODO: convert TimeLimit to parameter
-        options.append(("TimeLimit", 3 * 60))
-        kwargs["options"] = options
+        # Use time_limit from params if specified, otherwise default to 3 minutes
+        time_limit = params.time_limit if params.time_limit is not None else 180
+        if time_limit > 0:  # 0 means no limit
+            options.append(("TimeLimit", time_limit))
 
-        # Enhanced Gurobi parameters to help escape local optima
-        # when dealing with multi-vehicle per customer problems
-        # TODO: delete or review this
-        """
-        if os.getenv("FLEETMIX_ENHANCED_MIP", "1") == "1":
-            # Create options list for Gurobi parameters
-
-            # MIPFocus: 1 = focus on finding feasible solutions
-            #           2 = focus on proving optimality
-            #           3 = focus on improving the best bound
-            options.append(("MIPFocus", 1))
-            options.append(("Symmetry", 2))
-
-            # Increase solution pool to explore more solutions
-            options.append(("PoolSolutions", 10))
-            options.append(("PoolSearchMode", 2))  # Find n best solutions
-
-            # More aggressive heuristics
-            options.append(("Heuristics", 0.1))  # 10% of time on heuristics
-
-            # Stronger cuts to tighten the formulation
-            options.append(("Cuts", 2))  # Aggressive cut generation
-            options.append(("TimeLimit", 60))
-
-            # Multiple random seeds for diversity
-            seed_str = os.getenv("FLEETMIX_MIP_SEED")
-            if seed_str:
-                options.append(("Seed", int(seed_str)))
-
-            # Tune for finding good solutions quickly
-            options.append(("ImproveStartTime", 10))  # Focus on improving after 10s
-            options.append(("ImproveStartGap", 0.1))  # Or when gap < 10%
-
-            #kwargs["options"] = options
-        """
+        if options:
+            kwargs["options"] = options
 
         return pulp.GUROBI_CMD(**kwargs)
 
@@ -95,14 +59,21 @@ class CbcAdapter:
 
     def get_pulp_solver(
         self,
-        verbose: bool = False,
-        gap_rel: float | None = 0,
+        params: RuntimeParams,
     ) -> pulp.LpSolver:
-        """Return a configured CBC solver instance."""
-        msg = 1 if verbose else 0
+        """Return a configured CBC solver instance.
+
+        Args:
+            params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
+        """
+        msg = 1 if params.verbose else 0
         kwargs: dict[str, Any] = {"msg": msg}
-        if gap_rel is not None:
-            kwargs["gapRel"] = gap_rel
+        if params.gap_rel is not None:
+            kwargs["gapRel"] = params.gap_rel
+
+        if params.time_limit is not None and params.time_limit > 0:
+            kwargs["timeLimit"] = params.time_limit
+
         return pulp.PULP_CBC_CMD(**kwargs)
 
     @property
@@ -117,30 +88,35 @@ class CbcAdapter:
         return True
 
 
-def pick_solver(verbose: bool = False, gap_rel: float | None = 0):
+def pick_solver(params: RuntimeParams):
     """
-    Return a PuLP solver instance.
-    Priority
-    1. FSM_SOLVER env-var: 'gurobi' | 'cbc' | 'auto'
-    2. If 'auto' (default): try GUROBI_CMD, fall back to PULP_CBC_CMD.
+    Return a PuLP solver instance based on RuntimeParams.
+
+    Priority:
+    1. FSM_SOLVER env-var: 'gurobi' | 'cbc' | 'auto' (overrides params.solver)
+    2. params.solver: 'gurobi' | 'cbc' | 'auto'
+    3. If 'auto': try GUROBI_CMD, fall back to PULP_CBC_CMD.
     """
-    choice = os.getenv("FSM_SOLVER", "auto").lower()
+    # Environment variable takes precedence over params
+    # TODO: check if env var still relevant
+    env_choice = os.getenv("FSM_SOLVER")
+    choice = (env_choice or params.solver).lower()
 
     if choice == "gurobi":
         adapter = SOLVER_ADAPTER_REGISTRY["gurobi"]()
-        return adapter.get_pulp_solver(verbose=verbose, gap_rel=gap_rel)
+        return adapter.get_pulp_solver(params)
     if choice == "cbc":
         adapter = SOLVER_ADAPTER_REGISTRY["cbc"]()
-        return adapter.get_pulp_solver(verbose=verbose, gap_rel=gap_rel)
+        return adapter.get_pulp_solver(params)
 
     # auto: try Gurobi, fallback to CBC on instantiation errors
     gurobi_adapter = SOLVER_ADAPTER_REGISTRY["gurobi"]()
     if gurobi_adapter.available:
         try:
-            return gurobi_adapter.get_pulp_solver(verbose=verbose, gap_rel=gap_rel)
+            return gurobi_adapter.get_pulp_solver(params)
         except (pulp.PulpError, OSError):
             # Fall back to CBC if Gurobi fails
             pass
 
     cbc_adapter = SOLVER_ADAPTER_REGISTRY["cbc"]()
-    return cbc_adapter.get_pulp_solver(verbose=verbose, gap_rel=gap_rel)
+    return cbc_adapter.get_pulp_solver(params)

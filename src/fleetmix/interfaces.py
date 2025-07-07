@@ -5,7 +5,8 @@ from typing import Protocol
 import pandas as pd
 import pulp
 
-from fleetmix.core_types import ClusteringContext, RouteTimeContext
+from fleetmix.config.params import RuntimeParams
+from fleetmix.core_types import CapacitatedClusteringContext, RouteTimeContext
 
 __all__ = [
     "Clusterer",
@@ -22,7 +23,11 @@ class Clusterer(Protocol):
     """
 
     def fit(
-        self, customers: pd.DataFrame, *, context: ClusteringContext, n_clusters: int
+        self,
+        customers: pd.DataFrame,
+        *,
+        context: CapacitatedClusteringContext,
+        n_clusters: int,
     ) -> list[int]:
         """Cluster customers into n_clusters groups. Returns cluster labels."""
         ...
@@ -43,9 +48,7 @@ class RouteTimeEstimator(Protocol):
 class SolverAdapter(Protocol):
     """Thin wrapper around PuLP solvers to provide a consistent interface."""
 
-    def get_pulp_solver(
-        self, *, verbose: bool = False, gap_rel: float | None = 0
-    ) -> pulp.LpSolver:
+    def get_pulp_solver(self, params: RuntimeParams) -> pulp.LpSolver:
         """Return the underlying PuLP solver instance configured and ready to use."""
         ...
 

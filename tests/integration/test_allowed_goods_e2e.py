@@ -8,7 +8,7 @@ import yaml
 
 from fleetmix import generate_feasible_clusters
 from fleetmix.api import optimize
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params, FleetmixParams
 from fleetmix.core_types import Customer, VehicleSpec
 from fleetmix.optimization.core import optimize_fleet
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
@@ -103,8 +103,8 @@ post_optimization: false
     
     def test_vehicle_configurations_respect_allowed_goods(self, test_config_with_allowed_goods):
         """Test that vehicle configurations are generated correctly with allowed_goods."""
-        params = Parameters.from_yaml(test_config_with_allowed_goods)
-        configs = generate_vehicle_configurations(params.vehicles, params.goods)
+        params = load_fleetmix_params(test_config_with_allowed_goods)
+        configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
         
         # DryOnly should only have configurations with Dry
         dry_only_configs = [c for c in configs if c.vehicle_type == "DryOnly"]
@@ -124,8 +124,8 @@ post_optimization: false
     
     def test_clustering_respects_vehicle_allowed_goods(self, test_config_with_allowed_goods, test_customers):
         """Test that clustering only assigns customers to compatible vehicles."""
-        params = Parameters.from_yaml(test_config_with_allowed_goods)
-        configs = generate_vehicle_configurations(params.vehicles, params.goods)
+        params = load_fleetmix_params(test_config_with_allowed_goods)
+        configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
         
         # Generate clusters
         clusters = generate_feasible_clusters(test_customers, configs, params)
@@ -145,14 +145,14 @@ post_optimization: false
     
     def test_optimization_assigns_correct_vehicles(self, test_config_with_allowed_goods, test_customers):
         """Test that optimization assigns customers to vehicles with compatible goods."""
-        params = Parameters.from_yaml(test_config_with_allowed_goods)
-        configs = generate_vehicle_configurations(params.vehicles, params.goods)
+        params = load_fleetmix_params(test_config_with_allowed_goods)
+        configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
         
         # Generate clusters
         clusters = generate_feasible_clusters(test_customers, configs, params)
         
         # Run optimization
-        solution = optimize_fleet(clusters, configs, test_customers, params, verbose=False)
+        solution = optimize_fleet(clusters, configs, test_customers, params)
         
         # Verify solution
         assert solution.solver_status == "Optimal"
@@ -180,12 +180,12 @@ post_optimization: false
     
     def test_mixed_fleet_optimization(self, test_config_with_allowed_goods, test_customers):
         """Test optimization with a mixed fleet of specialized and universal vehicles."""
-        params = Parameters.from_yaml(test_config_with_allowed_goods)
-        configs = generate_vehicle_configurations(params.vehicles, params.goods)
+        params = load_fleetmix_params(test_config_with_allowed_goods)
+        configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
         
         # Generate clusters and solve
         clusters = generate_feasible_clusters(test_customers, configs, params)
-        solution = optimize_fleet(clusters, configs, test_customers, params, verbose=False)
+        solution = optimize_fleet(clusters, configs, test_customers, params)
         
         # Verify we get an optimal solution
         assert solution.solver_status == "Optimal"

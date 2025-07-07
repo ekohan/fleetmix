@@ -9,7 +9,8 @@ import pandas as pd
 import pytest
 
 from fleetmix.api import optimize
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 
 
 class TestSplitStopsIntegration:
@@ -97,15 +98,14 @@ class TestSplitStopsIntegration:
             temp_config_path = f.name
 
         try:
-            params = Parameters.from_yaml(temp_config_path)
+            params: FleetmixParams = load_fleetmix_params(temp_config_path)
             return params
         finally:
             Path(temp_config_path).unlink()  # Clean up temp file
 
     def test_single_stop_mode(self, sample_demand_data, minimal_config):
         """Test optimization with split-stops disabled (default behavior)."""
-        # Ensure split-stops is disabled
-        minimal_config.allow_split_stops = False
+        # Split-stops is disabled via `allow_split_stops=False` argument below
 
         # Run optimization
         solution = optimize(
@@ -135,8 +135,7 @@ class TestSplitStopsIntegration:
 
     def test_split_stop_mode(self, sample_demand_data, minimal_config):
         """Test optimization with split-stops enabled."""
-        # Enable split-stops
-        minimal_config.allow_split_stops = True
+        # Split-stops enabled via API argument below
 
         # Run optimization
         solution = optimize(

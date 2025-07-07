@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from fleetmix.clustering.heuristics import estimate_num_initial_clusters
-from fleetmix.core_types import ClusteringContext, DepotLocation, VehicleConfiguration
+from fleetmix.core_types import CapacitatedClusteringContext, DepotLocation, VehicleConfiguration
 
 
 def test_estimate_clusters_with_pseudo_customers():
@@ -46,7 +46,7 @@ def test_estimate_clusters_with_pseudo_customers():
     )
     
     depot_location = DepotLocation(latitude=0, longitude=0)
-    context = ClusteringContext(
+    context = CapacitatedClusteringContext(
         goods=goods,
         depot=depot_location,
         max_depth=1,
@@ -88,7 +88,7 @@ def test_estimate_clusters_with_regular_customers():
     )
     
     depot_location = DepotLocation(latitude=0, longitude=0)
-    context = ClusteringContext(
+    context = CapacitatedClusteringContext(
         goods=goods,
         depot=depot_location,
         max_depth=1,

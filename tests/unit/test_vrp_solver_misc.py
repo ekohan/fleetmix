@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
 import pytest
+import dataclasses
 
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver, BenchmarkType
-from fleetmix.config.parameters import Parameters
 from fleetmix.core_types import DepotLocation, VehicleSpec
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 
 
 @pytest.fixture()
@@ -18,18 +20,12 @@ def simple_params_two_goods():
             max_route_time=8,
         )
     }
-    return Parameters(
-        vehicles=vehicles,
-        variable_cost_per_hour=10.0,
-        depot=DepotLocation(latitude=0.0, longitude=0.0),
-        goods=["dry", "chilled"],
-        clustering={"route_time_estimation": "haversine", "geo_weight": 0.7, "demand_weight": 0.3},
-        demand_file="dummy.csv",
-        light_load_penalty=0.0,
-        light_load_threshold=0.2,
-        compartment_setup_cost=0.0,
-        format="csv",
-    )
+
+    # TODO: llevar a test assets
+    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
+    params = dataclasses.replace(params, problem=dataclasses.replace(params.problem, goods=["dry", "chilled"], depot=DepotLocation(latitude=0.0, longitude=0.0), vehicles=vehicles))
+
+    return params
 
 
 @pytest.fixture()

@@ -20,7 +20,7 @@ __all__ = [
     "VehicleConfiguration",
     "FleetmixSolution",
     # Context types
-    "ClusteringContext",
+    "CapacitatedClusteringContext",
     "RouteTimeContext",
     # Other types used in public APIs
     "VRPSolution",
@@ -230,11 +230,6 @@ class Customer(CustomerBase):
         return pd.DataFrame(data)
 
 
-def empty_dataframe_factory():
-    """Ensures a new empty DataFrame is created for default."""
-    return pd.DataFrame()
-
-
 def empty_dict_factory():
     """Ensures a new empty dict is created for default."""
     return {}
@@ -258,7 +253,7 @@ class VehicleOperationContext:
 
 
 @dataclass
-class ClusteringContext(VehicleOperationContext):
+class CapacitatedClusteringContext(VehicleOperationContext):
     """Context for customer clustering algorithms."""
 
     goods: list[str]
@@ -412,7 +407,6 @@ class FleetmixSolution:
     solver_status: str = "Unknown"
     solver_name: str = "Unknown"
     solver_runtime_sec: float = 0.0
-    post_optimization_runtime_sec: float | None = None
     time_measurements: list[TimeMeasurement] | None = None
 
     def __post_init__(self):
@@ -516,9 +510,6 @@ class DepotLocation:
             return self.longitude
         else:
             raise KeyError(f"Invalid key for DepotLocation: {key}")
-
-    def as_tuple(self) -> tuple[float, float]:
-        return (self.latitude, self.longitude)
 
     def to_dict(self) -> dict[str, float]:
         return asdict(self)

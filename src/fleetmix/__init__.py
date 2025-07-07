@@ -7,7 +7,7 @@ from .api import optimize
 from .clustering.generator import generate_feasible_clusters
 
 # Core types
-from .config.parameters import Parameters
+from .config.params import FleetmixParams
 from .core_types import (
     Cluster,
     Customer,
@@ -46,7 +46,7 @@ __all__ = [
     "optimize_fleet",
     "improve_solution",
     # Types
-    "Parameters",
+    "FleetmixParams",
     "FleetmixSolution",
     "VehicleConfiguration",
     "VehicleSpec",

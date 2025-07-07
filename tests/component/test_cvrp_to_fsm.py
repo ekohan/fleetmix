@@ -43,7 +43,7 @@ def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_p
         df, params = convert_cvrp_to_fsm(names, btype)
 
     # Expected vehicles match parser num_vehicles * multiplier
-    assert params.expected_vehicles == inst.num_vehicles * mult
+    assert params.problem.expected_vehicles == inst.num_vehicles * mult
 
     # DataFrame rows: for combined, rows = (dimension-1)*mult; otherwise rows = dimension-1
     if btype == CVRPBenchmarkType.COMBINED:
@@ -63,8 +63,8 @@ def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_p
 
     # Types
     assert isinstance(df, pd.DataFrame)
-    assert hasattr(params, "expected_vehicles")
+    assert hasattr(params.problem, "expected_vehicles")
 
     # Check expected_vehicles is positive and integer
-    assert isinstance(params.expected_vehicles, int)
-    assert params.expected_vehicles >= mult
+    assert isinstance(params.problem.expected_vehicles, int)
+    assert params.problem.expected_vehicles >= mult

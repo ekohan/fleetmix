@@ -35,8 +35,8 @@ def test_total_demand_preserved_and_expected_vehicles():
     assert pytest.approx(total_conv) == total_orig
 
     # Expected vehicles preserved and matches ceil(total / capacity)
-    assert params.expected_vehicles == instance.vehicles
-    assert params.expected_vehicles == math.ceil(total_orig / instance.capacity)
+    assert params.problem.expected_vehicles == instance.vehicles
+    assert params.problem.expected_vehicles == math.ceil(total_orig / instance.capacity)
 
 
 def test_dataframe_schema_and_vehicle_config():
@@ -75,8 +75,8 @@ def test_dataframe_schema_and_vehicle_config():
     assert df["Frozen_Demand"].dtype == int or df["Frozen_Demand"].dtype == float
 
     # Check vehicle configuration in parameters
-    assert "MCVRP" in params.vehicles
-    veh = params.vehicles["MCVRP"]
+    assert "MCVRP" in params.problem.vehicles
+    veh = params.problem.vehicles["MCVRP"]
     assert veh.capacity == instance.capacity
     assert veh.fixed_cost == 1000
     assert veh.compartments == {"Dry": True, "Chilled": True, "Frozen": True}
@@ -110,8 +110,8 @@ def test_multi_instance_conversion():
     assert pytest.approx(total_conv) == total_orig
 
     # Expected vehicles preserved and matches ceil(total / capacity)
-    assert params.expected_vehicles == instance.vehicles
-    assert params.expected_vehicles == math.ceil(total_orig / instance.capacity)
+    assert params.problem.expected_vehicles == instance.vehicles
+    assert params.problem.expected_vehicles == math.ceil(total_orig / instance.capacity)
 
     # DataFrame should have exactly these columns in order
     expected_cols = [
@@ -133,8 +133,8 @@ def test_multi_instance_conversion():
     assert df["Frozen_Demand"].dtype == int or df["Frozen_Demand"].dtype == float
 
     # Check vehicle configuration in parameters
-    assert "MCVRP" in params.vehicles
-    veh = params.vehicles["MCVRP"]
+    assert "MCVRP" in params.problem.vehicles
+    veh = params.problem.vehicles["MCVRP"]
     assert veh.capacity == instance.capacity
     assert veh.fixed_cost == 1000
     assert veh.compartments == {"Dry": True, "Chilled": True, "Frozen": True}

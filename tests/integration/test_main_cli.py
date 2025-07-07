@@ -36,7 +36,7 @@ def test_main_generates_excel(tmp_path, monkeypatch):
                 "--output",
                 str(tmp_path),
                 "--format",
-                "excel",
+                "xlsx",
             ],
         )
 

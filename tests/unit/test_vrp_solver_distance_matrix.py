@@ -4,15 +4,15 @@ import pytest
 from pathlib import Path
 
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import FleetmixParams, load_fleetmix_params
 
 
-def _load_minimal_params() -> Parameters:
+def _load_minimal_params() -> FleetmixParams:
     """Helper that loads the minimal YAML shipped with tests assets."""
     cfg_path = (
         Path(__file__).resolve().parent.parent / "_assets" / "configs" / "test_config_minimal.yaml"
     )
-    return Parameters.from_yaml(cfg_path)
+    return load_fleetmix_params(cfg_path)
 
 
 def _make_customers() -> pd.DataFrame:

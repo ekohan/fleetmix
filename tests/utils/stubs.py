@@ -108,7 +108,6 @@ def stub_solver(monkeypatch):
             solver_status="Optimal",
             total_vehicles=0,  # Ensure all fields have a default
             solver_runtime_sec=0.0,
-            post_optimization_runtime_sec=None,
             time_measurements=None,
         )
 

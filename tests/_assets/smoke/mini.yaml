@@ -27,4 +27,4 @@ demand_file: mini_demand.csv
 light_load_penalty: 0
 light_load_threshold: 0.0
 compartment_setup_cost: 0
-format: excel 
+format: xlsx 

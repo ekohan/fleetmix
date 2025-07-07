@@ -33,7 +33,19 @@ def test_create_model_counts_traditional_mode(toy_fsm_core_data):
     """Test model creation in traditional mode (split-stops disabled)."""
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Explicitly disable split-stops to ensure consistent constraint naming
-    params.allow_split_stops = False
+    # Create new params with allow_split_stops=False (it should be False by default anyway)
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
+    params.problem = new_problem
 
     configurations = dataframe_to_configurations(config_df)
     model, y_vars, x_vars, c_vk = _create_model(
@@ -56,7 +68,18 @@ def test_create_model_counts_split_stop_mode(toy_fsm_core_data):
     """Test model creation in split-stop mode (split-stops enabled)."""
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Explicitly enable split-stops to test the split-stop constraint naming
-    params.allow_split_stops = True
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=True,
+    )
+    params.problem = new_problem
 
     # Modify the test data to use pseudo-customer IDs for split-stop mode
     # This simulates what happens when customers are exploded into pseudo-customers
@@ -106,7 +129,18 @@ def test_create_model_counts(toy_fsm_core_data):
     """Legacy test name - defaults to traditional mode for backward compatibility."""
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Explicitly disable split-stops to ensure consistent constraint naming
-    params.allow_split_stops = False
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
+    params.problem = new_problem
 
     configurations = dataframe_to_configurations(config_df)
     model, y_vars, x_vars, c_vk = _create_model(
@@ -148,7 +182,18 @@ def test_capacity_violation_model_warning_traditional_mode(toy_fsm_core_data, ca
     """Test capacity violation handling in traditional mode."""
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Explicitly disable split-stops to ensure consistent behavior
-    params.allow_split_stops = False
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
+    params.problem = new_problem
 
     configurations = dataframe_to_configurations(config_df)
     # Build base data and violate capacity so no config is feasible
@@ -184,7 +229,18 @@ def test_capacity_violation_model_warning_split_stop_mode(toy_fsm_core_data, cap
     """Test capacity violation handling in split-stop mode."""
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Explicitly enable split-stops to test split-stop behavior
-    params.allow_split_stops = True
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=True,
+    )
+    params.problem = new_problem
 
     configurations = dataframe_to_configurations(config_df)
     # Build base data and violate capacity so no config is feasible
@@ -228,7 +284,18 @@ def test_capacity_violation_model_warning(toy_fsm_core_data, caplog):
     """Legacy test name - defaults to traditional mode for backward compatibility."""
     clusters_df, config_df, customers_df, params = toy_fsm_core_data
     # Explicitly disable split-stops to ensure consistent behavior
-    params.allow_split_stops = False
+    from fleetmix.config.params import ProblemParams
+    new_problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
+    params.problem = new_problem
 
     configurations = dataframe_to_configurations(config_df)
     # Build base data and violate capacity so no config is feasible

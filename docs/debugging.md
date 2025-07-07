@@ -23,9 +23,6 @@ fleetmix optimize --demand demand.csv --config config.yaml --debug-milp debug_ou
 
 # With benchmarks
 fleetmix benchmark mcvrp --instance 10_3_3_1_(01) --debug-milp debug_output/
-
-# With conversions
-fleetmix convert --type cvrp --instance X-n101-k25 --benchmark-type normal --debug-milp debug_output/
 ```
 
 ### Programmatic Usage
@@ -61,7 +58,7 @@ The debugger can generate the following artifacts:
 The LP file contains the complete model in a readable format:
 
 ```
-\* FSM-MCV_Model2 *\
+\* Model *\
 Minimize
 Total_Cost: 73.333 x_4_1 + 73.333 x_5_1 + ...
 
@@ -134,13 +131,6 @@ ls debug/
 # Examine the IIS to understand the conflict
 cat debug/fsm_model.iis
 ```
-
-## Environment Variables
-
-The debugging system respects the following environment variables:
-
-- `FSM_SOLVER`: Choose solver (cbc, gurobi, cplex, auto)
-- Standard solver environment variables (e.g., `GRB_LICENSE_FILE` for Gurobi)
 
 ## Troubleshooting
 

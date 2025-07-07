@@ -64,7 +64,8 @@ def tmp_results_dir(tmp_path, monkeypatch):
 def toy_fsm_core_data():
     import pandas as pd
 
-    from fleetmix.config.parameters import Parameters
+    from fleetmix.config import load_fleetmix_params
+    from fleetmix.config.params import FleetmixParams
 
     clusters_df = pd.DataFrame(
         {
@@ -101,7 +102,7 @@ def toy_fsm_core_data():
             }
         ]
     )
-    params = Parameters.from_yaml()
+    params: FleetmixParams = load_fleetmix_params(repo_root / "src" / "fleetmix" / "config" / "default_config.yaml")
     return clusters_df, config_df, customers_df, params
 
 
@@ -109,7 +110,8 @@ def toy_fsm_core_data():
 def toy_fsm_edge_data():
     import pandas as pd
 
-    from fleetmix.config.parameters import Parameters
+    from fleetmix.config import load_fleetmix_params
+    from fleetmix.config.params import FleetmixParams
 
     clusters_df = pd.DataFrame(
         [
@@ -134,7 +136,7 @@ def toy_fsm_edge_data():
             }
         ]
     )
-    params = Parameters.from_yaml()
+    params: FleetmixParams = load_fleetmix_params(repo_root / "src" / "fleetmix" / "config" / "default_config.yaml")
     return clusters_df, config_df, params
 
 
@@ -143,7 +145,8 @@ def toy_fsm_edge_data():
 def toy_fsm_model_build_data():
     import pandas as pd
 
-    from fleetmix.config.parameters import Parameters
+    from fleetmix.config import load_fleetmix_params
+    from fleetmix.config.params import FleetmixParams
 
     clusters_df = pd.DataFrame(
         [
@@ -167,7 +170,7 @@ def toy_fsm_model_build_data():
             }
         ]
     )
-    params = Parameters.from_yaml("src/fleetmix/config/default_config.yaml")
+    params: FleetmixParams = load_fleetmix_params(repo_root / "src" / "fleetmix" / "config" / "default_config.yaml")
     return clusters_df, config_df, params
 
 

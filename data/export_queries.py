@@ -102,7 +102,7 @@ def execute_query_to_csv(
 def export_all_queries(db_path: Path | None = None) -> None:
     """Execute all SQL queries and export results to CSV files."""
     if db_path is None:
-        db_path = get_data_dir() / "opperar.db"
+        db_path = get_data_dir() / "case_study.db"
 
     try:
         conn = sqlite3.connect(db_path)

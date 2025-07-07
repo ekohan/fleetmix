@@ -46,4 +46,4 @@ nearest_merge_candidates: 5
 max_improvement_iterations: 1
 
 # Output format
-format: excel 
+format: xlsx 

@@ -1,8 +1,10 @@
+import dataclasses
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 from typing import Any
 
-from fleetmix.config.parameters import Parameters
+from fleetmix.config import load_fleetmix_params
+from fleetmix.config.params import FleetmixParams
 from fleetmix.utils.logging import Colors
 
 
@@ -76,9 +78,9 @@ def print_parameter_help():
                            Default: src/config/default_config.yaml
                            Example: --config my_config.yaml
 
-  --format STR            Output format (excel or json)
-                           Default: excel
-                           Example: --format json
+  --format STR            Output format (xlsx, json)
+                           Default: json
+                           Example: --format xlsx
 
 {Colors.YELLOW}Other Options:{Colors.RESET}
   --verbose               Enable verbose output
@@ -164,9 +166,9 @@ def parse_args() -> ArgumentParser:
     parser.add_argument(
         "--format",
         type=str,
-        choices=["excel", "json"],
-        help="Output format (excel or json)",
-        default="excel",
+        choices=["xlsx", "json"],
+        help="Output format (xlsx, json)",
+        default="json",
     )
 
     return parser
@@ -191,19 +193,36 @@ def get_parameter_overrides(args) -> dict[str, Any]:
     return overrides
 
 
-def load_parameters(args) -> Parameters:
+def load_parameters(args) -> FleetmixParams:
     """Load parameters with optional command line overrides"""
     # Load base parameters
     if args.config:
-        params = Parameters.from_yaml(args.config)
+        params = load_fleetmix_params(args.config)
     else:
-        params = Parameters.from_yaml()
+        # Search for default config in standard locations
+        from pathlib import Path
+
+        default_paths = [
+            Path.cwd() / "config.yaml",
+            Path(__file__).parent.parent / "config" / "default_config.yaml",
+            Path(__file__).parent.parent / "config" / "baseline_config.yaml",
+        ]
+        for p in default_paths:
+            if p.exists():
+                params = load_fleetmix_params(p)
+                break
+        else:
+            raise FileNotFoundError(
+                "No configuration file provided and no default config found."
+            )
 
     # Get overrides from command line
     overrides = get_parameter_overrides(args)
 
-    # Handle clustering parameters
-    # Ensure this block runs if route_time_estimation is overridden
+    if not overrides:
+        return params
+
+    # Handle clustering parameters by updating algorithm section
     clustering_override_keys = [
         "clustering_method",
         "clustering_distance",
@@ -211,26 +230,59 @@ def load_parameters(args) -> Parameters:
         "demand_weight",
         "route_time_estimation",
     ]
-    if any(param in overrides for param in clustering_override_keys):
-        clustering = params.clustering.copy()  # Preserve ALL existing clustering params
 
-        if "clustering_method" in overrides:
-            clustering["method"] = overrides.pop("clustering_method")
-        if "clustering_distance" in overrides:
-            clustering["distance"] = overrides.pop("clustering_distance")
-        if "geo_weight" in overrides:
-            clustering["geo_weight"] = overrides.pop("geo_weight")
-        if "demand_weight" in overrides:
-            clustering["demand_weight"] = overrides.pop("demand_weight")
-        if "route_time_estimation" in overrides:
-            clustering["route_time_estimation"] = overrides.pop("route_time_estimation")
+    # TODO ver si conservar o no los overrides
+    algorithm_updates = {}
 
-        overrides["clustering"] = clustering
+    if "clustering_method" in overrides:
+        algorithm_updates["clustering_method"] = overrides.pop("clustering_method")
+    if "clustering_distance" in overrides:
+        algorithm_updates["clustering_distance"] = overrides.pop("clustering_distance")
+    if "geo_weight" in overrides:
+        algorithm_updates["geo_weight"] = overrides.pop("geo_weight")
+    if "demand_weight" in overrides:
+        algorithm_updates["demand_weight"] = overrides.pop("demand_weight")
+    if "route_time_estimation" in overrides:
+        algorithm_updates["route_time_estimation"] = overrides.pop(
+            "route_time_estimation"
+        )
 
-    # Create new Parameters instance with remaining overrides
+    # Handle problem-level parameters
+    problem_updates = {}
+    if "light_load_penalty" in overrides:
+        problem_updates["light_load_penalty"] = overrides.pop("light_load_penalty")
+    if "light_load_threshold" in overrides:
+        problem_updates["light_load_threshold"] = overrides.pop("light_load_threshold")
+    if "compartment_setup_cost" in overrides:
+        problem_updates["compartment_setup_cost"] = overrides.pop(
+            "compartment_setup_cost"
+        )
+
+    # Handle IO parameters
+    io_updates = {}
+    if "demand_file" in overrides:
+        io_updates["demand_file"] = overrides.pop("demand_file")
+    if "format" in overrides:
+        io_updates["format"] = overrides.pop("format")
+
+    # Apply updates using dataclasses.replace
+    if problem_updates:
+        params = dataclasses.replace(
+            params, problem=dataclasses.replace(params.problem, **problem_updates)
+        )
+
+    if algorithm_updates:
+        params = dataclasses.replace(
+            params, algorithm=dataclasses.replace(params.algorithm, **algorithm_updates)
+        )
+
+    if io_updates:
+        params = dataclasses.replace(
+            params, io=dataclasses.replace(params.io, **io_updates)
+        )
+
+    # Handle any remaining overrides (should be empty now, but just in case)
     if overrides:
-        data = params.__dict__.copy()
-        data.update(overrides)
-        params = Parameters(**data)
+        raise ValueError(f"Unknown parameter overrides: {list(overrides.keys())}")
 
     return params

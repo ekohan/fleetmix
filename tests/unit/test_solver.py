@@ -59,7 +59,7 @@ def test_pick_solver_auto_fallback(mock_cbc, mock_gurobi):
 
     # Should try Gurobi first, then fall back to CBC
     mock_gurobi.assert_called_once_with(msg=1, gapRel=0.0, options=[('TimeLimit', 180)])
-    mock_cbc.assert_called_once_with(msg=1, gapRel=0.0)
+    mock_cbc.assert_called_once_with(msg=1, gapRel=0.0, timeLimit=180)
     assert solver == mock_cbc_solver
 
 

@@ -78,7 +78,7 @@ class TestPickSolver(unittest.TestCase):
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(msg=0, gapRel=0.0, options=[('TimeLimit', 180)])
-        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0)
+        mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, timeLimit=180)
         self.assertEqual(result, mock_cbc_solver)
 
     @patch("pulp.GUROBI_CMD")

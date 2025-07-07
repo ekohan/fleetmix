@@ -40,42 +40,6 @@ class GurobiAdapter:
         if options:
             kwargs["options"] = options
 
-        # Enhanced Gurobi parameters to help escape local optima
-        # when dealing with multi-vehicle per customer problems
-        # TODO: delete or review this
-        """
-        if os.getenv("FLEETMIX_ENHANCED_MIP", "1") == "1":
-            # Create options list for Gurobi parameters
-
-            # MIPFocus: 1 = focus on finding feasible solutions
-            #           2 = focus on proving optimality
-            #           3 = focus on improving the best bound
-            options.append(("MIPFocus", 1))
-            options.append(("Symmetry", 2))
-
-            # Increase solution pool to explore more solutions
-            options.append(("PoolSolutions", 10))
-            options.append(("PoolSearchMode", 2))  # Find n best solutions
-
-            # More aggressive heuristics
-            options.append(("Heuristics", 0.1))  # 10% of time on heuristics
-
-            # Stronger cuts to tighten the formulation
-            options.append(("Cuts", 2))  # Aggressive cut generation
-            options.append(("TimeLimit", 60))
-
-            # Multiple random seeds for diversity
-            seed_str = os.getenv("FLEETMIX_MIP_SEED")
-            if seed_str:
-                options.append(("Seed", int(seed_str)))
-
-            # Tune for finding good solutions quickly
-            options.append(("ImproveStartTime", 10))  # Focus on improving after 10s
-            options.append(("ImproveStartGap", 0.1))  # Or when gap < 10%
-
-            #kwargs["options"] = options
-        """
-
         return pulp.GUROBI_CMD(**kwargs)
 
     @property
@@ -107,9 +71,8 @@ class CbcAdapter:
         if params.gap_rel is not None:
             kwargs["gapRel"] = params.gap_rel
 
-        # CBC uses maxSeconds for time limit
         if params.time_limit is not None and params.time_limit > 0:
-            kwargs["maxSeconds"] = params.time_limit
+            kwargs["timeLimit"] = params.time_limit
 
         return pulp.PULP_CBC_CMD(**kwargs)
 

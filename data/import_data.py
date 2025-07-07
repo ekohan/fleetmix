@@ -3,7 +3,6 @@ import logging
 import sqlite3
 from pathlib import Path
 
-
 # TODO: considerar eliminar este modulo y usar solo el dataset de /benchmarks/data/case
 
 # Configure logging

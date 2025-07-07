@@ -8,13 +8,13 @@ Run it: $ python examples/heterogeneous_fleet.py
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Dict
 
 import fleetmix as fm
+from fleetmix.config import FleetmixParams, load_fleetmix_params
 from fleetmix.core_types import VehicleSpec
-from fleetmix.config import load_fleetmix_params, FleetmixParams
-import dataclasses
 
 
 def build_demo_parameters() -> FleetmixParams:

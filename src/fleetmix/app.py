@@ -14,7 +14,7 @@ from rich.table import Table
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
-from fleetmix.config import load_fleetmix_params, FleetmixParams
+from fleetmix.config import FleetmixParams, load_fleetmix_params
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.logging import (

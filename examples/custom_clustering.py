@@ -15,12 +15,13 @@ from pathlib import Path
 # Ensure the plugin is visible (serial mode) *before* FleetMix import, see docs/parallelism.md.
 os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 
+import dataclasses
+
 import fleetmix as fm
 
 # Plugin module import – executed for its side-effect of registering itself.
 import fleetmix_example_plugins.round_robin  # noqa: F401
 from fleetmix.config import load_fleetmix_params
-import dataclasses
 
 
 def main():

@@ -1,7 +1,7 @@
+import dataclasses
 import sys
 from argparse import ArgumentParser, RawTextHelpFormatter
 from typing import Any
-import dataclasses
 
 from fleetmix.config import load_fleetmix_params
 from fleetmix.config.params import FleetmixParams

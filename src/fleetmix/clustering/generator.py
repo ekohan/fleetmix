@@ -15,8 +15,8 @@ from joblib import Parallel, delayed
 
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
-    Cluster,
     CapacitatedClusteringContext,
+    Cluster,
     Customer,
     CustomerBase,
     DepotLocation,

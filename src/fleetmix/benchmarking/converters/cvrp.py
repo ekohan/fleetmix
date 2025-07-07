@@ -4,6 +4,7 @@ Converter for CVRP instances into FSM format.
 
 __all__ = ["CVRPBenchmarkType", "convert_cvrp_to_fsm"]
 
+import dataclasses
 from enum import Enum
 from pathlib import Path
 
@@ -14,7 +15,6 @@ from fleetmix.config import FleetmixParams, load_fleetmix_params
 from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 from fleetmix.utils.logging import log_detail
-import dataclasses
 
 
 class CVRPBenchmarkType(Enum):

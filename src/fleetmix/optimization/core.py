@@ -49,6 +49,7 @@ from typing import Any
 import pandas as pd
 import pulp
 
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     Cluster,
     Customer,
@@ -61,7 +62,6 @@ from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
 from fleetmix.utils.solver import pick_solver
-from fleetmix.config.params import FleetmixParams
 
 logger = FleetmixLogger.get_logger(__name__)
 

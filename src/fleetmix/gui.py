@@ -200,8 +200,9 @@ def collect_parameters_from_ui() -> FleetmixParams:
             ui_overrides[param_name] = st.session_state[key]
 
     # Convert vehicle dictionaries to VehicleSpec objects if needed
-    from fleetmix.core_types import VehicleSpec
     from typing import Dict
+
+    from fleetmix.core_types import VehicleSpec
 
     vehicles: Dict[str, VehicleSpec] = params.problem.vehicles
     if "vehicles" in ui_overrides and isinstance(ui_overrides["vehicles"], dict):

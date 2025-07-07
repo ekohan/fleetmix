@@ -20,10 +20,11 @@ from pathlib import Path
 os.environ.setdefault("FLEETMIX_N_JOBS", "1")
 
 # Register the straight-line estimator (import for side-effect)
+import dataclasses
+
 import fleetmix as fm
 import fleetmix_example_plugins.straight_line  # noqa: F401
 from fleetmix.config import load_fleetmix_params
-import dataclasses
 
 
 def main() -> None:  # pragma: no cover – example script

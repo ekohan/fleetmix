@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Parameter container dataclasses for the FleetMix configuration system.
 
 The parameter organisation separates problem definition, algorithm settings, runtime settings and
 I/O related options into individual immutable dataclasses.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path

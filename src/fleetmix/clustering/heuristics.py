@@ -17,8 +17,8 @@ from sklearn.mixture import GaussianMixture
 
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
-    Cluster,
     CapacitatedClusteringContext,
+    Cluster,
     Customer,
     CustomerBase,
     VehicleConfiguration,

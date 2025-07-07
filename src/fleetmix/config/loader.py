@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Utilities for loading FleetMix configuration YAML files into the
 parameter dataclass hierarchy.
 
@@ -8,20 +6,22 @@ existing configuration files continue to function, while the internal data
 representation becomes more structured and type-safe.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 import yaml
 
-from fleetmix.core_types import VehicleSpec, DepotLocation
+from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils.logging import FleetmixLogger
 
 from .params import (
-    ProblemParams,
     AlgorithmParams,
-    IOParams,
-    RuntimeParams,
     FleetmixParams,
+    IOParams,
+    ProblemParams,
+    RuntimeParams,
 )
 
 logger = FleetmixLogger.get_logger(__name__)

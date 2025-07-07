@@ -10,6 +10,7 @@ Run:
 
 from __future__ import annotations
 
+import dataclasses
 import os
 from pathlib import Path
 
@@ -17,9 +18,7 @@ import fleetmix as fm
 
 # Import plugin for side-effect registration
 import fleetmix_example_plugins.naive_solver  # noqa: F401
-
 from fleetmix.config import load_fleetmix_params
-import dataclasses
 
 
 def main() -> None:  # pragma: no cover – example script

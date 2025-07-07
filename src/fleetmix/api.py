@@ -2,12 +2,12 @@
 API facade for Fleetmix - provides a single entry point for programmatic usage.
 """
 
+import dataclasses
 from pathlib import Path
 
 import pandas as pd
 
 from fleetmix.clustering import generate_feasible_clusters
-
 from fleetmix.config import load_fleetmix_params
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
@@ -20,7 +20,6 @@ from fleetmix.utils.logging import FleetmixLogger, log_warning
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-import dataclasses
 
 logger = FleetmixLogger.get_logger("fleetmix.api")
 

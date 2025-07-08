@@ -11,6 +11,84 @@ from fleetmix.config.params import RuntimeParams
 from fleetmix.registry import SOLVER_ADAPTER_REGISTRY, register_solver_adapter
 
 
+def extract_optimality_gap(model, solver) -> float | None:
+    """
+    Try to fetch the *relative* optimality gap from a PuLP model and solver instance.
+
+    Tries multiple approaches:
+    1. Model attributes (solutionGap)
+    2. Solver-specific extraction (primarily GUROBI_CMD log parsing)
+
+    The value is returned in **percentage points** (e.g. ``0.48`` for a 0.48 % gap).
+    For solvers that cannot report a gap the function returns ``None``.
+
+    Args:
+        model: The PuLP model instance after solving
+        solver: The PuLP solver instance used
+
+    Returns:
+        Optimality gap in percentage points, or None if unavailable
+    """
+    # TODO: toggle as runtime/io feature
+    import pulp
+
+    # ------------------------------------------------------------------
+    # Try to get gap from model attributes first
+    # ------------------------------------------------------------------
+    if hasattr(model, "solutionGap"):
+        optimality_gap = model.solutionGap
+        if optimality_gap is not None and optimality_gap <= 1.0:
+            return float(optimality_gap * 100.0)  # Convert to percentage
+        elif optimality_gap is not None:
+            return float(optimality_gap)  # Already in percentage
+
+    # ------------------------------------------------------------------
+    # Gurobi via PuLP log parsing
+    # ------------------------------------------------------------------
+    if hasattr(pulp, "GUROBI_CMD") and isinstance(solver, pulp.GUROBI_CMD):
+        # Parse gap from Gurobi log file
+        import os
+        import re
+
+        # Try multiple log locations
+        log_paths = []
+
+        # Current working directory (when keepFiles=True)
+        log_paths.append("gurobi.log")
+
+        # Solver's temporary directory
+        if hasattr(solver, "tmpDir") and solver.tmpDir:
+            log_paths.append(os.path.join(solver.tmpDir, "gurobi.log"))
+
+        # Search for gap in each potential log file
+        for log_path in log_paths:
+            if os.path.exists(log_path):
+                try:
+                    with open(log_path, "r") as f:
+                        content = f.read()
+
+                    # Look for the final gap report in the log
+                    # Pattern: "Best objective 7.900174045037e+04, best bound 7.850209502181e+04, gap 0.6324%"
+                    gap_pattern = (
+                        r"Best objective [^,]+, best bound [^,]+, gap (\d+\.?\d*)%"
+                    )
+                    matches = re.findall(gap_pattern, content, re.IGNORECASE)
+
+                    if matches:
+                        # Take the last match (final gap at termination)
+                        gap_str = matches[-1]
+                        return float(gap_str)
+
+                except Exception:  # noqa: BLE001
+                    # If file reading fails, try next location
+                    continue
+
+    # ------------------------------------------------------------------
+    # Other solvers – nothing to report
+    # ------------------------------------------------------------------
+    return None
+
+
 @register_solver_adapter("gurobi")
 class GurobiAdapter:
     """Adapter for Gurobi solver."""
@@ -25,7 +103,7 @@ class GurobiAdapter:
             params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
         """
         msg = 1 if params.verbose else 0
-        kwargs: dict[str, Any] = {"msg": msg}
+        kwargs: dict[str, Any] = {"msg": msg, "keepFiles": True}
         # Only pass gapRel when an explicit tolerance is requested – omitting
         # it forces the solver to strive for optimality with gap = 0.
         if params.gap_rel is not None:

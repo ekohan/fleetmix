@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from enum import Enum
+from pathlib import Path
 
 import pandas as pd
 
 from fleetmix.benchmarking.converters.vrp import convert_vrp_to_fsm
+from fleetmix.benchmarking.models import InstanceSpec
 from fleetmix.clustering import generate_feasible_clusters
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
@@ -21,7 +23,7 @@ class VRPType(Enum):
     MCVRP = "mcvrp"
 
 
-def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, FleetmixParams]:
+def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, InstanceSpec]:
     """
     Library facade to convert VRP instances to FSM format.
     """

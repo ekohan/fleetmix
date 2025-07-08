@@ -133,7 +133,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
             format="xlsx",
         )
 
-        runtime_params = RuntimeParams()
+        runtime_params = RuntimeParams(config=Path("test_config.yaml"))
 
         self.parameters = FleetmixParams(
             problem=problem_params,

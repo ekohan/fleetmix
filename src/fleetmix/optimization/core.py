@@ -61,7 +61,7 @@ from fleetmix.preprocess.demand import get_origin_id
 from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
-from fleetmix.utils.solver import pick_solver
+from fleetmix.utils.solver import extract_optimality_gap, pick_solver
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -199,6 +199,9 @@ def _solve_internal(
     end_time = time.time()
     solver_time = end_time - start_time
 
+    # Extract optimality gap from model/solver if available
+    optimality_gap = extract_optimality_gap(model, solver)
+
     if parameters.runtime.verbose:
         print(f"Optimization completed in {solver_time:.2f} seconds.")
 
@@ -240,6 +243,7 @@ def _solve_internal(
     solution.solver_name = model.solver.name
     solution.solver_status = pulp.LpStatus[model.status]
     solution.solver_runtime_sec = solver_time
+    solution.optimality_gap = optimality_gap
 
     return solution
 

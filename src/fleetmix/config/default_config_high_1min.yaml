@@ -74,8 +74,8 @@ nearest_merge_candidates: 1000   # max neighbour clusters to probe
 max_improvement_iterations: 20  # max iterations for iterative post-optimization
 
 # Merge phase pre-MILP
-pre_small_cluster_size: 5
-pre_nearest_merge_candidates: 50
+pre_small_cluster_size: 20
+pre_nearest_merge_candidates: 100
 
 # ---------------------------------------------------------------------------
 # IO params
@@ -98,4 +98,4 @@ debug: false        # Enable debug mode
 # TODO: check debug-milp mode
 solver: gurobi        # auto | gurobi | cbc
 gap_rel: 0.0        # relative MIP gap
-time_limit: 180     # seconds; None = no limit
+time_limit: 60     # seconds; None = no limit

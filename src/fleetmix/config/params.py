@@ -144,6 +144,7 @@ class IOParams:
 
 @dataclass(slots=True)
 class RuntimeParams:
+    config: Path
     verbose: bool = False
     debug: bool = False
     gap_rel: float = 0.0  # Renamed from solver_gap_rel
@@ -163,7 +164,7 @@ class FleetmixParams:
     problem: ProblemParams
     algorithm: AlgorithmParams
     io: IOParams
-    runtime: RuntimeParams = field(default_factory=RuntimeParams)
+    runtime: RuntimeParams
 
     # Make the object picklable when using joblib (loky backend)
     def __getstate__(self):

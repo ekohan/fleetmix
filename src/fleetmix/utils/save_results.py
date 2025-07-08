@@ -151,12 +151,7 @@ def save_optimization_results(
             ("Truck Load % (Median)", f"{load_percentages.median():.1f}"),
             ("---Parameters---", ""),
             ("Demand File", parameters.io.demand_file),
-            (
-                "Config File",
-                getattr(
-                    getattr(parameters, "config_file_path", None), "name", "default"
-                ),
-            ),
+            ("Config File", parameters.runtime.config.name),
             ("Variable Cost per Hour", parameters.problem.variable_cost_per_hour),
             ("Max Split Depth", parameters.algorithm.clustering_max_depth),
             ("Clustering Method", parameters.algorithm.clustering_method),
@@ -310,6 +305,7 @@ def save_optimization_results(
             ("Solver", solution.solver_name),
             ("Solver Status", solution.solver_status),
             ("Solver Runtime (s)", solution.solver_runtime_sec),
+            ("Optimality Gap (%)", solution.optimality_gap),
             ("Total Fixed Cost", solution.total_fixed_cost),
             ("Total Variable Cost", solution.total_variable_cost),
             ("Total Penalties", solution.total_penalties),

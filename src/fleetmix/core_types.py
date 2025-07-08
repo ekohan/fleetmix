@@ -394,6 +394,11 @@ class FleetmixSolution:
     Represents the solution of a fleet optimization problem.
     """
 
+    configurations: list["VehicleConfiguration"] = field(
+        default_factory=empty_list_factory,
+        metadata={"description": "Vehicle configurations employed in the solution"},
+    )
+
     selected_clusters: list[Cluster] = field(default_factory=empty_list_factory)
     total_fixed_cost: float = 0.0
     total_variable_cost: float = 0.0

@@ -41,7 +41,6 @@ logger = FleetmixLogger.get_logger(__name__)
 
 def save_optimization_results(
     solution: FleetmixSolution,
-    configurations: list[VehicleConfiguration],
     parameters: FleetmixParams,
     filename: str | None = None,
     format: str = "json",
@@ -67,7 +66,9 @@ def save_optimization_results(
     output_filename.parent.mkdir(parents=True, exist_ok=True)
 
     # Create a lookup dictionary for configurations
-    config_lookup = {str(config.config_id): config for config in configurations}
+    config_lookup = {
+        str(config.config_id): config for config in solution.configurations
+    }
 
     # Convert clusters to DataFrame for easier processing
     clusters_df = clusters_to_dataframe(solution.selected_clusters)
@@ -257,7 +258,9 @@ def save_optimization_results(
             cluster_details.at[cluster_idx, "Load_empty_pct"] = 1 - total_load_pct
 
     # Convert configurations to DataFrame for output compatibility
-    configurations_df = pd.DataFrame([config.to_dict() for config in configurations])
+    configurations_df = pd.DataFrame(
+        [config.to_dict() for config in solution.configurations]
+    )
 
     data = {
         "summary_metrics": summary_metrics,

@@ -32,10 +32,10 @@ def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, InstanceS
 
 def run_optimization(
     customers_df: pd.DataFrame, params: FleetmixParams
-) -> tuple[FleetmixSolution, list[VehicleConfiguration]]:
+) -> FleetmixSolution:
     """
-    Run the common FSM optimization pipeline.
-    Returns the solution object and the vehicleconfigurations list.
+    Run the common FSM optimization pipeline and return a *self-contained*
+    `FleetmixSolution` object.
     """
     # Initialize TimeRecorder
     time_recorder = TimeRecorder()
@@ -77,10 +77,13 @@ def run_optimization(
     # Add time measurements to solution
     solution.time_measurements = time_recorder.measurements
 
+    # Attach configurations to the solution so it is self-contained
+    solution.configurations = configs
+
     # Console output
     log_progress("Optimization Results:")
     log_detail(f"Total Cost: ${solution.total_cost:,.2f}")
     log_detail(f"Vehicles Used: {sum(solution.vehicles_used.values())}")
     log_detail(f"Expected Vehicles: {params.problem.expected_vehicles}")
 
-    return solution, configs
+    return solution

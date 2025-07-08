@@ -91,7 +91,7 @@ EOF"""
         assert len(customers_df) == 3
 
         # Run optimization
-        solution, configs_df = run_optimization(
+        solution = run_optimization(
             customers_df=customers_df, params=params, verbose=False
         )
 
@@ -188,7 +188,7 @@ EOF"""
         assert len(demand_cols) >= 3
 
         # Run optimization
-        solution, configs_df = run_optimization(
+        solution = run_optimization(
             customers_df=customers_df, params=params, verbose=False
         )
 
@@ -268,7 +268,7 @@ EOF"""
         )
 
         # Run optimization
-        solution, configs_df = run_optimization(
+        solution = run_optimization(
             customers_df=customers_df, params=params, verbose=False
         )
 
@@ -343,7 +343,7 @@ EOF"""
             runtime=RuntimeParams(config=Path("test_config.yaml")),
         )
 
-        solution, _ = run_optimization(
+        solution = run_optimization(
             customers_df=customers_df, params=params, verbose=False
         )
 
@@ -397,7 +397,7 @@ EOF"""
             )
 
             # Just verify it runs without error
-            solution, _ = run_optimization(
+            solution = run_optimization(
                 customers_df=customers_df, params=params, verbose=False
             )
 

@@ -188,6 +188,7 @@ def _solve_internal(
             solver_status="No clusters to optimize",
             solver_runtime_sec=0.0,
             time_measurements=None,
+            configurations=configurations,
         )
         return empty_solution
 
@@ -244,6 +245,7 @@ def _solve_internal(
     solution.solver_status = pulp.LpStatus[model.status]
     solution.solver_runtime_sec = solver_time
     solution.optimality_gap = optimality_gap
+    solution.configurations = configurations
 
     return solution
 

@@ -96,7 +96,8 @@ def test_convert_to_fsm_mcvrp():
 
 def test_run_optimization_prints_and_returns(caplog, test_params):
     df = pd.DataFrame()
-    sol, cfg = run_optimization(df, test_params)
+    sol = run_optimization(df, test_params)
+    cfg = sol.configurations
 
     # Check that the logging message appears in the captured logs
     assert any("Optimization Results:" in record.message for record in caplog.records)
@@ -121,7 +122,8 @@ def test_run_optimization_with_post_optimization(caplog, monkeypatch, test_param
     df = pd.DataFrame()
     # test_params already has post_optimization=True by default
     
-    sol, cfg = run_optimization(df, test_params)
+    sol = run_optimization(df, test_params)
+    cfg = sol.configurations
     
     assert post_opt_called, "Post-optimization should have been called when enabled"
     assert sol.total_cost == 0

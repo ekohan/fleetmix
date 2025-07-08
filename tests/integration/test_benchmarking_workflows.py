@@ -19,7 +19,6 @@ from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, VRPSolution
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
-from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams
 
 
@@ -206,13 +205,11 @@ EOF
             runtime=RuntimeParams(config=Path("test_config.yaml")),
         )
 
-        # Run optimization
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
-        )
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Verify solution structure - solution is FleetmixSolution
         assert solution.solver_status is not None  # Attribute access
+        configs = solution.configurations
         assert isinstance(configs, list)
         assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
@@ -245,13 +242,11 @@ EOF
             runtime=RuntimeParams(config=Path("test_config.yaml")),
         )
 
-        # Run optimization
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
-        )
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Verify solution structure - solution is FleetmixSolution
         assert solution.solver_status is not None  # Attribute access
+        configs = solution.configurations
         assert isinstance(configs, list)
         assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
@@ -378,9 +373,7 @@ EOF
 
         start_optimization = time.time()
 
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
-        )
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         optimization_time = time.time() - start_optimization
 

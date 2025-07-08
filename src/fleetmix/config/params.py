@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
+
+if TYPE_CHECKING:  # pragma: no cover – for static typing only
+    from fleetmix.benchmarking.models import InstanceSpec
 
 from fleetmix.core_types import DepotLocation, VehicleSpec
 
@@ -180,3 +183,19 @@ class FleetmixParams:
         object.__setattr__(self, "algorithm", state["algorithm"])
         object.__setattr__(self, "io", state["io"])
         object.__setattr__(self, "runtime", state["runtime"])
+
+    def apply_instance_spec(self, spec: "InstanceSpec") -> "FleetmixParams":
+        """
+        Return a copy with ProblemParams fields overridden by the provided
+        InstanceSpec.
+        """
+        import dataclasses as _dc
+
+        new_problem = _dc.replace(
+            self.problem,
+            vehicles=spec.vehicles,
+            depot=spec.depot,
+            goods=spec.goods,
+            expected_vehicles=spec.expected_vehicles,
+        )
+        return _dc.replace(self, problem=new_problem)

@@ -190,16 +190,7 @@ def _run_single_instance(
         )
 
         # Update params.problem with fields from InstanceSpec
-        params = dataclasses.replace(
-            params,
-            problem=dataclasses.replace(
-                params.problem,
-                vehicles=instance_spec.vehicles,
-                depot=instance_spec.depot,
-                goods=instance_spec.goods,
-                expected_vehicles=instance_spec.expected_vehicles,
-            ),
-        )
+        params = params.apply_instance_spec(instance_spec)
 
         # Use the unified pipeline interface for optimization
         solution, configs = run_optimization(customers_df=customers_df, params=params)
@@ -319,16 +310,7 @@ def _run_single_instance(
         )
 
         # Update params.problem with fields from InstanceSpec
-        params = dataclasses.replace(
-            params,
-            problem=dataclasses.replace(
-                params.problem,
-                vehicles=instance_spec.vehicles,
-                depot=instance_spec.depot,
-                goods=instance_spec.goods,
-                expected_vehicles=instance_spec.expected_vehicles,
-            ),
-        )
+        params = params.apply_instance_spec(instance_spec)
 
         # Use the unified pipeline interface for optimization
         solution, configs = run_optimization(customers_df=customers_df, params=params)
@@ -540,16 +522,7 @@ def _run_all_mcvrp_instances(
             )
 
             # Update params.problem with fields from InstanceSpec
-            params = dataclasses.replace(
-                params,
-                problem=dataclasses.replace(
-                    params.problem,
-                    vehicles=instance_spec.vehicles,
-                    depot=instance_spec.depot,
-                    goods=instance_spec.goods,
-                    expected_vehicles=instance_spec.expected_vehicles,
-                ),
-            )
+            params = params.apply_instance_spec(instance_spec)
 
             # Use the unified pipeline interface for optimization
             solution, configs = run_optimization(
@@ -627,16 +600,7 @@ def _run_all_cvrp_instances(
             )
 
             # Update params.problem with fields from InstanceSpec
-            params = dataclasses.replace(
-                params,
-                problem=dataclasses.replace(
-                    params.problem,
-                    vehicles=instance_spec.vehicles,
-                    depot=instance_spec.depot,
-                    goods=instance_spec.goods,
-                    expected_vehicles=instance_spec.expected_vehicles,
-                ),
-            )
+            params = params.apply_instance_spec(instance_spec)
 
             # Use the unified pipeline interface for optimization
             solution, configs = run_optimization(
@@ -1143,16 +1107,7 @@ def convert(
         if _DEFAULT_CONFIG is None:
             raise RuntimeError("No default configuration found")
 
-        params = dataclasses.replace(
-            _DEFAULT_CONFIG,
-            problem=dataclasses.replace(
-                _DEFAULT_CONFIG.problem,
-                vehicles=instance_spec.vehicles,
-                depot=instance_spec.depot,
-                goods=instance_spec.goods,
-                expected_vehicles=instance_spec.expected_vehicles,
-            ),
-        )
+        params = _DEFAULT_CONFIG.apply_instance_spec(instance_spec)
 
         # Override output directory if specified
         if output:

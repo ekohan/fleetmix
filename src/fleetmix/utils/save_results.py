@@ -41,7 +41,6 @@ logger = FleetmixLogger.get_logger(__name__)
 
 def save_optimization_results(
     solution: FleetmixSolution,
-    configurations: list[VehicleConfiguration],
     parameters: FleetmixParams,
     filename: str | None = None,
     format: str = "json",
@@ -67,7 +66,9 @@ def save_optimization_results(
     output_filename.parent.mkdir(parents=True, exist_ok=True)
 
     # Create a lookup dictionary for configurations
-    config_lookup = {str(config.config_id): config for config in configurations}
+    config_lookup = {
+        str(config.config_id): config for config in solution.configurations
+    }
 
     # Convert clusters to DataFrame for easier processing
     clusters_df = clusters_to_dataframe(solution.selected_clusters)
@@ -151,12 +152,7 @@ def save_optimization_results(
             ("Truck Load % (Median)", f"{load_percentages.median():.1f}"),
             ("---Parameters---", ""),
             ("Demand File", parameters.io.demand_file),
-            (
-                "Config File",
-                getattr(
-                    getattr(parameters, "config_file_path", None), "name", "default"
-                ),
-            ),
+            ("Config File", parameters.runtime.config.name),
             ("Variable Cost per Hour", parameters.problem.variable_cost_per_hour),
             ("Max Split Depth", parameters.algorithm.clustering_max_depth),
             ("Clustering Method", parameters.algorithm.clustering_method),
@@ -262,7 +258,9 @@ def save_optimization_results(
             cluster_details.at[cluster_idx, "Load_empty_pct"] = 1 - total_load_pct
 
     # Convert configurations to DataFrame for output compatibility
-    configurations_df = pd.DataFrame([config.to_dict() for config in configurations])
+    configurations_df = pd.DataFrame(
+        [config.to_dict() for config in solution.configurations]
+    )
 
     data = {
         "summary_metrics": summary_metrics,
@@ -310,6 +308,7 @@ def save_optimization_results(
             ("Solver", solution.solver_name),
             ("Solver Status", solution.solver_status),
             ("Solver Runtime (s)", solution.solver_runtime_sec),
+            ("Optimality Gap (%)", solution.optimality_gap),
             ("Total Fixed Cost", solution.total_fixed_cost),
             ("Total Variable Cost", solution.total_variable_cost),
             ("Total Penalties", solution.total_penalties),

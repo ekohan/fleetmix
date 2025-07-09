@@ -95,7 +95,17 @@ def parse_vrp_results(vrp_type: str):
                 if summary.get("Variable Cost ($)")
                 else "0"
             )
-            config_file = summary.get("Config File", "default")
+            config_file = summary.get("Config File", "not_found?")
+
+            # Extract optimality gap from Execution Details if present
+            exec_details = data.get("Execution Details", {})
+            gap_raw = exec_details.get("Optimality Gap (%)", None)
+            optimality_gap = ""
+            if gap_raw is not None:
+                try:
+                    optimality_gap = f"{float(gap_raw):.2f}"
+                except (ValueError, TypeError):
+                    optimality_gap = str(gap_raw)
 
             # Clean up cost values
             try:
@@ -121,6 +131,7 @@ def parse_vrp_results(vrp_type: str):
                 "Total Cost ($)": f"{total_cost:.2f}",
                 "Fixed Cost ($)": f"{fixed_cost:.2f}",
                 "Variable Cost ($)": f"{variable_cost:.2f}",
+                "Optimality Gap (%)": optimality_gap,
                 "Config File": config_file,
             }
 
@@ -182,6 +193,7 @@ def main():
         "Total Cost ($)",
         "Fixed Cost ($)",
         "Variable Cost ($)",
+        "Optimality Gap (%)",
         "Config File",
         "# Customers",
         "wall_time_sec-vehicle_configuration",

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from fleetmix.pipeline.vrp_interface import VRPType
 # TODO fix nasty import.
 
-from fleetmix.config.params import FleetmixParams
+from fleetmix.benchmarking.models import InstanceSpec
 
 __all__ = ["convert_vrp_to_fsm"]
 
@@ -32,7 +32,7 @@ def convert_vrp_to_fsm(
     split_ratios: dict[str, float] | None = None,  # For CVRP
     custom_instance_paths: dict[str, Path]
     | None = None,  # New: For CVRP with multiple custom paths
-) -> tuple[pd.DataFrame, FleetmixParams]:
+) -> tuple[pd.DataFrame, InstanceSpec]:
     """
     Dispatch CVRP/MCVRP conversion to the appropriate converter.
     """

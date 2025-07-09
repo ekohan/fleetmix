@@ -160,12 +160,14 @@ def _run_single_instance(
 
         log_progress(f"Running MCVRP instance {instance}...")
 
-        # Use the unified pipeline interface for conversion
-        customers_df, params = convert_to_fsm(VRPType.MCVRP, instance_path=dat_path)
-
-        # Override with provided config if given
+        # Load config or use default
         if config_path:
             params = load_fleetmix_params(config_path)
+        else:
+            # Use default config
+            if _DEFAULT_CONFIG is None:
+                raise RuntimeError("No default configuration found")
+            params = _DEFAULT_CONFIG
 
         # Override output directory if specified
         if output_dir:
@@ -182,8 +184,16 @@ def _run_single_instance(
             ),
         )
 
+        # Use the unified pipeline interface for conversion
+        customers_df, instance_spec = convert_to_fsm(
+            VRPType.MCVRP, instance_path=dat_path
+        )
+
+        # Update params.problem with fields from InstanceSpec
+        params = params.apply_instance_spec(instance_spec)
+
         # Use the unified pipeline interface for optimization
-        solution, configs = run_optimization(customers_df=customers_df, params=params)
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -197,7 +207,6 @@ def _run_single_instance(
 
         save_optimization_results(
             solution=solution,
-            configurations=configs,
             parameters=params,
             filename=str(output_path),
             format=format,
@@ -224,7 +233,9 @@ def _run_single_instance(
         if solution.selected_clusters:
             for i, cluster in enumerate(solution.selected_clusters):
                 # Calculate load percentage from total demand and vehicle capacity
-                config = _find_config_by_id(configs, str(cluster.config_id))
+                config = _find_config_by_id(
+                    solution.configurations, str(cluster.config_id)
+                )
                 total_demand = sum(cluster.total_demand.values())
                 load_pct = (total_demand / config.capacity) * 100
 
@@ -270,17 +281,14 @@ def _run_single_instance(
 
         log_progress(f"Running CVRP instance {instance}...")
 
-        # Use the unified pipeline interface for conversion
-        # CVRP requires benchmark_type and uses instance_names instead of instance_path
-        customers_df, params = convert_to_fsm(
-            VRPType.CVRP,
-            instance_names=[instance],
-            benchmark_type=CVRPBenchmarkType.NORMAL,
-        )
-
-        # Override with provided config if given
+        # Load config or use default
         if config_path:
             params = load_fleetmix_params(config_path)
+        else:
+            # Use default config
+            if _DEFAULT_CONFIG is None:
+                raise RuntimeError("No default configuration found")
+            params = _DEFAULT_CONFIG
 
         # Override output directory if specified
         if output_dir:
@@ -294,8 +302,19 @@ def _run_single_instance(
                 "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmark (single-product instance).[/yellow]"
             )
 
+        # Use the unified pipeline interface for conversion
+        # CVRP requires benchmark_type and uses instance_names instead of instance_path
+        customers_df, instance_spec = convert_to_fsm(
+            VRPType.CVRP,
+            instance_names=[instance],
+            benchmark_type=CVRPBenchmarkType.NORMAL,
+        )
+
+        # Update params.problem with fields from InstanceSpec
+        params = params.apply_instance_spec(instance_spec)
+
         # Use the unified pipeline interface for optimization
-        solution, configs = run_optimization(customers_df=customers_df, params=params)
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -308,7 +327,6 @@ def _run_single_instance(
             output_path = params.io.results_dir / f"cvrp_{instance}_normal.{ext}"
         save_optimization_results(
             solution=solution,
-            configurations=configs,
             parameters=params,
             filename=str(output_path),
             format=format,
@@ -335,7 +353,9 @@ def _run_single_instance(
         if solution.selected_clusters:
             for i, cluster in enumerate(solution.selected_clusters):
                 # Calculate load percentage from total demand and vehicle capacity
-                config = _find_config_by_id(configs, str(cluster.config_id))
+                config = _find_config_by_id(
+                    solution.configurations, str(cluster.config_id)
+                )
                 total_demand = sum(cluster.total_demand.values())
                 load_pct = (total_demand / config.capacity) * 100
 
@@ -423,7 +443,7 @@ def _run_single_instance(
         )
 
         # Run optimization using the same approach as MCVRP/CVRP
-        solution, configs = run_optimization(customers_df=customers_df, params=params)
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -435,7 +455,6 @@ def _run_single_instance(
 
         save_optimization_results(
             solution=solution,
-            configurations=configs,
             parameters=params,
             filename=str(output_path),
             format=format,
@@ -475,12 +494,14 @@ def _run_all_mcvrp_instances(
         log_progress(f"Running MCVRP instance {instance}...")
 
         try:
-            # Use the unified pipeline interface for conversion
-            customers_df, params = convert_to_fsm(VRPType.MCVRP, instance_path=dat_path)
-
-            # Override with provided config if given
+            # Load config or use default
             if config_path:
                 params = load_fleetmix_params(config_path)
+            else:
+                # Use default config
+                if _DEFAULT_CONFIG is None:
+                    raise RuntimeError("No default configuration found")
+                params = _DEFAULT_CONFIG
 
             # Override output directory if specified
             if output_dir:
@@ -496,10 +517,16 @@ def _run_all_mcvrp_instances(
                 ),
             )
 
-            # Use the unified pipeline interface for optimization
-            solution, configs = run_optimization(
-                customers_df=customers_df, params=params
+            # Use the unified pipeline interface for conversion
+            customers_df, instance_spec = convert_to_fsm(
+                VRPType.MCVRP, instance_path=dat_path
             )
+
+            # Update params.problem with fields from InstanceSpec
+            params = params.apply_instance_spec(instance_spec)
+
+            # Use the unified pipeline interface for optimization
+            solution = run_optimization(customers_df=customers_df, params=params)
 
             # Save results with specified format
             format = "json"
@@ -512,7 +539,6 @@ def _run_all_mcvrp_instances(
                 output_path = params.io.results_dir / f"mcvrp_{instance}.{format}"
             save_optimization_results(
                 solution=solution,
-                configurations=configs,
                 parameters=params,
                 filename=str(output_path),
                 format=format,
@@ -542,17 +568,14 @@ def _run_all_cvrp_instances(
         log_progress(f"Running CVRP instance {instance}...")
 
         try:
-            # Use the unified pipeline interface for conversion
-            # CVRP requires benchmark_type and uses instance_names instead of instance_path
-            customers_df, params = convert_to_fsm(
-                VRPType.CVRP,
-                instance_names=[instance],
-                benchmark_type=CVRPBenchmarkType.NORMAL,
-            )
-
-            # Override with provided config if given
+            # Load parameters
             if config_path:
                 params = load_fleetmix_params(config_path)
+            else:
+                # Use default config
+                if _DEFAULT_CONFIG is None:
+                    raise RuntimeError("No default configuration found")
+                params = _DEFAULT_CONFIG
 
             # Override output directory if specified
             if output_dir:
@@ -566,10 +589,19 @@ def _run_all_cvrp_instances(
                     "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmarks (single-product instances).[/yellow]"
                 )
 
-            # Use the unified pipeline interface for optimization
-            solution, configs = run_optimization(
-                customers_df=customers_df, params=params
+            # Use the unified pipeline interface for conversion
+            # CVRP requires benchmark_type and uses instance_names instead of instance_path
+            customers_df, instance_spec = convert_to_fsm(
+                VRPType.CVRP,
+                instance_names=[instance],
+                benchmark_type=CVRPBenchmarkType.NORMAL,
             )
+
+            # Update params.problem with fields from InstanceSpec
+            params = params.apply_instance_spec(instance_spec)
+
+            # Use the unified pipeline interface for optimization
+            solution = run_optimization(customers_df=customers_df, params=params)
 
             # Save results with specified format
             format = "json"
@@ -583,7 +615,6 @@ def _run_all_cvrp_instances(
                 output_path = params.io.results_dir / f"cvrp_{instance}_normal.{format}"
             save_optimization_results(
                 solution=solution,
-                configurations=configs,
                 parameters=params,
                 filename=str(output_path),
                 format=format,
@@ -652,9 +683,7 @@ def _run_all_case_instances(
             )
 
             # Run optimization using the same approach as MCVRP/CVRP
-            solution, configs = run_optimization(
-                customers_df=customers_df, params=params
-            )
+            solution = run_optimization(customers_df=customers_df, params=params)
 
             # Save results with appropriate filename
             format = "json"  # Default to JSON for batch runs
@@ -668,7 +697,6 @@ def _run_all_case_instances(
 
             save_optimization_results(
                 solution=solution,
-                configurations=configs,
                 parameters=params,
                 filename=str(output_path),
                 format=format,
@@ -1042,7 +1070,7 @@ def convert(
 
         if vrp_type == VRPType.CVRP:
             bench_type = CVRPBenchmarkType(benchmark_type)
-            customers_df, params = convert_to_fsm(
+            customers_df, instance_spec = convert_to_fsm(
                 vrp_type,
                 instance_names=[instance],
                 benchmark_type=bench_type,
@@ -1061,11 +1089,17 @@ def convert(
                 log_error(f"MCVRP instance file not found: {instance_path}")
                 raise typer.Exit(1)
 
-            customers_df, params = convert_to_fsm(
+            customers_df, instance_spec = convert_to_fsm(
                 vrp_type,
                 instance_path=instance_path,
             )
             filename_stub = f"vrp_{type}_{instance}"
+
+        # Create params from default config and update with fields from InstanceSpec
+        if _DEFAULT_CONFIG is None:
+            raise RuntimeError("No default configuration found")
+
+        params = _DEFAULT_CONFIG.apply_instance_spec(instance_spec)
 
         # Override output directory if specified
         if output:
@@ -1077,7 +1111,7 @@ def convert(
         if not quiet:
             log_progress("Running optimization on converted instance...")
 
-        solution, configs = run_optimization(customers_df=customers_df, params=params)
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Save results
         ext = "xlsx" if format == "xlsx" else "json"
@@ -1085,7 +1119,6 @@ def convert(
 
         save_optimization_results(
             solution=solution,
-            configurations=configs,
             parameters=params,
             filename=str(results_path),
             format=format,

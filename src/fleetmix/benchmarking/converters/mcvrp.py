@@ -9,21 +9,15 @@ from pathlib import Path
 
 import pandas as pd
 
+from fleetmix.benchmarking.models import InstanceSpec
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
-from fleetmix.config import load_fleetmix_params
-from fleetmix.config.params import (
-    AlgorithmParams,
-    FleetmixParams,
-    IOParams,
-    ProblemParams,
-)
 from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.utils.coordinate_converter import CoordinateConverter
 
 
 def convert_mcvrp_to_fsm(
     instance_name: str, custom_instance_path: Path | None = None
-) -> tuple:
+) -> tuple[pd.DataFrame, InstanceSpec]:
     """Convert an MCVRP *.dat* file to Fleetmix inputs.
 
     Parameters
@@ -37,8 +31,8 @@ def convert_mcvrp_to_fsm(
     -------
     pd.DataFrame
         Customer demand table.
-    FleetmixParams
-        Parameter set pre-filled with depot, capacity, and expected vehicles.
+    InstanceSpec
+        Instance specification with depot, vehicles, goods, and expected vehicle count.
 
     Raises
     ------
@@ -84,8 +78,6 @@ def convert_mcvrp_to_fsm(
         )
     customers_df = pd.DataFrame(customers)
 
-    # Create parameters with defaults
-    params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     # Set depot location
     depot_lat, depot_lon = geo_coords[instance.depot_id]
     depot = DepotLocation(latitude=depot_lat, longitude=depot_lon)
@@ -103,15 +95,12 @@ def convert_mcvrp_to_fsm(
         )
     }
 
-    # Update params with MCVRP-specific settings
-    params = dataclasses.replace(
-        params,
-        problem=dataclasses.replace(
-            params.problem,
-            depot=depot,
-            vehicles=vehicles,
-            expected_vehicles=instance.vehicles,
-        ),
+    # Create InstanceSpec instead of ProblemParams
+    instance_spec = InstanceSpec(
+        expected_vehicles=instance.vehicles,
+        depot=depot,
+        goods=["Dry", "Chilled", "Frozen"],
+        vehicles=vehicles,
     )
 
-    return customers_df, params
+    return customers_df, instance_spec

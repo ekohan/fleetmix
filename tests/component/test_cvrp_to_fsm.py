@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType, convert_cvrp_to_fsm
+from fleetmix.benchmarking.models import InstanceSpec
 from fleetmix.benchmarking.parsers.cvrp import CVRPParser
 
 
@@ -31,19 +32,19 @@ def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_p
 
     # Call converter with correct parameters
     if btype == CVRPBenchmarkType.SPLIT:
-        df, params = convert_cvrp_to_fsm(
+        df, instance_spec = convert_cvrp_to_fsm(
             names, btype, split_ratios=extra_kwargs["split_ratios"]
         )
     elif btype == CVRPBenchmarkType.SCALED:
-        df, params = convert_cvrp_to_fsm(
+        df, instance_spec = convert_cvrp_to_fsm(
             names, btype, num_goods=extra_kwargs["num_goods"]
         )
     else:
         # NORMAL and COMBINED
-        df, params = convert_cvrp_to_fsm(names, btype)
+        df, instance_spec = convert_cvrp_to_fsm(names, btype)
 
     # Expected vehicles match parser num_vehicles * multiplier
-    assert params.problem.expected_vehicles == inst.num_vehicles * mult
+    assert instance_spec.expected_vehicles == inst.num_vehicles * mult
 
     # DataFrame rows: for combined, rows = (dimension-1)*mult; otherwise rows = dimension-1
     if btype == CVRPBenchmarkType.COMBINED:
@@ -63,8 +64,8 @@ def test_convert_cvrp_to_fsm_and_expected(btype, extra_kwargs, mult, small_vrp_p
 
     # Types
     assert isinstance(df, pd.DataFrame)
-    assert hasattr(params.problem, "expected_vehicles")
+    assert isinstance(instance_spec, InstanceSpec)
 
     # Check expected_vehicles is positive and integer
-    assert isinstance(params.problem.expected_vehicles, int)
-    assert params.problem.expected_vehicles >= mult
+    assert isinstance(instance_spec.expected_vehicles, int)
+    assert instance_spec.expected_vehicles >= mult

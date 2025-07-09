@@ -54,6 +54,7 @@ def _make_params(variable_cost_per_hour: float = 0.0) -> FleetmixParams:
     )
     
     runtime = RuntimeParams(
+        config=Path("test_config.yaml"),
         verbose=False,
         debug=False,
     )

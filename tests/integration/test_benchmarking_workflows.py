@@ -19,7 +19,7 @@ from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, VRPSolution
 from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
-from fleetmix.utils.save_results import save_optimization_results
+from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams
 
 
 class TestBenchmarkingWorkflows:
@@ -131,7 +131,7 @@ EOF
 
         # Test different benchmark types
         for benchmark_type in [CVRPBenchmarkType.NORMAL, CVRPBenchmarkType.SPLIT]:
-            customers_df, params = convert_cvrp_to_fsm(
+            customers_df, instance_spec = convert_cvrp_to_fsm(
                 instance_names=[instance_name],
                 benchmark_type=benchmark_type,
                 num_goods=2,
@@ -157,7 +157,7 @@ EOF
     def test_mcvrp_to_fsm_conversion(self, small_mcvrp_file, temp_results_dir):
         """Test MCVRP to FSM conversion process."""
         instance_name = small_mcvrp_file.stem
-        customers_df, params = convert_mcvrp_to_fsm(
+        customers_df, instance_spec = convert_mcvrp_to_fsm(
             instance_name=instance_name, custom_instance_path=small_mcvrp_file
         )
 
@@ -176,7 +176,7 @@ EOF
         instance_name = small_cvrp_file.stem
 
         # Use the unified pipeline interface
-        customers_df, params = convert_to_fsm(
+        customers_df, instance_spec = convert_to_fsm(
             VRPType.CVRP,
             instance_names=[instance_name],
             benchmark_type=CVRPBenchmarkType.NORMAL,
@@ -186,39 +186,67 @@ EOF
         assert isinstance(customers_df, pd.DataFrame)
         assert len(customers_df) > 0
 
-        # Override results directory for testing
-        params = dataclasses.replace(params, io=dataclasses.replace(params.io, results_dir=temp_results_dir))
-
-        # Run optimization
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
+        # Convert InstanceSpec to ProblemParams and set up params
+        problem_params = ProblemParams(
+            expected_vehicles=instance_spec.expected_vehicles,
+            depot=instance_spec.depot,
+            goods=instance_spec.goods,
+            vehicles=instance_spec.vehicles,
+            variable_cost_per_hour=50.0
         )
+        params = FleetmixParams(
+            problem=problem_params,
+            algorithm=AlgorithmParams(),
+            io=IOParams(
+                demand_file=f"{instance_name}.csv",
+                results_dir=temp_results_dir,
+                format="json",
+            ),
+            runtime=RuntimeParams(config=Path("test_config.yaml")),
+        )
+
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Verify solution structure - solution is FleetmixSolution
         assert solution.solver_status is not None  # Attribute access
+        configs = solution.configurations
         assert isinstance(configs, list)
         assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
     def test_unified_vrp_pipeline_mcvrp(self, small_mcvrp_file, temp_results_dir):
         """Test unified VRP pipeline with MCVRP instance."""
         # Use the unified pipeline interface
-        customers_df, params = convert_to_fsm(
+        customers_df, instance_spec = convert_to_fsm(
             VRPType.MCVRP, instance_path=small_mcvrp_file
         )
 
         assert isinstance(customers_df, pd.DataFrame)
         assert len(customers_df) > 0
 
-        # Override results directory for testing
-        params = dataclasses.replace(params, io=dataclasses.replace(params.io, results_dir=temp_results_dir))
-
-        # Run optimization
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
+        # Convert InstanceSpec to ProblemParams and set up params
+        problem_params = ProblemParams(
+            expected_vehicles=instance_spec.expected_vehicles,
+            depot=instance_spec.depot,
+            goods=instance_spec.goods,
+            vehicles=instance_spec.vehicles,
+            variable_cost_per_hour=50.0
         )
+        params = FleetmixParams(
+            problem=problem_params,
+            algorithm=AlgorithmParams(),
+            io=IOParams(
+                demand_file=f"{small_mcvrp_file.stem}.dat",
+                results_dir=temp_results_dir,
+                format="json",
+            ),
+            runtime=RuntimeParams(config=Path("test_config.yaml")),
+        )
+
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         # Verify solution structure - solution is FleetmixSolution
         assert solution.solver_status is not None  # Attribute access
+        configs = solution.configurations
         assert isinstance(configs, list)
         assert all(isinstance(config, VehicleConfiguration) for config in configs)
 
@@ -267,7 +295,7 @@ EOF
         ]
 
         for benchmark_type in benchmark_types:
-            customers_df, params = convert_cvrp_to_fsm(
+            customers_df, problem_params = convert_cvrp_to_fsm(
                 instance_names=[instance_name],
                 benchmark_type=benchmark_type,
                 num_goods=3,
@@ -315,7 +343,7 @@ EOF
         start_time = time.time()
 
         # Convert instance
-        customers_df, params = convert_to_fsm(
+        customers_df, instance_spec = convert_to_fsm(
             VRPType.CVRP,
             instance_names=[instance_name],
             benchmark_type=CVRPBenchmarkType.NORMAL,
@@ -324,14 +352,28 @@ EOF
 
         conversion_time = time.time() - start_time
 
-        # Override settings for quick test
-        params = dataclasses.replace(params, io=dataclasses.replace(params.io, results_dir=temp_results_dir))
+        # Convert InstanceSpec to ProblemParams and set up params
+        problem_params = ProblemParams(
+            expected_vehicles=instance_spec.expected_vehicles,
+            depot=instance_spec.depot,
+            goods=instance_spec.goods,
+            vehicles=instance_spec.vehicles,
+            variable_cost_per_hour=50.0
+        )
+        params = FleetmixParams(
+            problem=problem_params,
+            algorithm=AlgorithmParams(),
+            io=IOParams(
+                demand_file=f"{instance_name}.csv",
+                results_dir=temp_results_dir,
+                format="json",
+            ),
+            runtime=RuntimeParams(config=Path("test_config.yaml")),
+        )
 
         start_optimization = time.time()
 
-        solution, configs = run_optimization(
-            customers_df=customers_df, params=params
-        )
+        solution = run_optimization(customers_df=customers_df, params=params)
 
         optimization_time = time.time() - start_optimization
 

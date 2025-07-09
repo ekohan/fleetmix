@@ -175,6 +175,7 @@ def load_yaml(path: str | Path) -> FleetmixParams:
     # ---------------------------------------------------------------------
 
     runtime = RuntimeParams(
+        config=cfg_path,
         verbose=data.pop("verbose", False),
         debug=data.pop("debug", False),
         gap_rel=data.pop("gap_rel", 0.0),

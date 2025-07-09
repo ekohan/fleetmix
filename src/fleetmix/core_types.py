@@ -394,6 +394,11 @@ class FleetmixSolution:
     Represents the solution of a fleet optimization problem.
     """
 
+    configurations: list["VehicleConfiguration"] = field(
+        default_factory=empty_list_factory,
+        metadata={"description": "Vehicle configurations employed in the solution"},
+    )
+
     selected_clusters: list[Cluster] = field(default_factory=empty_list_factory)
     total_fixed_cost: float = 0.0
     total_variable_cost: float = 0.0
@@ -408,6 +413,10 @@ class FleetmixSolution:
     solver_name: str = "Unknown"
     solver_runtime_sec: float = 0.0
     time_measurements: list[TimeMeasurement] | None = None
+    optimality_gap: float | None = (
+        None  # Relative optimality gap (%) or None if unavailable
+    )
+    # TODO: add list of vehicleconfigs; make run_opt return fleetmixsolution only
 
     def __post_init__(self):
         """Calculate total cost after initialization."""

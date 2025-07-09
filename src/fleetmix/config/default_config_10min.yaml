@@ -1,3 +1,5 @@
+# TODO: add comments
+
 # ---------------------------------------------------------------------------
 # PROBLEM params
 # ---------------------------------------------------------------------------
@@ -90,9 +92,10 @@ format: 'json'  # Output format (excel or json)
 # RUNTIME params
 # ---------------------------------------------------------------------------
 
-verbose: true       # Enable verbose output
-debug: false        # Enable debug mode for solver and model
+# TODO: add solver parameters
+verbose: true      # Enable verbose output
+debug: false        # Enable debug mode 
 # TODO: check debug-milp mode
-solver: gurobi      # auto | gurobi | cbc
-gap_rel: 0.0        # relative MIP gap
-time_limit: 180     # seconds; None = no limit
+solver: gurobi        # auto | gurobi | cbc
+gap_rel: 0.005        # relative MIP gap
+time_limit: 600     # seconds; None = no limit

@@ -382,7 +382,6 @@ def optimize(
         try:
             save_optimization_results(
                 solution=solution,
-                configurations=configs,
                 parameters=params,
                 format=format,
             )

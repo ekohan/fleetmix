@@ -39,3 +39,8 @@ src/*.egg-info/
 # TODO: do add the paper
 paper_wip.txt
 paper/*
+
+# TODO: solve optimality gap implementation
+*-pulp.lp
+*-pulp.sol
+gurobi.log

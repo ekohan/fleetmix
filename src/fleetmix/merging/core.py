@@ -79,7 +79,6 @@ def _get_merged_route_time(
     return time, sequence
 
 
-# TODO: check DataFrame usage
 def generate_merge_phase_clusters(
     selected_clusters: pd.DataFrame,
     configurations: list[VehicleConfiguration],
@@ -99,7 +98,7 @@ def generate_merge_phase_clusters(
         selected_clusters: DataFrame of currently selected clusters
         configurations: List of vehicle configurations
         customers_df: DataFrame of all customers
-        params: Parameters object with merge configuration
+        params: FleetmixParams object with merge configuration like small_cluster_size and nearest_merge_candidates
         small_cluster_size: Optionally override ``params.small_cluster_size`` for this call.
         nearest_merge_candidates: Optionally override ``params.nearest_merge_candidates`` for this call.
 

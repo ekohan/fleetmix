@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from fleetmix.benchmarking.converters.mcvrp import convert_mcvrp_to_fsm
+from fleetmix.benchmarking.models import InstanceSpec
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 
 
@@ -21,7 +22,7 @@ def test_total_demand_preserved_and_expected_vehicles():
     # Parse original instance
     instance = parse_mcvrp(dat_path)
     # Convert to FSM format - pass instance name and custom path separately
-    df, params = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
+    df, instance_spec = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
 
     # Sum demands for customers only
     total_orig = sum(
@@ -35,8 +36,8 @@ def test_total_demand_preserved_and_expected_vehicles():
     assert pytest.approx(total_conv) == total_orig
 
     # Expected vehicles preserved and matches ceil(total / capacity)
-    assert params.problem.expected_vehicles == instance.vehicles
-    assert params.problem.expected_vehicles == math.ceil(total_orig / instance.capacity)
+    assert instance_spec.expected_vehicles == instance.vehicles
+    assert instance_spec.expected_vehicles == math.ceil(total_orig / instance.capacity)
 
 
 def test_dataframe_schema_and_vehicle_config():
@@ -53,7 +54,7 @@ def test_dataframe_schema_and_vehicle_config():
     # Parse original instance
     instance = parse_mcvrp(dat_path)
     # Convert to FSM format - pass instance name and custom path separately
-    df, params = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
+    df, instance_spec = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
 
     # DataFrame should have exactly these columns in order
     expected_cols = [
@@ -75,8 +76,8 @@ def test_dataframe_schema_and_vehicle_config():
     assert df["Frozen_Demand"].dtype == int or df["Frozen_Demand"].dtype == float
 
     # Check vehicle configuration in parameters
-    assert "MCVRP" in params.problem.vehicles
-    veh = params.problem.vehicles["MCVRP"]
+    assert "MCVRP" in instance_spec.vehicles
+    veh = instance_spec.vehicles["MCVRP"]
     assert veh.capacity == instance.capacity
     assert veh.fixed_cost == 1000
     assert veh.compartments == {"Dry": True, "Chilled": True, "Frozen": True}
@@ -96,7 +97,7 @@ def test_multi_instance_conversion():
     # Parse original instance
     instance = parse_mcvrp(dat_path)
     # Convert to FSM format - pass instance name and custom path separately
-    df, params = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
+    df, instance_spec = convert_mcvrp_to_fsm(dat_path.stem, custom_instance_path=dat_path)
 
     # Sum demands for customers only
     total_orig = sum(
@@ -110,8 +111,8 @@ def test_multi_instance_conversion():
     assert pytest.approx(total_conv) == total_orig
 
     # Expected vehicles preserved and matches ceil(total / capacity)
-    assert params.problem.expected_vehicles == instance.vehicles
-    assert params.problem.expected_vehicles == math.ceil(total_orig / instance.capacity)
+    assert instance_spec.expected_vehicles == instance.vehicles
+    assert instance_spec.expected_vehicles == math.ceil(total_orig / instance.capacity)
 
     # DataFrame should have exactly these columns in order
     expected_cols = [
@@ -133,8 +134,8 @@ def test_multi_instance_conversion():
     assert df["Frozen_Demand"].dtype == int or df["Frozen_Demand"].dtype == float
 
     # Check vehicle configuration in parameters
-    assert "MCVRP" in params.problem.vehicles
-    veh = params.problem.vehicles["MCVRP"]
+    assert "MCVRP" in instance_spec.vehicles
+    veh = instance_spec.vehicles["MCVRP"]
     assert veh.capacity == instance.capacity
     assert veh.fixed_cost == 1000
     assert veh.compartments == {"Dry": True, "Chilled": True, "Frozen": True}

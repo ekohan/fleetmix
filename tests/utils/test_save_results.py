@@ -58,6 +58,23 @@ class TestSaveOptimizationResults(unittest.TestCase):
                 method="hierarchical",
             ),
         ]
+
+        configs = [
+            VehicleConfiguration(
+                config_id="C1",
+                vehicle_type="Type1",
+                capacity=1000,
+                fixed_cost=100,
+                compartments={"Dry": True, "Chilled": True, "Frozen": False},
+            ),
+            VehicleConfiguration(
+                config_id="C2",
+                vehicle_type="Type2",
+                capacity=2000,
+                fixed_cost=200,
+                compartments={"Dry": True, "Frozen": True, "Chilled": False},
+            ),
+        ]
         
         # Create a FleetmixSolution instance for testing
         self.solution = FleetmixSolution(
@@ -75,24 +92,10 @@ class TestSaveOptimizationResults(unittest.TestCase):
             solver_status="Optimal",
             solver_runtime_sec=10.5,
             time_measurements=None,
+            configurations=configs,
         )
 
-        self.configurations = [
-            VehicleConfiguration(
-                config_id="C1",
-                vehicle_type="Type1",
-                capacity=1000,
-                fixed_cost=100,
-                compartments={"Dry": True, "Chilled": True, "Frozen": False},
-            ),
-            VehicleConfiguration(
-                config_id="C2",
-                vehicle_type="Type2",
-                capacity=2000,
-                fixed_cost=200,
-                compartments={"Dry": True, "Frozen": True, "Chilled": False},
-            ),
-        ]
+
 
         # Create a real FleetmixParams object instead of a mock
         problem_params = ProblemParams(
@@ -133,7 +136,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
             format="xlsx",
         )
 
-        runtime_params = RuntimeParams()
+        runtime_params = RuntimeParams(config=Path("test_config.yaml"))
 
         self.parameters = FleetmixParams(
             problem=problem_params,
@@ -152,7 +155,6 @@ class TestSaveOptimizationResults(unittest.TestCase):
         try:
             save_optimization_results(
                 solution=self.solution,
-                configurations=self.configurations,
                 parameters=self.parameters,
                 filename=temp_file,
                 format="xlsx",
@@ -178,7 +180,6 @@ class TestSaveOptimizationResults(unittest.TestCase):
         try:
             save_optimization_results(
                 solution=self.solution,
-                configurations=self.configurations,
                 parameters=self.parameters,
                 filename=temp_file,
                 format="json",
@@ -202,7 +203,6 @@ class TestSaveOptimizationResults(unittest.TestCase):
 
         save_optimization_results(
             solution=self.solution,
-            configurations=self.configurations,
             parameters=self.parameters,
             format="xlsx",  # Explicitly specify xlsx format to ensure _write_to_excel is called
         )
@@ -241,11 +241,11 @@ class TestSaveOptimizationResults(unittest.TestCase):
             solver_status=self.solution.solver_status,
             solver_runtime_sec=self.solution.solver_runtime_sec,
             time_measurements=time_measurements_list,
+            configurations=self.solution.configurations,
         )
 
         save_optimization_results(
             solution=solution_with_times,
-            configurations=self.configurations,
             parameters=self.parameters,
             format="xlsx",  # Explicitly specify xlsx format to ensure _write_to_excel is called
         )

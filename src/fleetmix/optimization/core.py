@@ -237,7 +237,7 @@ def _solve_internal(
     # Update Goods_In_Config based on assigned config's allowed goods
     selected_clusters["Goods_In_Config"] = selected_clusters.apply(
         lambda row: [good for good in parameters.problem.goods if row[good] == 1],
-        axis=1
+        axis=1,
     )
 
     # Calculate statistics using the actual optimization costs

@@ -4,6 +4,7 @@ API facade for Fleetmix - provides a single entry point for programmatic usage.
 
 import dataclasses
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -144,7 +145,7 @@ def optimize(
     output_dir: str = "results",
     format: str = "json",
     verbose: bool = False,
-    allow_split_stops: bool = False,
+    allow_split_stops: Optional[bool] = None,
 ) -> FleetmixSolution:
     """
     Optimize fleet size and mix for given demand and configuration.
@@ -256,7 +257,7 @@ def optimize(
                 )
 
         # Override allow_split_stops if provided via API
-        if allow_split_stops != params.problem.allow_split_stops:
+        if allow_split_stops is not None:
             params = dataclasses.replace(
                 params,
                 problem=dataclasses.replace(

@@ -4,6 +4,7 @@ Command-line interface for Fleetmix using Typer.
 
 import dataclasses
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 import typer
@@ -116,7 +117,7 @@ def _run_single_instance(
     output_dir: Path | None = None,
     format: str = "json",
     verbose: bool = False,
-    allow_split_stops: bool = False,
+    allow_split_stops: Optional[bool] = None,
     config_path: Path | None = None,
 ) -> None:
     """Run a single benchmark instance."""
@@ -175,14 +176,14 @@ def _run_single_instance(
                 params, io=dataclasses.replace(params.io, results_dir=output_dir)
             )
 
-        # Set allow_split_stops explicitly (don't rely on default config)
-        # TODO check this flag
-        params = dataclasses.replace(
-            params,
-            problem=dataclasses.replace(
-                params.problem, allow_split_stops=allow_split_stops
-            ),
-        )
+        # Override allow_split_stops if specified
+        if allow_split_stops is not None:
+            params = dataclasses.replace(
+                params,
+                problem=dataclasses.replace(
+                    params.problem, allow_split_stops=allow_split_stops
+                ),
+            )
 
         # Use the unified pipeline interface for conversion
         customers_df, instance_spec = convert_to_fsm(
@@ -296,11 +297,16 @@ def _run_single_instance(
                 params, io=dataclasses.replace(params.io, results_dir=output_dir)
             )
 
-        # Ignore split-stop flag for single-product CVRP NORMAL benchmarks
-        if allow_split_stops:
+        # For CVRP normal: force disable split-stops as it's single-product
+        was_enabled = params.problem.allow_split_stops
+        if allow_split_stops is True or (allow_split_stops is None and was_enabled):
             log_debug(
-                "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmark (single-product instance).[/yellow]"
+                "[yellow]⚠ Ignoring split-stops for CVRP NORMAL benchmark (single-product instance) – forcing to False.[/yellow]"
             )
+        params = dataclasses.replace(
+            params,
+            problem=dataclasses.replace(params.problem, allow_split_stops=False),
+        )
 
         # Use the unified pipeline interface for conversion
         # CVRP requires benchmark_type and uses instance_names instead of instance_path
@@ -419,13 +425,14 @@ def _run_single_instance(
                 params, io=dataclasses.replace(params.io, results_dir=output_dir)
             )
 
-        # Set allow_split_stops explicitly
-        params = dataclasses.replace(
-            params,
-            problem=dataclasses.replace(
-                params.problem, allow_split_stops=allow_split_stops
-            ),
-        )
+        # Override allow_split_stops if specified
+        if allow_split_stops is not None:
+            params = dataclasses.replace(
+                params,
+                problem=dataclasses.replace(
+                    params.problem, allow_split_stops=allow_split_stops
+                ),
+            )
 
         # Load customer data using the data processing utility
         from fleetmix.utils.data_processing import load_customer_demand
@@ -483,7 +490,7 @@ def _run_all_mcvrp_instances(
     output_dir: Path | None = None,
     verbose: bool = False,
     debug: bool = False,
-    allow_split_stops: bool = False,
+    allow_split_stops: Optional[bool] = None,
     config_path: Path | None = None,
 ) -> None:
     """Run benchmarks for all MCVRP instances."""
@@ -509,13 +516,14 @@ def _run_all_mcvrp_instances(
                     params, io=dataclasses.replace(params.io, results_dir=output_dir)
                 )
 
-            # Set allow_split_stops explicitly (don't rely on default config)
-            params = dataclasses.replace(
-                params,
-                problem=dataclasses.replace(
-                    params.problem, allow_split_stops=allow_split_stops
-                ),
-            )
+            # Override allow_split_stops if specified
+            if allow_split_stops is not None:
+                params = dataclasses.replace(
+                    params,
+                    problem=dataclasses.replace(
+                        params.problem, allow_split_stops=allow_split_stops
+                    ),
+                )
 
             # Use the unified pipeline interface for conversion
             customers_df, instance_spec = convert_to_fsm(
@@ -557,7 +565,7 @@ def _run_all_cvrp_instances(
     output_dir: Path | None = None,
     verbose: bool = False,
     debug: bool = False,
-    allow_split_stops: bool = False,
+    allow_split_stops: Optional[bool] = None,
     config_path: Path | None = None,
 ) -> None:
     """Run benchmarks for all CVRP instances."""
@@ -583,10 +591,20 @@ def _run_all_cvrp_instances(
                     params, io=dataclasses.replace(params.io, results_dir=output_dir)
                 )
 
-            # Ignore split-stop flag for CVRP NORMAL benchmarks (single product)
-            if allow_split_stops:
+            # Override allow_split_stops if specified
+            if allow_split_stops is not None:
                 log_debug(
                     "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmarks (single-product instances).[/yellow]"
+                )
+            if allow_split_stops is not None:
+                params = dataclasses.replace(
+                    params,
+                    problem=dataclasses.replace(
+                        params.problem,
+                        allow_split_stops=allow_split_stops
+                        if allow_split_stops is not None
+                        else False,
+                    ),
                 )
 
             # Use the unified pipeline interface for conversion
@@ -633,7 +651,7 @@ def _run_all_case_instances(
     output_dir: Path | None = None,
     verbose: bool = False,
     debug: bool = False,
-    allow_split_stops: bool = False,
+    allow_split_stops: Optional[bool] = None,
     config_path: Path | None = None,
 ) -> None:
     """Run benchmarks for all case instances."""
@@ -659,13 +677,14 @@ def _run_all_case_instances(
                     params, io=dataclasses.replace(params.io, results_dir=output_dir)
                 )
 
-            # Set allow_split_stops explicitly
-            params = dataclasses.replace(
-                params,
-                problem=dataclasses.replace(
-                    params.problem, allow_split_stops=allow_split_stops
-                ),
-            )
+            # Override allow_split_stops if specified
+            if allow_split_stops is not None:
+                params = dataclasses.replace(
+                    params,
+                    problem=dataclasses.replace(
+                        params.problem, allow_split_stops=allow_split_stops
+                    ),
+                )
 
             # Load customer data using the data processing utility
             from fleetmix.utils.data_processing import load_customer_demand
@@ -733,9 +752,9 @@ def optimize(
         False, "--quiet", "-q", help="Minimal output (errors only)"
     ),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
-    allow_split_stops: bool = typer.Option(
-        False,
-        "--allow-split-stops",
+    allow_split_stops: Optional[bool] = typer.Option(
+        None,
+        "--allow-split-stops/--no-split-stops",
         help="Allow customers to be served by multiple vehicles",
     ),
     debug_milp: Path | None = typer.Option(
@@ -897,9 +916,9 @@ def benchmark(
         False, "--quiet", "-q", help="Minimal output (errors only)"
     ),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
-    allow_split_stops: bool = typer.Option(
-        False,
-        "--allow-split-stops",
+    allow_split_stops: Optional[bool] = typer.Option(
+        None,
+        "--allow-split-stops/--no-split-stops",
         help="Allow customers to be served by multiple vehicles",
     ),
     debug_milp: Path | None = typer.Option(
@@ -1003,9 +1022,9 @@ def convert(
         False, "--quiet", "-q", help="Minimal output (errors only)"
     ),
     debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
-    allow_split_stops: bool = typer.Option(
-        False,
-        "--allow-split-stops",
+    allow_split_stops: Optional[bool] = typer.Option(
+        None,
+        "--allow-split-stops/--no-split-stops",
         help="Allow customers to be served by multiple vehicles",
     ),
     debug_milp: Path | None = typer.Option(
@@ -1105,6 +1124,15 @@ def convert(
         if output:
             params = dataclasses.replace(
                 params, io=dataclasses.replace(params.io, results_dir=output)
+            )
+
+        # Override allow_split_stops if specified
+        if allow_split_stops is not None:
+            params = dataclasses.replace(
+                params,
+                problem=dataclasses.replace(
+                    params.problem, allow_split_stops=allow_split_stops
+                ),
             )
 
         # Run optimization

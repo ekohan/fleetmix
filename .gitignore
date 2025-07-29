@@ -43,4 +43,5 @@ paper/*
 # TODO: solve optimality gap implementation
 *-pulp.lp
 *-pulp.sol
+gurobi.logexperiments/*/results/*
 gurobi.log

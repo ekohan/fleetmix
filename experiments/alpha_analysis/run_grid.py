@@ -12,9 +12,11 @@ from experiments.alpha_analysis.config import ALPHA_GRID, C_VALUES, DEMAND_FILES
 from experiments.alpha_analysis.fleet_templates import make_scv_fleet, make_mcv_fleet
 from experiments.alpha_analysis.run_day import run_day
 
-RESULTS_RAW = Path("results_raw_v4")
-RESULTS_RAW.mkdir(exist_ok=True)
-SUMMARY_PATH = Path("results/summary_v4.parquet")
+PKG_DIR = Path(__file__).resolve().parent
+RESULTS_RAW  = PKG_DIR / "results" / "raw"
+RESULTS_RAW.mkdir(parents=True, exist_ok=True)
+SUMMARY_PATH = PKG_DIR / "results" / "summary.parquet"
+
 
 def convert_numpy_types(obj):
     """Convert numpy types and complex objects to native Python types for JSON serialization."""
@@ -43,7 +45,12 @@ def convert_numpy_types(obj):
     else:
         return obj
 
-def main():
+def main(config_path: Path | None = None) -> None:
+    """
+    CLI entry-point wrapper.
+    `config_path` is accepted for future use but ignored for now –
+    the module still relies on config.py constants.
+    """
     all_results = []
     combos = [(d, 1.0, 0.0, 'SCV') for d in DEMAND_FILES] + [(d, a, c, 'MCV') for d in DEMAND_FILES for a in ALPHA_GRID for c in C_VALUES]
     for demand_path, alpha, c, fleet_type in tqdm(combos):

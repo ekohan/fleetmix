@@ -253,7 +253,7 @@ def plot_economic_sweet_spot_enhanced(df: pd.DataFrame) -> None:
             if pd.isna(val):
                 annot.loc[a, c] = ""
             else:
-                win_rate_val = float(pivot_wr.loc[a, c])  # type: ignore
+                win_rate_val = float(pivot_wr.loc[a, c])  # type: ignore[arg-type]
                 wins = int(round(win_rate_val * days))
                 annot.loc[a, c] = f"{val:.0f}%\n{wins}/{days}"
 

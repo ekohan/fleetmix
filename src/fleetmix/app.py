@@ -1254,7 +1254,7 @@ def experiments(
 ):
     """
     Run experimental analyses.
-    
+
     Actions:
     - list: Show available experiments
     - run: Execute experiment grid runs
@@ -1262,8 +1262,10 @@ def experiments(
     """
     if action == "list":
         import fleetmix.experiments as exp_pkg
-        
-        available = [name for _, name, is_pkg in pkgutil.iter_modules(exp_pkg.__path__) if is_pkg]
+
+        available = [
+            name for _, name, is_pkg in pkgutil.iter_modules(exp_pkg.__path__) if is_pkg
+        ]
         if available:
             console.print("Available experiments:")
             for exp_name in available:
@@ -1281,23 +1283,25 @@ def experiments(
         if action == "run":
             if experiment == "alpha_analysis":
                 from fleetmix.experiments.alpha_analysis.run_grid import main
+
                 main(config_path)
             else:
                 log_error(f"Unknown experiment '{experiment}' for action 'run'")
                 raise typer.Exit(1)
-                
+
         elif action == "analyze":
             if experiment == "alpha_analysis":
                 from fleetmix.experiments.alpha_analysis.analyze import main
+
                 main(config_path)
             else:
                 log_error(f"Unknown experiment '{experiment}' for action 'analyze'")
                 raise typer.Exit(1)
-                
+
         else:
             log_error(f"Unknown action '{action}'. Use 'list', 'run', or 'analyze'")
             raise typer.Exit(1)
-            
+
     except ImportError as e:
         log_error(f"Failed to import experiment module: {e}")
         raise typer.Exit(1)

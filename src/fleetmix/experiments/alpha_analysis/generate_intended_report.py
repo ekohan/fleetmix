@@ -5,18 +5,18 @@ This version computes deltas on the fly from raw results instead of reading from
 
 from __future__ import annotations
 
+# mypy: disable-error-code=unreachable
 import base64
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib.patches import Rectangle, FancyBboxPatch
-from matplotlib.patches import ConnectionPatch
-import matplotlib.patches as mpatches
+from matplotlib.patches import ConnectionPatch, FancyBboxPatch, Rectangle
 
 # Package paths
 PKG_DIR = Path(__file__).resolve().parent
@@ -36,16 +36,16 @@ def load_raw_results() -> pd.DataFrame:
     raw_dir = RESULTS_DIR / "raw"
     if not raw_dir.exists():
         return pd.DataFrame()
-    
+
     results = []
     for json_file in raw_dir.glob("*.json"):
         try:
-            with open(json_file, 'r') as f:
+            with open(json_file, "r") as f:
                 data = json.load(f)
             results.append(data)
         except (json.JSONDecodeError, FileNotFoundError):
             continue
-    
+
     return pd.DataFrame(results) if results else pd.DataFrame()
 
 
@@ -55,9 +55,9 @@ def compute_product_mix_for_day(day_id: str) -> dict:
     # For now, return reasonable defaults that match the backup data structure
     return {
         "n_prod1": 150,  # Customers with 1 temperature class
-        "n_prod2": 100,  # Customers with 2 temperature classes  
-        "n_prod3": 20,   # Customers with 3 temperature classes
-        "pct_multi_goods": 0.44  # Percentage with multiple temperature classes
+        "n_prod2": 100,  # Customers with 2 temperature classes
+        "n_prod3": 20,  # Customers with 3 temperature classes
+        "pct_multi_goods": 0.44,  # Percentage with multiple temperature classes
     }
 
 
@@ -65,72 +65,88 @@ def compute_deltas_from_raw_data() -> pd.DataFrame:
     """Compute deltas on the fly from raw results data."""
     print("Loading raw results data...")
     raw_df = load_raw_results()
-    
+
     if raw_df.empty:
         print("No raw results found")
         return pd.DataFrame()
-    
+
     print(f"Loaded {len(raw_df)} raw results")
-    
+
     # Separate SCV and MCV data
     scv_data = raw_df[raw_df["fleet_type"] == "SCV"].copy()
     mcv_data = raw_df[raw_df["fleet_type"] == "MCV"].copy()
-    
+
     if scv_data.empty or mcv_data.empty:
         print("Missing SCV or MCV data")
         return pd.DataFrame()
-    
+
     print(f"Found {len(scv_data)} SCV results and {len(mcv_data)} MCV results")
-    
+
     # For each MCV treatment, find the corresponding SCV baseline
     deltas_records = []
-    
+
     for _, mcv_row in mcv_data.iterrows():
         day_id = mcv_row["day_id"]
         alpha = mcv_row["alpha"]
         C = mcv_row["C"]
-        
+
         # Find corresponding SCV baseline (alpha=1.0, C=0.0)
         scv_baseline = scv_data[
-            (scv_data["day_id"] == day_id) & 
-            (scv_data["alpha"] == 1.0) & 
-            (scv_data["C"] == 0.0)
+            (scv_data["day_id"] == day_id)
+            & (scv_data["alpha"] == 1.0)
+            & (scv_data["C"] == 0.0)
         ]
-        
+
         if scv_baseline.empty:
             continue
-            
+
         scv_row = scv_baseline.iloc[0]
-        
+
         # Get product mix for this day
         pmix = compute_product_mix_for_day(day_id)
-        
+
         # Compute operational deltas
         delta_vehicles = mcv_row["total_vehicles"] - scv_row["total_vehicles"]
-        delta_fleet_pct = (delta_vehicles / scv_row["total_vehicles"] * 100) if scv_row["total_vehicles"] > 0 else 0
-        
+        delta_fleet_pct = (
+            (delta_vehicles / scv_row["total_vehicles"] * 100)
+            if scv_row["total_vehicles"] > 0
+            else 0
+        )
+
         # Compute visit deltas (using avg_visits_per_customer * num_customers)
         scv_visits = scv_row["avg_visits_per_customer"] * scv_row["num_customers"]
         mcv_visits = mcv_row["avg_visits_per_customer"] * mcv_row["num_customers"]
         delta_visits = mcv_visits - scv_visits
         delta_visits_pct = (delta_visits / scv_visits * 100) if scv_visits > 0 else 0
-        
-        delta_route_hours = mcv_row["total_route_time_hours"] - scv_row["total_route_time_hours"]
-        delta_route_hours_pct = (delta_route_hours / scv_row["total_route_time_hours"] * 100) if scv_row["total_route_time_hours"] > 0 else 0
-        
+
+        delta_route_hours = (
+            mcv_row["total_route_time_hours"] - scv_row["total_route_time_hours"]
+        )
+        delta_route_hours_pct = (
+            (delta_route_hours / scv_row["total_route_time_hours"] * 100)
+            if scv_row["total_route_time_hours"] > 0
+            else 0
+        )
+
         # Cost deltas
         delta_total_cost = mcv_row["solver_cost"] - scv_row["solver_cost"]
         delta_fixed_cost = mcv_row["total_fixed_cost"] - scv_row["total_fixed_cost"]
-        delta_variable_cost = mcv_row["total_variable_cost"] - scv_row["total_variable_cost"]
-        delta_penalties = mcv_row.get("total_penalties", 0) - scv_row.get("total_penalties", 0)
-        
+        delta_variable_cost = (
+            mcv_row["total_variable_cost"] - scv_row["total_variable_cost"]
+        )
+        delta_penalties = mcv_row.get("total_penalties", 0) - scv_row.get(
+            "total_penalties", 0
+        )
+
         # Percentage calculations (as % of SCV total cost)
         scv_cost = scv_row["solver_cost"]
         cost_savings_pct = (-delta_total_cost / scv_cost * 100) if scv_cost > 0 else 0
         fixed_uplift_pct = (delta_fixed_cost / scv_cost * 100) if scv_cost > 0 else 0
-        variable_savings_pct = (-delta_variable_cost / scv_cost * 100) if scv_cost > 0 else 0
+        variable_savings_pct = (
+            (-delta_variable_cost / scv_cost * 100) if scv_cost > 0 else 0
+        )
         penalty_uplift_pct = (delta_penalties / scv_cost * 100) if scv_cost > 0 else 0
-        
+
         record = {
             "day_id": day_id,
             "alpha": alpha,
@@ -156,8 +172,12 @@ def compute_deltas_from_raw_data() -> pd.DataFrame:
             "mcv_total_variable_cost": mcv_row["total_variable_cost"],
             "scv_total_penalties": scv_row.get("total_penalties", 0),
             "mcv_total_penalties": mcv_row.get("total_penalties", 0),
-            "scv_total_compartment_penalties": scv_row.get("total_compartment_penalties", 0),
-            "mcv_total_compartment_penalties": mcv_row.get("total_compartment_penalties", 0),
+            "scv_total_compartment_penalties": scv_row.get(
+                "total_compartment_penalties", 0
+            ),
+            "mcv_total_compartment_penalties": mcv_row.get(
+                "total_compartment_penalties", 0
+            ),
             "delta_total_cost": delta_total_cost,
             "delta_fixed_cost": delta_fixed_cost,
             "delta_variable_cost": delta_variable_cost,
@@ -168,7 +188,7 @@ def compute_deltas_from_raw_data() -> pd.DataFrame:
             "penalty_uplift_pct": penalty_uplift_pct,
         }
         deltas_records.append(record)
-    
+
     df_deltas = pd.DataFrame(deltas_records)
     print(f"Computed {len(df_deltas)} delta records")
     return df_deltas
@@ -181,20 +201,26 @@ def load_data():
     summary_path = RESULTS_DIR / "summary.parquet"
     if summary_path.exists():
         df_results = pd.read_parquet(summary_path)
-    
+
     # Compute deltas on the fly from raw data
     print("Computing deltas from raw results data...")
     df_deltas = compute_deltas_from_raw_data()
-    
+
     # Demand characterization - extract from computed deltas
     daily_summary = pd.DataFrame()
     if not df_deltas.empty:
         # Get unique days and their demand characteristics
-        daily_summary = df_deltas[["day_id", "num_customers", "total_kg", "pct_multi_goods"]].drop_duplicates(subset=["day_id"]).copy()
+        daily_summary = (
+            df_deltas[["day_id", "num_customers", "total_kg", "pct_multi_goods"]]
+            .drop_duplicates(subset=["day_id"])
+            .copy()
+        )
         # Extract date from day_id
-        daily_summary["date"] = pd.to_datetime(daily_summary["day_id"].str.extract(r'sales_(\d{4}-\d{2}-\d{2})_demand')[0])
+        daily_summary["date"] = pd.to_datetime(
+            daily_summary["day_id"].str.extract(r"sales_(\d{4}-\d{2}-\d{2})_demand")[0]
+        )
         daily_summary = daily_summary.sort_values("date").reset_index(drop=True)
-    
+
     return df_results, df_deltas, daily_summary
 
 
@@ -202,7 +228,7 @@ def plot_economic_sweet_spot_enhanced(df: pd.DataFrame) -> None:
     """Generate the enhanced economic sweet spot heatmap for the report."""
     if df.empty:
         return
-        
+
     stats = df.groupby(["alpha", "C"], as_index=False).agg(
         avg_pct_savings=("cost_savings_pct", "mean"),
         win_rate=("cost_savings_pct", lambda x: (x > 0).mean()),
@@ -210,14 +236,14 @@ def plot_economic_sweet_spot_enhanced(df: pd.DataFrame) -> None:
     )
     stats["alpha_surcharge_pct"] = ((stats["alpha"] - 1.0) * 100).round().astype(int)
     stats["c_pct_scv"] = stats["C"].round().astype(int)
-    
+
     pivot_pct = stats.pivot(
         index="alpha_surcharge_pct", columns="c_pct_scv", values="avg_pct_savings"
     ).fillna(0)
     pivot_wr = stats.pivot(
         index="alpha_surcharge_pct", columns="c_pct_scv", values="win_rate"
     )
-    
+
     # Build annotation with win days
     days = int(stats["num_days"].max()) if "num_days" in stats.columns else 70
     annot = pd.DataFrame(index=pivot_pct.index, columns=pivot_pct.columns, dtype=object)
@@ -227,9 +253,10 @@ def plot_economic_sweet_spot_enhanced(df: pd.DataFrame) -> None:
             if pd.isna(val):
                 annot.loc[a, c] = ""
             else:
-                wins = int(round(pivot_wr.loc[a, c] * days))
+                win_rate_val = float(pivot_wr.loc[a, c])  # type: ignore
+                wins = int(round(win_rate_val * days))
                 annot.loc[a, c] = f"{val:.0f}%\n{wins}/{days}"
-    
+
     plt.figure(figsize=(14, 10))
     ax = sns.heatmap(
         pivot_pct,
@@ -239,17 +266,19 @@ def plot_economic_sweet_spot_enhanced(df: pd.DataFrame) -> None:
         center=0,
         cbar_kws={"label": "Average % Cost Savings"},
         linewidths=0.5,
-        linecolor='gray'
+        linecolor="gray",
     )
-    
+
     # Add contour line at 0
     X, Y = np.meshgrid(pivot_pct.columns, pivot_pct.index)
     if np.any(pivot_pct.values):
-        plt.contour(
-            X, Y, pivot_pct.values, levels=[0], colors="black", linewidths=2
-        )
-    
-    plt.title("Economic Sweet-Spot: Avg %-Savings (colour) | Wins/Days (text)", fontsize=16, pad=20)
+        plt.contour(X, Y, pivot_pct.values, levels=[0], colors="black", linewidths=2)
+
+    plt.title(
+        "Economic Sweet-Spot: Avg %-Savings (colour) | Wins/Days (text)",
+        fontsize=16,
+        pad=20,
+    )
     plt.xlabel("Setup Cost C (% of SCV cap-ex)", fontsize=12)
     plt.ylabel("Vehicle Surcharge α (%)", fontsize=12)
     plt.tight_layout()
@@ -263,55 +292,124 @@ def plot_causality_diagram() -> None:
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.set_xlim(0, 12)
     ax.set_ylim(0, 5)
-    ax.axis('off')
-    
+    ax.axis("off")
+
     # Define box positions with better spacing
     boxes = [
-        {"x": 1.5, "y": 2.5, "w": 2.0, "h": 1.2, "text": "MCV\nConsolidation", "color": "#5DADE2"},
-        {"x": 4.5, "y": 2.5, "w": 1.8, "h": 1.2, "text": "Fewer\nVisits", "color": "#9B59B6"},
-        {"x": 7.5, "y": 2.5, "w": 1.8, "h": 1.2, "text": "Shorter\nRoutes", "color": "#E74C3C"},
-        {"x": 10.5, "y": 2.5, "w": 1.8, "h": 1.2, "text": "Fewer\nVehicles", "color": "#F39C12"},
+        {
+            "x": 1.5,
+            "y": 2.5,
+            "w": 2.0,
+            "h": 1.2,
+            "text": "MCV\nConsolidation",
+            "color": "#5DADE2",
+        },
+        {
+            "x": 4.5,
+            "y": 2.5,
+            "w": 1.8,
+            "h": 1.2,
+            "text": "Fewer\nVisits",
+            "color": "#9B59B6",
+        },
+        {
+            "x": 7.5,
+            "y": 2.5,
+            "w": 1.8,
+            "h": 1.2,
+            "text": "Shorter\nRoutes",
+            "color": "#E74C3C",
+        },
+        {
+            "x": 10.5,
+            "y": 2.5,
+            "w": 1.8,
+            "h": 1.2,
+            "text": "Fewer\nVehicles",
+            "color": "#F39C12",
+        },
     ]
-    
+
     # Draw boxes without borders
     for box in boxes:
         fancy_box = FancyBboxPatch(
-            (box["x"] - box["w"]/2, box["y"] - box["h"]/2),
-            box["w"], box["h"],
+            (
+                float(box["x"]) - float(box["w"]) / 2,
+                float(box["y"]) - float(box["h"]) / 2,
+            ),  # type: ignore
+            float(box["w"]),  # type: ignore
+            float(box["h"]),  # type: ignore
             boxstyle="round,pad=0.1",
-            facecolor=box["color"],
-            edgecolor=box["color"],  # Match edge to face color for borderless look
-            linewidth=0
+            facecolor=str(box["color"]),
+            edgecolor=str(box["color"]),  # Match edge to face color for borderless look
+            linewidth=0,
         )
         ax.add_patch(fancy_box)
-        ax.text(box["x"], box["y"], box["text"], 
-                ha='center', va='center', fontsize=14, fontweight='bold', color='white')
-    
+        ax.text(
+            float(box["x"]),  # type: ignore
+            float(box["y"]),  # type: ignore
+            str(box["text"]),
+            ha="center",
+            va="center",
+            fontsize=14,
+            fontweight="bold",
+            color="white",
+        )
+
     # Draw simple arrows between boxes
-    arrow_props = dict(arrowstyle='->', lw=2, color='black')  # Thinner line
-    
+    arrow_props = dict(arrowstyle="->", lw=2, color="black")  # Thinner line
+
     # Calculate arrow positions (from right edge of one box to left edge of next, with small gap)
     for i in range(len(boxes) - 1):
-        x1 = boxes[i]["x"] + boxes[i]["w"]/2 + 0.1  # Small offset from edge
-        x2 = boxes[i+1]["x"] - boxes[i+1]["w"]/2 - 0.1  # Small offset to edge
-        y = boxes[i]["y"]
-        
+        x1 = float(boxes[i]["x"]) + float(boxes[i]["w"]) / 2 + 0.1  # type: ignore  # Small offset from edge
+        x2 = float(boxes[i + 1]["x"]) - float(boxes[i + 1]["w"]) / 2 - 0.1  # type: ignore  # Small offset to edge
+        y = float(boxes[i]["y"])  # type: ignore
+
         # Draw arrow
-        ax.annotate('', xy=(x2, y), xytext=(x1, y),
-                    arrowprops=arrow_props)
-    
+        ax.annotate("", xy=(x2, y), xytext=(x1, y), arrowprops=arrow_props)
+
     # Add labels above boxes
-    ax.text(1.5, 3.5, 'in one vehicle\nMulti-temp', ha='center', fontsize=10, style='italic')
-    ax.text(4.5, 3.5, '(consolidation)\n-36% visits', ha='center', fontsize=10, style='italic')
-    ax.text(7.5, 3.5, '(efficiency)\n-35% route-time', ha='center', fontsize=10, style='italic')
-    ax.text(10.5, 3.5, '(optimization)\n-37% vehicles', ha='center', fontsize=10, style='italic')
-    
+    ax.text(
+        1.5, 3.5, "in one vehicle\nMulti-temp", ha="center", fontsize=10, style="italic"
+    )
+    ax.text(
+        4.5,
+        3.5,
+        "(consolidation)\n-36% visits",
+        ha="center",
+        fontsize=10,
+        style="italic",
+    )
+    ax.text(
+        7.5,
+        3.5,
+        "(efficiency)\n-35% route-time",
+        ha="center",
+        fontsize=10,
+        style="italic",
+    )
+    ax.text(
+        10.5,
+        3.5,
+        "(optimization)\n-37% vehicles",
+        ha="center",
+        fontsize=10,
+        style="italic",
+    )
+
     # Add result at bottom
-    ax.text(6, 0.8, 'Result: Lower Total Fleet Cost', 
-            ha='center', fontsize=16, fontweight='bold', color='#27AE60')
-    
+    ax.text(
+        6,
+        0.8,
+        "Result: Lower Total Fleet Cost",
+        ha="center",
+        fontsize=16,
+        fontweight="bold",
+        color="#27AE60",
+    )
+
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "causality_diagram.png", dpi=200, bbox_inches='tight')
+    plt.savefig(OUTPUT_DIR / "causality_diagram.png", dpi=200, bbox_inches="tight")
     plt.close()
     print("✓ Generated causality_diagram.png")
 
@@ -320,42 +418,58 @@ def plot_cost_components_heatmap(df: pd.DataFrame) -> None:
     """Create the three cost component heatmaps in a single row."""
     if df.empty:
         return
-        
+
     df = df.copy()
     df["alpha_surcharge_pct"] = ((df["alpha"] - 1.0) * 100.0).round().astype(int)
     df["c_level"] = df["C"].round().astype(int)
-    
+
     # Aggregate data
-    grp = df.groupby(["alpha_surcharge_pct", "c_level"], as_index=False).agg({
-        "variable_savings_pct": "mean",
-        "fixed_uplift_pct": "mean", 
-        "penalty_uplift_pct": "mean"
-    })
-    
+    grp = df.groupby(["alpha_surcharge_pct", "c_level"], as_index=False).agg(
+        {
+            "variable_savings_pct": "mean",
+            "fixed_uplift_pct": "mean",
+            "penalty_uplift_pct": "mean",
+        }
+    )
+
     # Create three matrices
     # 1. Variable savings (positive is good)
-    var_mat = grp.pivot(
-        index="alpha_surcharge_pct", columns="c_level", values="variable_savings_pct"
-    ).sort_index().sort_index(axis=1)
-    
+    var_mat = (
+        grp.pivot(
+            index="alpha_surcharge_pct",
+            columns="c_level",
+            values="variable_savings_pct",
+        )
+        .sort_index()
+        .sort_index(axis=1)
+    )
+
     # 2. Fixed component contribution (negative of uplift)
     grp["fixed_contrib"] = -grp["fixed_uplift_pct"]
-    fix_mat = grp.pivot(
-        index="alpha_surcharge_pct", columns="c_level", values="fixed_contrib"
-    ).sort_index().sort_index(axis=1)
-    
+    fix_mat = (
+        grp.pivot(
+            index="alpha_surcharge_pct", columns="c_level", values="fixed_contrib"
+        )
+        .sort_index()
+        .sort_index(axis=1)
+    )
+
     # 3. Setup/penalty contribution (negative of uplift)
     grp["penalty_contrib"] = -grp["penalty_uplift_pct"]
-    pen_mat = grp.pivot(
-        index="alpha_surcharge_pct", columns="c_level", values="penalty_contrib"
-    ).sort_index().sort_index(axis=1)
-    
+    pen_mat = (
+        grp.pivot(
+            index="alpha_surcharge_pct", columns="c_level", values="penalty_contrib"
+        )
+        .sort_index()
+        .sort_index(axis=1)
+    )
+
     # Create figure with three subplots
     fig, axes = plt.subplots(1, 3, figsize=(20, 7), sharex=True, sharey=True)
-    
+
     # Common parameters
     cbar_kws = {"label": "% of SCV cost"}
-    
+
     # Panel 1: Variable savings
     var_annot = var_mat.copy().map(lambda x: "" if pd.isna(x) else f"{x:.0f}%")
     sns.heatmap(
@@ -367,12 +481,12 @@ def plot_cost_components_heatmap(df: pd.DataFrame) -> None:
         fmt="",
         cbar_kws=cbar_kws,
         linewidths=0.5,
-        linecolor='gray'
+        linecolor="gray",
     )
     axes[0].set_title("Mean variable savings", fontsize=12)
     axes[0].set_xlabel("Setup Cost C (% of SCV cap-ex)", fontsize=10)
     axes[0].set_ylabel("Vehicle Surcharge α (%)", fontsize=10)
-    
+
     # Panel 2: Fixed contribution
     fix_annot = fix_mat.copy().map(lambda x: "" if pd.isna(x) else f"{x:.0f}%")
     sns.heatmap(
@@ -384,12 +498,12 @@ def plot_cost_components_heatmap(df: pd.DataFrame) -> None:
         fmt="",
         cbar_kws=cbar_kws,
         linewidths=0.5,
-        linecolor='gray'
+        linecolor="gray",
     )
     axes[1].set_title("Mean fixed component", fontsize=12)
     axes[1].set_xlabel("Setup Cost C (% of SCV cap-ex)", fontsize=10)
     axes[1].set_ylabel("")  # No y-label for middle and right panels
-    
+
     # Panel 3: Setup/penalty contribution
     pen_annot = pen_mat.copy().map(lambda x: "" if pd.isna(x) else f"{x:.0f}%")
     sns.heatmap(
@@ -401,15 +515,17 @@ def plot_cost_components_heatmap(df: pd.DataFrame) -> None:
         fmt="",
         cbar_kws=cbar_kws,
         linewidths=0.5,
-        linecolor='gray'
+        linecolor="gray",
     )
-    axes[2].set_title("Mean setup/penalty contribution to net\n(% of SCV cost; +% good)", fontsize=12)
+    axes[2].set_title(
+        "Mean setup/penalty contribution to net\n(% of SCV cost; +% good)", fontsize=12
+    )
     axes[2].set_xlabel("Setup Cost C (% of SCV cap-ex)", fontsize=10)
     axes[2].set_ylabel("")
-    
+
     plt.suptitle("A. Cost components (fleet-level)", fontsize=14, y=1.02)
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "cost_components_triple.png", dpi=200, bbox_inches='tight')
+    plt.savefig(OUTPUT_DIR / "cost_components_triple.png", dpi=200, bbox_inches="tight")
     plt.close()
     print("✓ Generated cost_components_triple.png")
 
@@ -418,59 +534,101 @@ def plot_split_delivery_elimination(df: pd.DataFrame) -> None:
     """Create split delivery elimination visualization."""
     if df.empty:
         return
-    
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-    
+
     # Left panel: Split Delivery Elimination
     avg_scv_visits = 173  # Example value
     avg_mcv_visits = 110
     visits_saved = avg_scv_visits - avg_mcv_visits
-    
+
     # Bar chart
-    bars = ax1.bar(['SCV', 'MCV'], [avg_scv_visits, avg_mcv_visits], 
-                    color=['#E74C3C', '#2ECC71'], edgecolor='black', linewidth=2)
-    
+    bars = ax1.bar(
+        ["SCV", "MCV"],
+        [avg_scv_visits, avg_mcv_visits],
+        color=["#E74C3C", "#2ECC71"],
+        edgecolor="black",
+        linewidth=2,
+    )
+
     # Add annotation
-    ax1.annotate('', xy=(1.5, avg_mcv_visits), xytext=(1.5, avg_scv_visits),
-                arrowprops=dict(arrowstyle='<->', color='black', lw=2))
-    ax1.text(1.6, (avg_scv_visits + avg_mcv_visits) / 2, f'-{visits_saved}\nvisits\nsaved',
-             fontsize=12, color='#27AE60', fontweight='bold', va='center')
-    
-    ax1.set_ylabel('Split Deliveries per Day', fontsize=12)
-    ax1.set_title('Split Delivery Elimination', fontsize=14, fontweight='bold')
+    ax1.annotate(
+        "",
+        xy=(1.5, avg_mcv_visits),
+        xytext=(1.5, avg_scv_visits),
+        arrowprops=dict(arrowstyle="<->", color="black", lw=2),
+    )
+    ax1.text(
+        1.6,
+        (avg_scv_visits + avg_mcv_visits) / 2,
+        f"-{visits_saved}\nvisits\nsaved",
+        fontsize=12,
+        color="#27AE60",
+        fontweight="bold",
+        va="center",
+    )
+
+    ax1.set_ylabel("Split Deliveries per Day", fontsize=12)
+    ax1.set_title("Split Delivery Elimination", fontsize=14, fontweight="bold")
     ax1.set_ylim(0, 200)
-    ax1.grid(axis='y', alpha=0.3)
-    
+    ax1.grid(axis="y", alpha=0.3)
+
     # Add values on bars
     for bar, value in zip(bars, [avg_scv_visits, avg_mcv_visits]):
         height = bar.get_height()
-        ax1.text(bar.get_x() + bar.get_width()/2., height + 3,
-                f'~{int(value)} visits', ha='center', va='bottom', fontweight='bold')
-    
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + 3,
+            f"~{int(value)} visits",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+
     # Right panel: Operational Impact
-    ax2.text(0.1, 0.8, 'Operational Impact', fontsize=16, fontweight='bold', transform=ax2.transAxes)
-    
+    ax2.text(
+        0.1,
+        0.8,
+        "Operational Impact",
+        fontsize=16,
+        fontweight="bold",
+        transform=ax2.transAxes,
+    )
+
     impacts = [
-        ('Visit reduction:', '~36%'),
-        ('Time saved:', '~90 hours/day'),
-        ('Distance saved:', '~35% less km')
+        ("Visit reduction:", "~36%"),
+        ("Time saved:", "~90 hours/day"),
+        ("Distance saved:", "~35% less km"),
     ]
-    
-    y_pos = 0.6
-    for label, value in impacts:
+
+    y_pos: float = 0.6
+    for label, value in impacts:  # type: ignore
         ax2.text(0.1, y_pos, label, fontsize=14, transform=ax2.transAxes)
-        ax2.text(0.6, y_pos, value, fontsize=14, fontweight='bold', 
-                 color='#27AE60', transform=ax2.transAxes)
+        ax2.text(
+            0.6,
+            y_pos,
+            value,
+            fontsize=14,
+            fontweight="bold",
+            color="#27AE60",
+            transform=ax2.transAxes,
+        )
         y_pos -= 0.15
-    
-    ax2.text(0.1, 0.1, 
-             'Each eliminated visit saves approximately 25 minutes of service time\n'
-             'plus associated travel. This cascades through the system: fewer visits\n'
-             '→ shorter routes → fewer vehicles → lower costs.',
-             fontsize=11, style='italic', transform=ax2.transAxes, wrap=True)
-    
-    ax2.axis('off')
-    
+
+    ax2.text(
+        0.1,
+        0.1,
+        "Each eliminated visit saves approximately 25 minutes of service time\n"
+        "plus associated travel. This cascades through the system: fewer visits\n"
+        "→ shorter routes → fewer vehicles → lower costs.",
+        fontsize=11,
+        style="italic",
+        transform=ax2.transAxes,
+        wrap=True,
+    )
+
+    ax2.axis("off")
+
     plt.tight_layout()
     plt.savefig(OUTPUT_DIR / "split_delivery_elimination.png", dpi=200)
     plt.close()
@@ -481,151 +639,218 @@ def plot_tipping_point_analysis(df: pd.DataFrame) -> None:
     """Create tipping point analysis visualization."""
     if df.empty:
         return
-    
+
     # Find data at α=60%, C=20%
     tipping_data = df[(np.isclose(df["alpha"], 1.6)) & (np.isclose(df["C"], 20))]
     if tipping_data.empty:
         return
-    
+
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    
+
     # Panel A: Cost decomposition at tipping point
     ax = axes[0, 0]
-    
+
     # Calculate average values
     avg_var_savings = tipping_data["variable_savings_pct"].mean()
     avg_fixed_delta = -tipping_data["fixed_uplift_pct"].mean()
     avg_penalty = -tipping_data["penalty_uplift_pct"].mean()
     net = avg_var_savings + avg_fixed_delta + avg_penalty
-    
-    categories = ['Variable savings', '− Fixed delta', '− Setup/penalty']
+
+    categories = ["Variable savings", "− Fixed delta", "− Setup/penalty"]
     values = [avg_var_savings, avg_fixed_delta, avg_penalty]
-    colors = ['#2ECC71', '#E74C3C', '#F39C12']
-    
-    bars = ax.bar(categories, values, color=colors, edgecolor='black', linewidth=1.5)
-    
+    colors = ["#2ECC71", "#E74C3C", "#F39C12"]
+
+    bars = ax.bar(categories, values, color=colors, edgecolor="black", linewidth=1.5)
+
     # Add value labels
     for bar, val in zip(bars, values):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + 0.5 if height > 0 else height - 0.5,
-                f'{val:.1f}%', ha='center', va='bottom' if height > 0 else 'top', fontweight='bold')
-    
-    ax.axhline(0, color='black', linewidth=0.8)
-    ax.set_ylabel('% of SCV cost', fontsize=12)
-    ax.set_title(f'Cost decomposition at break-even (α=60%, C=20%)\nNet ≈ {net:.1f}%', fontsize=14)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + 0.5 if height > 0 else height - 0.5,
+            f"{val:.1f}%",
+            ha="center",
+            va="bottom" if height > 0 else "top",
+            fontweight="bold",
+        )
+
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_ylabel("% of SCV cost", fontsize=12)
+    ax.set_title(
+        f"Cost decomposition at break-even (α=60%, C=20%)\nNet ≈ {net:.1f}%",
+        fontsize=14,
+    )
     ax.set_ylim(-15, 20)
-    ax.grid(axis='y', alpha=0.3)
-    
+    ax.grid(axis="y", alpha=0.3)
+
     # Panel B: Operational performance at the margin
     ax = axes[0, 1]
-    
+
     metrics = {
-        'Fleet reduction': '-37% vehicles',
-        'Visit reduction': '-36% deliveries',
-        'Route-time reduction': '-35% hours',
-        'P(MCV wins)': '~50%'
+        "Fleet reduction": "-37% vehicles",
+        "Visit reduction": "-36% deliveries",
+        "Route-time reduction": "-35% hours",
+        "P(MCV wins)": "~50%",
     }
-    
+
     y_pos = 0.8
-    ax.text(0.5, 0.9, 'Key metrics at α = 60%, C = 20%', 
-            ha='center', fontsize=14, fontweight='bold', transform=ax.transAxes)
-    
+    ax.text(
+        0.5,
+        0.9,
+        "Key metrics at α = 60%, C = 20%",
+        ha="center",
+        fontsize=14,
+        fontweight="bold",
+        transform=ax.transAxes,
+    )
+
     for metric, value in metrics.items():
-        ax.text(0.2, y_pos, f'{metric}:', fontsize=12, transform=ax.transAxes)
-        ax.text(0.7, y_pos, value, fontsize=12, fontweight='bold', 
-                color='#27AE60' if '-' in value else '#3498DB', transform=ax.transAxes)
+        ax.text(0.2, y_pos, f"{metric}:", fontsize=12, transform=ax.transAxes)
+        ax.text(
+            0.7,
+            y_pos,
+            value,
+            fontsize=12,
+            fontweight="bold",
+            color="#27AE60" if "-" in value else "#3498DB",
+            transform=ax.transAxes,
+        )
         y_pos -= 0.1
-    
-    ax.axis('off')
-    
+
+    ax.axis("off")
+
     # Panel C: Win days vs multi-temp customers
     ax = axes[1, 0]
-    
+
     # Create synthetic data for illustration with more realistic distribution
     np.random.seed(42)
     multi_temp_rates = np.random.uniform(0.3, 0.7, 70)
-    
+
     # Calculate MCV advantage as a continuous variable based on multi-temp rate
     # Add some noise for realism
     mcv_advantage = (multi_temp_rates - 0.45) * 100 + np.random.normal(0, 5, 70)
     mcv_wins = mcv_advantage > 0
-    
+
     # Create scatter plot with color coding
-    colors = ['#E74C3C' if not win else '#2ECC71' for win in mcv_wins]
-    
+    colors = ["#E74C3C" if not win else "#2ECC71" for win in mcv_wins]
+
     # Plot points
-    scatter = ax.scatter(multi_temp_rates * 100, mcv_advantage, 
-                        c=colors, alpha=0.7, s=60, edgecolors='black', linewidth=0.5)
-    
+    scatter = ax.scatter(
+        multi_temp_rates * 100,
+        mcv_advantage,
+        c=colors,
+        alpha=0.7,
+        s=60,
+        edgecolors="black",
+        linewidth=0.5,
+    )
+
     # Add trend line
     z = np.polyfit(multi_temp_rates * 100, mcv_advantage, 1)
     p = np.poly1d(z)
     x_trend = np.linspace(30, 70, 100)
-    ax.plot(x_trend, p(x_trend), color='#3498DB', linewidth=2, linestyle='-', alpha=0.8)
-    
+    ax.plot(x_trend, p(x_trend), color="#3498DB", linewidth=2, linestyle="-", alpha=0.8)
+
     # Add horizontal line at y=0 (break-even)
-    ax.axhline(0, color='black', linewidth=1, linestyle='-', alpha=0.5)
-    
+    ax.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.5)
+
     # Add vertical line at 45% multi-temp
-    ax.axvline(45, color='gray', linestyle='--', alpha=0.5)
-    
+    ax.axvline(45, color="gray", linestyle="--", alpha=0.5)
+
     # Annotations
-    ax.text(45, ax.get_ylim()[1] * 0.9, '45% multi-temp\nthreshold', 
-            ha='center', va='top', fontsize=10, alpha=0.7,
-            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
-    
+    ax.text(
+        45,
+        ax.get_ylim()[1] * 0.9,
+        "45% multi-temp\nthreshold",
+        ha="center",
+        va="top",
+        fontsize=10,
+        alpha=0.7,
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.7),
+    )
+
     # Labels and formatting
-    ax.set_xlabel('Multi-Temperature Customer Rate (%)', fontsize=12)
-    ax.set_ylabel('MCV Advantage (% of SCV cost)', fontsize=12)
-    ax.set_title('MCV Win Days vs Multi-Temp Customers', fontsize=14)
-    
+    ax.set_xlabel("Multi-Temperature Customer Rate (%)", fontsize=12)
+    ax.set_ylabel("MCV Advantage (% of SCV cost)", fontsize=12)
+    ax.set_title("MCV Win Days vs Multi-Temp Customers", fontsize=14)
+
     # Set y-axis limits for better visibility
     ax.set_ylim(-20, 20)
-    
+
     # Grid
-    ax.grid(True, alpha=0.3, linestyle=':')
-    
+    ax.grid(True, alpha=0.3, linestyle=":")
+
     # Add shaded regions
-    ax.axhspan(0, ax.get_ylim()[1], alpha=0.05, color='green', zorder=0)
-    ax.axhspan(ax.get_ylim()[0], 0, alpha=0.05, color='red', zorder=0)
-    
+    ax.axhspan(0, ax.get_ylim()[1], alpha=0.05, color="green", zorder=0)
+    ax.axhspan(ax.get_ylim()[0], 0, alpha=0.05, color="red", zorder=0)
+
     # Add text labels for regions
-    ax.text(32, 10, 'MCV Better', fontsize=11, alpha=0.6, fontweight='bold', color='#2ECC71')
-    ax.text(32, -10, 'SCV Better', fontsize=11, alpha=0.6, fontweight='bold', color='#E74C3C')
-    
+    ax.text(
+        32, 10, "MCV Better", fontsize=11, alpha=0.6, fontweight="bold", color="#2ECC71"
+    )
+    ax.text(
+        32,
+        -10,
+        "SCV Better",
+        fontsize=11,
+        alpha=0.6,
+        fontweight="bold",
+        color="#E74C3C",
+    )
+
     # Add legend
-    red_patch = mpatches.Patch(color='#E74C3C', label='SCV wins (n=35)')
-    green_patch = mpatches.Patch(color='#2ECC71', label='MCV wins (n=35)')
-    ax.legend(handles=[red_patch, green_patch], loc='upper left', framealpha=0.9)
-    
+    red_patch = mpatches.Patch(color="#E74C3C", label="SCV wins (n=35)")
+    green_patch = mpatches.Patch(color="#2ECC71", label="MCV wins (n=35)")
+    ax.legend(handles=[red_patch, green_patch], loc="upper left", framealpha=0.9)
+
     # Panel D: Demand-driven economics
     ax = axes[1, 1]
-    
-    ax.text(0.5, 0.9, 'Demand-Driven Economics', 
-            ha='center', fontsize=14, fontweight='bold', transform=ax.transAxes)
-    
+
+    ax.text(
+        0.5,
+        0.9,
+        "Demand-Driven Economics",
+        ha="center",
+        fontsize=14,
+        fontweight="bold",
+        transform=ax.transAxes,
+    )
+
     info_text = [
-        ('Correlation:', 'r = 0.73', '#3498DB'),
-        ('Threshold:', '~45% multi-temp', '#E67E22'),
-        ('MCV wins when:', '>45% multi-temp', '#27AE60')
+        ("Correlation:", "r = 0.73", "#3498DB"),
+        ("Threshold:", "~45% multi-temp", "#E67E22"),
+        ("MCV wins when:", ">45% multi-temp", "#27AE60"),
     ]
-    
+
     y_pos = 0.7
     for label, value, color in info_text:
         ax.text(0.2, y_pos, label, fontsize=12, transform=ax.transAxes)
-        ax.text(0.6, y_pos, value, fontsize=12, fontweight='bold', 
-                color=color, transform=ax.transAxes)
+        ax.text(
+            0.6,
+            y_pos,
+            value,
+            fontsize=12,
+            fontweight="bold",
+            color=color,
+            transform=ax.transAxes,
+        )
         y_pos -= 0.15
-    
-    ax.text(0.1, 0.2,
-            'At α=60%, C=20% (tipping point), MCV advantage correlates strongly\n'
-            'with multi-temperature customer prevalence. Days with higher\n'
-            'consolidation opportunities favor MCVs despite price premiums.',
-            fontsize=11, style='italic', transform=ax.transAxes, wrap=True)
-    
-    ax.axis('off')
-    
-    plt.suptitle('Tipping Point — Zoom in', fontsize=16, fontweight='bold')
+
+    ax.text(
+        0.1,
+        0.2,
+        "At α=60%, C=20% (tipping point), MCV advantage correlates strongly\n"
+        "with multi-temperature customer prevalence. Days with higher\n"
+        "consolidation opportunities favor MCVs despite price premiums.",
+        fontsize=11,
+        style="italic",
+        transform=ax.transAxes,
+        wrap=True,
+    )
+
+    ax.axis("off")
+
+    plt.suptitle("Tipping Point — Zoom in", fontsize=16, fontweight="bold")
     plt.tight_layout()
     plt.savefig(OUTPUT_DIR / "tipping_point_analysis.png", dpi=200)
     plt.close()
@@ -636,68 +861,109 @@ def plot_demand_heterogeneity_analysis(df: pd.DataFrame) -> None:
     """Minimalist robustness check across demand terciles using boxplots."""
     if df.empty:
         return
-    
+
     df_copy = df.copy()
-    
+
     # Assign each day to a demand-volume tercile
-    daily_demand = df_copy.groupby('day_id')['total_kg'].first().reset_index()
-    daily_demand['demand_tercile'] = pd.qcut(daily_demand['total_kg'], q=3, labels=['Low', 'Medium', 'High'])
-    df_copy = df_copy.merge(daily_demand[['day_id', 'demand_tercile']], on='day_id')
-    
+    daily_demand = df_copy.groupby("day_id")["total_kg"].first().reset_index()
+    daily_demand["demand_tercile"] = pd.qcut(
+        daily_demand["total_kg"], q=3, labels=["Low", "Medium", "High"]
+    )
+    df_copy = df_copy.merge(daily_demand[["day_id", "demand_tercile"]], on="day_id")
+
     # Focus on the economically relevant region
-    sweet = df_copy[(df_copy['alpha'] <= 1.6) & (df_copy['C'] <= 30)].copy()
+    sweet = df_copy[(df_copy["alpha"] <= 1.6) & (df_copy["C"] <= 30)].copy()
     if sweet.empty:
         return
-    
+
     # Aggregate to one observation per day (reduces clutter, equal weight per day)
-    day_stats = sweet.groupby(['day_id', 'demand_tercile'], as_index=False, observed=True).agg(
-        net_advantage_pct=('cost_savings_pct', 'mean'),
-        fleet_reduction_pct=('delta_fleet_pct', lambda s: -s.mean()),  # positive = fewer vehicles
-        multi_temp_pct=('pct_multi_goods', 'first'),
-        total_kg=('total_kg', 'first'),
+    day_stats = sweet.groupby(
+        ["day_id", "demand_tercile"], as_index=False, observed=True
+    ).agg(
+        net_advantage_pct=("cost_savings_pct", "mean"),
+        fleet_reduction_pct=(
+            "delta_fleet_pct",
+            lambda s: -s.mean(),
+        ),  # positive = fewer vehicles
+        multi_temp_pct=("pct_multi_goods", "first"),
+        total_kg=("total_kg", "first"),
     )
-    
-    order = ['Low', 'Medium', 'High']
-    palette = {'Low': '#D6EAF8', 'Medium': '#85C1E9', 'High': '#2E86C1'}
-    
+
+    order = ["Low", "Medium", "High"]
+    palette = {"Low": "#D6EAF8", "Medium": "#85C1E9", "High": "#2E86C1"}
+
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     ax1, ax2 = axes
-    
+
     # Left: Net advantage
     sns.boxplot(
         data=day_stats,
-        x='demand_tercile', y='net_advantage_pct',
-        order=order, palette=palette, ax=ax1, width=0.5, fliersize=2
+        x="demand_tercile",
+        y="net_advantage_pct",
+        order=order,
+        palette=palette,
+        ax=ax1,
+        width=0.5,
+        fliersize=2,
     )
-    ax1.axhline(0, color='gray', lw=1, alpha=0.6)
-    ax1.set_xlabel('Demand volume tercile')
-    ax1.set_ylabel('Net cost savings (% of SCV cost)')
-    ax1.set_title('Net advantage by demand level', fontsize=12)
-    medians1 = day_stats.groupby('demand_tercile')['net_advantage_pct'].median()
+    ax1.axhline(0, color="gray", lw=1, alpha=0.6)
+    ax1.set_xlabel("Demand volume tercile")
+    ax1.set_ylabel("Net cost savings (% of SCV cost)")
+    ax1.set_title("Net advantage by demand level", fontsize=12)
+    medians1 = day_stats.groupby("demand_tercile")["net_advantage_pct"].median()
     for i, t in enumerate(order):
         if t in medians1.index:
             m = medians1[t]
-            ax1.text(i, m, f'{m:.1f}%', ha='center', va='bottom', fontsize=10, fontweight='bold', color='#1f2d3d')
-    
+            ax1.text(
+                i,
+                m,
+                f"{m:.1f}%",
+                ha="center",
+                va="bottom",
+                fontsize=10,
+                fontweight="bold",
+                color="#1f2d3d",
+            )
+
     # Right: Fleet reduction
     sns.boxplot(
         data=day_stats,
-        x='demand_tercile', y='fleet_reduction_pct',
-        order=order, palette=palette, ax=ax2, width=0.5, fliersize=2
+        x="demand_tercile",
+        y="fleet_reduction_pct",
+        order=order,
+        palette=palette,
+        ax=ax2,
+        width=0.5,
+        fliersize=2,
     )
-    ax2.axhline(0, color='gray', lw=1, alpha=0.6)
-    ax2.set_xlabel('Demand volume tercile')
-    ax2.set_ylabel('Fleet reduction (%)')
-    ax2.set_title('Fleet reduction by demand level', fontsize=12)
-    medians2 = day_stats.groupby('demand_tercile')['fleet_reduction_pct'].median()
+    ax2.axhline(0, color="gray", lw=1, alpha=0.6)
+    ax2.set_xlabel("Demand volume tercile")
+    ax2.set_ylabel("Fleet reduction (%)")
+    ax2.set_title("Fleet reduction by demand level", fontsize=12)
+    medians2 = day_stats.groupby("demand_tercile")["fleet_reduction_pct"].median()
     for i, t in enumerate(order):
         if t in medians2.index:
             m = medians2[t]
-            ax2.text(i, m, f'{m:.0f}%', ha='center', va='bottom', fontsize=10, fontweight='bold', color='#1f2d3d')
-    
-    plt.suptitle('Robustness across demand levels (sweet-spot: α ≤ 60%, C ≤ 30%)', fontsize=14, y=1.02)
+            ax2.text(
+                i,
+                m,
+                f"{m:.0f}%",
+                ha="center",
+                va="bottom",
+                fontsize=10,
+                fontweight="bold",
+                color="#1f2d3d",
+            )
+
+    plt.suptitle(
+        "Robustness across demand levels (sweet-spot: α ≤ 60%, C ≤ 30%)",
+        fontsize=14,
+        y=1.02,
+    )
     plt.tight_layout()
-    plt.savefig(OUTPUT_DIR / "demand_heterogeneity_analysis.png", dpi=200, bbox_inches='tight')
+    plt.savefig(
+        OUTPUT_DIR / "demand_heterogeneity_analysis.png", dpi=200, bbox_inches="tight"
+    )
     plt.close()
     print("✓ Generated demand_heterogeneity_analysis.png")
 
@@ -706,73 +972,113 @@ def plot_demand_characterization_panels(daily_df: pd.DataFrame) -> None:
     """Create demand characterization panel plots."""
     if daily_df.empty:
         return
-    
+
     fig = plt.figure(figsize=(16, 12))
-    
+
     # Panel A: Temporal patterns
     ax1 = plt.subplot(3, 2, 1)
-    ax1.plot(daily_df.index[:70], daily_df["total_kg"][:70] / 1000, 
-             marker='o', markersize=4, linewidth=1.5, color='#3498DB')
-    ax1.set_xlabel('Date')
-    ax1.set_ylabel('Total Demand (tonnes)', fontsize=10)
-    ax1.set_title('Panel A: Daily Total Demand Volume', fontsize=12)
+    ax1.plot(
+        daily_df.index[:70],
+        daily_df["total_kg"][:70] / 1000,
+        marker="o",
+        markersize=4,
+        linewidth=1.5,
+        color="#3498DB",
+    )
+    ax1.set_xlabel("Date")
+    ax1.set_ylabel("Total Demand (tonnes)", fontsize=10)
+    ax1.set_title("Panel A: Daily Total Demand Volume", fontsize=12)
     ax1.grid(True, alpha=0.3)
-    ax1.tick_params(axis='x', rotation=45)
-    
+    ax1.tick_params(axis="x", rotation=45)
+
     # Panel B: Day of week effects
     ax2 = plt.subplot(3, 2, 2)
     if "date" in daily_df.columns:
         daily_df["weekday"] = pd.to_datetime(daily_df["date"]).dt.day_name()
-        weekday_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        weekday_order = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ]
         weekday_data = daily_df[daily_df["weekday"].isin(weekday_order)]
-        sns.boxplot(data=weekday_data, x="weekday", y="total_kg", order=weekday_order, ax=ax2)
-        ax2.set_xlabel('Day of Week')
-        ax2.set_ylabel('Total Demand (kg)', fontsize=10)
-        ax2.set_title('Panel B: Day-of-Week Effects on Total Demand', fontsize=12)
-        ax2.tick_params(axis='x', rotation=45)
-    
+        sns.boxplot(
+            data=weekday_data, x="weekday", y="total_kg", order=weekday_order, ax=ax2
+        )
+        ax2.set_xlabel("Day of Week")
+        ax2.set_ylabel("Total Demand (kg)", fontsize=10)
+        ax2.set_title("Panel B: Day-of-Week Effects on Total Demand", fontsize=12)
+        ax2.tick_params(axis="x", rotation=45)
+
     # Panel C: Customer count time series
     ax3 = plt.subplot(3, 2, 3)
-    ax3.plot(daily_df.index[:70], daily_df["num_customers"][:70], 
-             marker='o', markersize=4, linewidth=1.5, color='#1ABC9C')
-    ax3.set_xlabel('Date')
-    ax3.set_ylabel('Number of Customers', fontsize=10)
-    ax3.set_title('Panel C: Daily Customer Count', fontsize=12)
+    ax3.plot(
+        daily_df.index[:70],
+        daily_df["num_customers"][:70],
+        marker="o",
+        markersize=4,
+        linewidth=1.5,
+        color="#1ABC9C",
+    )
+    ax3.set_xlabel("Date")
+    ax3.set_ylabel("Number of Customers", fontsize=10)
+    ax3.set_title("Panel C: Daily Customer Count", fontsize=12)
     ax3.grid(True, alpha=0.3)
-    ax3.tick_params(axis='x', rotation=45)
-    
+    ax3.tick_params(axis="x", rotation=45)
+
     # Additional panels for demand scale
     ax4 = plt.subplot(3, 2, 4)
-    ax4.hist(daily_df["num_customers"], bins=20, edgecolor='black', alpha=0.7, color='#9B59B6')
-    ax4.axvline(daily_df["num_customers"].mean(), color='red', linestyle='--', 
-                label=f'Mean: {daily_df["num_customers"].mean():.0f}')
-    ax4.set_xlabel('Number of Customers')
-    ax4.set_ylabel('Count', fontsize=10)
-    ax4.set_title('Panel A: Daily Customer Counts', fontsize=12)
+    ax4.hist(
+        daily_df["num_customers"],
+        bins=20,
+        edgecolor="black",
+        alpha=0.7,
+        color="#9B59B6",
+    )
+    ax4.axvline(
+        daily_df["num_customers"].mean(),
+        color="red",
+        linestyle="--",
+        label=f"Mean: {daily_df['num_customers'].mean():.0f}",
+    )
+    ax4.set_xlabel("Number of Customers")
+    ax4.set_ylabel("Count", fontsize=10)
+    ax4.set_title("Panel A: Daily Customer Counts", fontsize=12)
     ax4.legend()
-    
+
     ax5 = plt.subplot(3, 2, 5)
-    ax5.hist(daily_df["total_kg"], bins=20, edgecolor='black', alpha=0.7, color='#E74C3C')
-    ax5.axvline(daily_df["total_kg"].mean(), color='red', linestyle='--',
-                label=f'Mean: {daily_df["total_kg"].mean():.0f} kg')
-    ax5.set_xlabel('Total Demand (kg)')
-    ax5.set_ylabel('Count', fontsize=10)
-    ax5.set_title('Panel B: Daily Total Volume', fontsize=12)
+    ax5.hist(
+        daily_df["total_kg"], bins=20, edgecolor="black", alpha=0.7, color="#E74C3C"
+    )
+    ax5.axvline(
+        daily_df["total_kg"].mean(),
+        color="red",
+        linestyle="--",
+        label=f"Mean: {daily_df['total_kg'].mean():.0f} kg",
+    )
+    ax5.set_xlabel("Total Demand (kg)")
+    ax5.set_ylabel("Count", fontsize=10)
+    ax5.set_title("Panel B: Daily Total Volume", fontsize=12)
     ax5.legend()
-    
+
     # Geographic coverage placeholder
     ax6 = plt.subplot(3, 2, 6)
     # Create synthetic distance data for illustration
     np.random.seed(42)
     distances = np.random.lognormal(2.5, 0.8, 1000)
     distances = np.clip(distances, 0.5, 50)
-    ax6.hist(distances, bins=30, edgecolor='black', alpha=0.7, color='#F39C12')
-    ax6.set_xlabel('Distance from Depot (km)')
-    ax6.set_ylabel('Count', fontsize=10)
-    ax6.set_title('Panel C: Geographic Coverage per Day', fontsize=12)
-    
-    plt.suptitle('Figure A1: Temporal patterns of daily total demand volume, day-of-week effects, and customer count over time',
-                 fontsize=14)
+    ax6.hist(distances, bins=30, edgecolor="black", alpha=0.7, color="#F39C12")
+    ax6.set_xlabel("Distance from Depot (km)")
+    ax6.set_ylabel("Count", fontsize=10)
+    ax6.set_title("Panel C: Geographic Coverage per Day", fontsize=12)
+
+    plt.suptitle(
+        "Figure A1: Temporal patterns of daily total demand volume, day-of-week effects, and customer count over time",
+        fontsize=14,
+    )
     plt.tight_layout()
     plt.savefig(OUTPUT_DIR / "demand_characterization_panels.png", dpi=200)
     plt.close()
@@ -781,7 +1087,7 @@ def plot_demand_characterization_panels(daily_df: pd.DataFrame) -> None:
 
 def generate_report_html() -> None:
     """Generate the HTML report with the intended structure."""
-    
+
     # Define all image paths
     images = {
         "sweet_spot": OUTPUT_DIR / "economic_sweet_spot_enhanced.png",
@@ -792,7 +1098,7 @@ def generate_report_html() -> None:
         "demand_heterogeneity": OUTPUT_DIR / "demand_heterogeneity_analysis.png",
         "demand_panels": OUTPUT_DIR / "demand_characterization_panels.png",
     }
-    
+
     def encode_image(image_path: Path) -> str:
         """Encode image as base64 data URI."""
         if not image_path.exists():
@@ -800,7 +1106,7 @@ def generate_report_html() -> None:
         with open(image_path, "rb") as f:
             data = base64.b64encode(f.read()).decode()
         return f"data:image/png;base64,{data}"
-    
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1000,7 +1306,7 @@ def generate_report_html() -> None:
             <h2>Central Figure – Economic Sweet Spot</h2>
             
             <figure>
-                <img src="{encode_image(images['sweet_spot'])}" alt="Economic Sweet-Spot Analysis">
+                <img src="{encode_image(images["sweet_spot"])}" alt="Economic Sweet-Spot Analysis">
                 <figcaption>
                     <p>Each cell shows the mean net advantage of multi-compartment vehicles (MCV) compared to single-compartment vehicles (SCV) across 70 demand days. Color intensity indicates the magnitude of cost advantage (green = MCV cheaper, red = SCV cheaper), while text shows the number of days where MCV wins out of the total.</p>
                 </figcaption>
@@ -1027,7 +1333,7 @@ def generate_report_html() -> None:
             <p>This consolidation triggers a cascade of efficiency gains: fewer customer visits reduce both service time and travel distance, leading to shorter tour durations. Under binding route-time constraints, shorter tours translate directly into fewer required vehicles, ultimately reducing fleet fixed costs.</p>
             
             <figure>
-                <img src="{encode_image(images['causality'])}" alt="Causality Flow Diagram">
+                <img src="{encode_image(images["causality"])}" alt="Causality Flow Diagram">
                 <figcaption>
                     The causal mechanism through which MCVs generate cost savings. Consolidation enables serving multi-temperature customers in a single visit, cascading through operational improvements to reduce the total fleet required. Percentages show typical reductions observed across 70 demand days.
                 </figcaption>
@@ -1043,7 +1349,7 @@ def generate_report_html() -> None:
             <p>Left → right: <strong>mean variable savings</strong> (operational), <strong>mean setup penalty</strong> (operational), <strong>mean fixed component</strong> (fleet).</p>
             
             <figure>
-                <img src="{encode_image(images['cost_components'])}" alt="Cost Components Triple Heatmap">
+                <img src="{encode_image(images["cost_components"])}" alt="Cost Components Triple Heatmap">
                 <figcaption>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px;">
                         <div>
@@ -1066,7 +1372,7 @@ def generate_report_html() -> None:
             <h3>B. Split deliveries and operations</h3>
             
             <figure>
-                <img src="{encode_image(images['split_delivery'])}" alt="Split Delivery Elimination">
+                <img src="{encode_image(images["split_delivery"])}" alt="Split Delivery Elimination">
                 <figcaption>
                     MCVs eliminate ~63 extra visits per day (36% reduction) by consolidating multi-temperature deliveries. This is the fundamental driver of all downstream efficiencies—each saved visit translates directly to reduced route time and ultimately fewer vehicles needed.
                     <br><br>
@@ -1084,7 +1390,7 @@ def generate_report_html() -> None:
             <h3>A. Cost decomposition at the tipping point</h3>
             
             <figure>
-                <img src="{encode_image(images['tipping_point'])}" alt="Tipping Point Analysis">
+                <img src="{encode_image(images["tipping_point"])}" alt="Tipping Point Analysis">
                 <figcaption>
                     <p><strong>Interpretation:</strong> At this near-equilibrium configuration, variable savings from consolidation (~15% of SCV cost) are nearly offset by the combination of fixed vehicle premiums (~9%) and compartment setup costs (~9%). The net advantage hovers near zero, making this an ideal case study for understanding the trade-offs. Each component is measured as % of total SCV fleet cost for the day.</p>
                 </figcaption>
@@ -1104,7 +1410,7 @@ def generate_report_html() -> None:
             <p>To verify that our findings are not driven by specific demand conditions, we stratify the analysis by demand volume. We divide the 70 experimental days into terciles based on total daily demand (kg), creating three groups: Low (bottom third), Medium (middle third), and High (top third) demand days. This allows us to test whether MCV advantages persist across different operational scales.</p>
             
             <figure>
-                <img src="{encode_image(images['demand_heterogeneity'])}" alt="Demand Heterogeneity Analysis">
+                <img src="{encode_image(images["demand_heterogeneity"])}" alt="Demand Heterogeneity Analysis">
                 <figcaption>
                     <p><strong>Figure: Robustness across demand terciles.</strong> Minimalist boxplots show the distribution of net cost savings (left) and fleet reduction (right) across Low, Medium, and High demand days (sweet-spot region: α ≤ 60%, C ≤ 30%). Medians are annotated. Despite a 4× range in volume, the distributions and medians are nearly unchanged across terciles.</p>
                 </figcaption>
@@ -1242,7 +1548,7 @@ def generate_report_html() -> None:
                 <h4 style="margin-top: 40px; color: #2c3e50;">Demand Variability</h4>
                 
                 <figure style="margin: 30px 0;">
-                    <img src="{encode_image(images['demand_panels'])}" alt="Demand Characterization Panels" style="max-width: 100%; height: auto; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <img src="{encode_image(images["demand_panels"])}" alt="Demand Characterization Panels" style="max-width: 100%; height: auto; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <figcaption style="margin-top: 15px; text-align: center; color: #7f8c8d; font-style: italic;">
                         Figure A1: Temporal patterns of daily total demand volume, day-of-week effects, and customer count over time.
                     </figcaption>
@@ -1298,7 +1604,7 @@ def generate_report_html() -> None:
     </main>
 </body>
 </html>"""
-    
+
     # Write the HTML file
     output_path = RESULTS_DIR / "executive_summary_intended.html"
     output_path.write_text(html, encoding="utf-8")
@@ -1307,48 +1613,48 @@ def generate_report_html() -> None:
 
 def generate_all_images_and_report():
     """Generate all images and the report."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("GENERATING INTENDED REPORT WITH PROPER STRUCTURE")
-    print("="*60 + "\n")
-    
+    print("=" * 60 + "\n")
+
     # Load data
     print("Loading data...")
     df_results, df_deltas, daily_summary = load_data()
-    
+
     # Generate all visualizations
     print("\nGenerating visualizations...")
-    
+
     # 1. Enhanced economic sweet spot
     plot_economic_sweet_spot_enhanced(df_deltas)
-    
+
     # 2. Causality diagram
     plot_causality_diagram()
-    
+
     # 3. Cost components heatmap
     plot_cost_components_heatmap(df_deltas)
-    
+
     # 4. Split delivery elimination
     plot_split_delivery_elimination(df_deltas)
-    
+
     # 5. Tipping point analysis
     plot_tipping_point_analysis(df_deltas)
-    
+
     # 6. Demand heterogeneity analysis
     plot_demand_heterogeneity_analysis(df_deltas)
-    
+
     # 7. Demand characterization panels
     if not daily_summary.empty:
         plot_demand_characterization_panels(daily_summary)
     else:
         print("⚠ Skipping demand panels (no daily summary data)")
-    
+
     # Generate the HTML report
     print("\nGenerating HTML report...")
     generate_report_html()
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("✅ REPORT GENERATION COMPLETE!")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
 if __name__ == "__main__":

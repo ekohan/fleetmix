@@ -40,7 +40,7 @@ def convert_numpy_types(obj):
         if hasattr(obj, "to_dict"):
             return convert_numpy_types(obj.to_dict())
         else:
-            return convert_numpy_types(asdict(obj))
+            return convert_numpy_types(asdict(obj))  # type: ignore
     elif isinstance(obj, dict):
         return {key: convert_numpy_types(value) for key, value in obj.items()}
     elif isinstance(obj, (list, tuple)):

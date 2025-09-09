@@ -10,6 +10,7 @@ import itertools
 import os
 from dataclasses import replace
 from multiprocessing import Manager
+from typing import Dict, List, Optional, Tuple
 
 from joblib import Parallel, delayed
 
@@ -344,7 +345,7 @@ def _deduplicate_clusters(clusters: list[Cluster]) -> list[Cluster]:
     )
 
     # Group clusters by vehicle type
-    clusters_by_vehicle_type = {}
+    clusters_by_vehicle_type: Dict[str, List[Cluster]] = {}
     for cluster in clusters:
         vehicle_type = cluster.vehicle_type
 

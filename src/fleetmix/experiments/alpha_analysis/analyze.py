@@ -29,11 +29,11 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy.stats
+import scipy.stats  # type: ignore
 import seaborn as sns
-import statsmodels.formula.api as smf
-from scipy.interpolate import griddata, interp1d
-from scipy.spatial import ConvexHull, KDTree
+import statsmodels.formula.api as smf  # type: ignore
+from scipy.interpolate import griddata, interp1d  # type: ignore
+from scipy.spatial import ConvexHull, KDTree  # type: ignore
 
 from fleetmix.config import load_fleetmix_params
 
@@ -326,11 +326,11 @@ def run_dataset_characterization():
         day_id = csv_path.stem.replace("sales_", "").replace("_demand", "")
         df_day = pd.read_csv(csv_path, usecols=["Lat", "Lon"])
         coords = df_day[["Lon", "Lat"]].to_numpy()
-        area_sq_km = 0
+        area_sq_km: float = 0.0
         if len(coords) >= 3:
             try:
                 hull = ConvexHull(coords)
-                area_sq_km = hull.volume  # area for 2D
+                area_sq_km = float(hull.volume)  # area for 2D
             except Exception:
                 pass
         geo_records.append(
@@ -359,7 +359,7 @@ def run_dataset_characterization():
             coords_rad = np.radians(df_day[["Lat", "Lon"]].to_numpy())
             tree = KDTree(coords_rad)
             distances, _ = tree.query(coords_rad, k=2)
-            avg_dist_km = np.mean(distances[:, 1]) * R_EARTH_KM
+            avg_dist_km = float(np.mean(distances[:, 1])) * R_EARTH_KM
         else:
             avg_dist_km = 0
         dist_between_cust_records.append(

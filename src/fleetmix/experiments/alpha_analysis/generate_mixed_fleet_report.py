@@ -7,8 +7,8 @@ import base64
 from io import BytesIO
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -51,11 +51,11 @@ def encode_image(fig):
 def load_and_prepare_data():
     """Load mixed fleet results and prepare for analysis."""
     df = pd.read_parquet(SUMMARY_PATH)
-    
+
     # Separate SCV baseline and mixed results
     scv_baseline = df[df["fleet_type"] == "SCV_BASE"].copy()
     mixed_results = df[df["fleet_type"] == "MIXED"].copy()
-    
+
     return df, scv_baseline, mixed_results
 
 
@@ -149,12 +149,12 @@ def create_main_heatmap(mixed_results):
 def create_mcv_share_heatmap(mixed_results):
     """Create heatmap of MCV share across (α, C) grid."""
     fig, ax = plt.subplots(figsize=(10, 8))
-    
+
     # Prepare data
     pivot_data = mixed_results.pivot_table(
         values="mcv_share", index="alpha", columns="C", aggfunc="mean"
     )
-    
+
     # Create heatmap
     sns.heatmap(
         pivot_data * 100,  # Convert to percentage
@@ -162,29 +162,31 @@ def create_mcv_share_heatmap(mixed_results):
         fmt=".0f",
         cmap="viridis",
         cbar_kws={"label": "Average MCV Share (%)"},
-        ax=ax
+        ax=ax,
     )
-    
+
     ax.set_title("MCV Share Across Parameter Space", fontsize=14, pad=20)
     ax.set_xlabel("C: Compartment Setup Cost", fontsize=12)
     ax.set_ylabel("α: MCV Fixed Cost Premium", fontsize=12)
-    
+
     # Format labels
     ax.set_xticklabels([f"{int(float(x.get_text()))}%" for x in ax.get_xticklabels()])
-    ax.set_yticklabels([f"+{int((float(x.get_text()) - 1) * 100)}%" for x in ax.get_yticklabels()])
-    
+    ax.set_yticklabels(
+        [f"+{int((float(x.get_text()) - 1) * 100)}%" for x in ax.get_yticklabels()]
+    )
+
     return fig
 
 
 def create_cost_savings_heatmap(mixed_results):
     """Create heatmap of cost savings vs SCV baseline."""
     fig, ax = plt.subplots(figsize=(10, 8))
-    
+
     # Prepare data
     pivot_data = mixed_results.pivot_table(
         values="delta_cost_pct_vs_scv", index="alpha", columns="C", aggfunc="mean"
     )
-    
+
     # Create heatmap
     sns.heatmap(
         pivot_data,
@@ -193,17 +195,19 @@ def create_cost_savings_heatmap(mixed_results):
         cmap="RdYlGn_r",
         center=0,
         cbar_kws={"label": "Cost vs SCV Baseline (%)"},
-        ax=ax
+        ax=ax,
     )
-    
+
     ax.set_title("Cost Performance vs SCV Baseline", fontsize=14, pad=20)
     ax.set_xlabel("C: Compartment Setup Cost", fontsize=12)
     ax.set_ylabel("α: MCV Fixed Cost Premium", fontsize=12)
-    
-    # Format labels  
+
+    # Format labels
     ax.set_xticklabels([f"{int(float(x.get_text()))}%" for x in ax.get_xticklabels()])
-    ax.set_yticklabels([f"+{int((float(x.get_text()) - 1) * 100)}%" for x in ax.get_yticklabels()])
-    
+    ax.set_yticklabels(
+        [f"+{int((float(x.get_text()) - 1) * 100)}%" for x in ax.get_yticklabels()]
+    )
+
     return fig
 
 
@@ -219,7 +223,7 @@ def create_fleet_composition_analysis(mixed_results):
         .agg(
             {
                 "mcv_share": "mean",
-                "scv_vehicles": "mean", 
+                "scv_vehicles": "mean",
                 "mcv_vehicles": "mean",
                 "total_vehicles": "mean",
             }
@@ -303,7 +307,10 @@ def create_fleet_composition_analysis(mixed_results):
     ax2.set_xlabel("α: MCV Fixed Cost Premium", fontsize=11)
     ax2.set_ylabel("Percentage of Scenarios", fontsize=11)
     ax2.set_title("Fleet Type Distribution by α", fontsize=12)
-    ax2.set_xticklabels([f"+{int((float(x.get_text()) - 1) * 100)}%" for x in ax2.get_xticklabels()], rotation=45)
+    ax2.set_xticklabels(
+        [f"+{int((float(x.get_text()) - 1) * 100)}%" for x in ax2.get_xticklabels()],
+        rotation=45,
+    )
     ax2.legend(title="Fleet Type", loc="center left", bbox_to_anchor=(1, 0.5))
 
     # 3. Economic performance by fleet category
@@ -327,7 +334,11 @@ def create_fleet_composition_analysis(mixed_results):
     ax4 = fig.add_subplot(gs[2, :])
 
     # Key operational metrics
-    metrics = ["total_vehicles", "average_visits_per_customer", "total_route_time_hours"]
+    metrics = [
+        "total_vehicles",
+        "average_visits_per_customer",
+        "total_route_time_hours",
+    ]
     metric_labels = ["Fleet Size", "Visits per Customer", "Route Time (hours)"]
 
     x_pos = np.arange(len(metrics))
@@ -337,13 +348,31 @@ def create_fleet_composition_analysis(mixed_results):
     mixed_means = []
 
     for metric in metrics:
-        scv_val = mixed_results[mixed_results["fleet_category"] == "Pure SCV"][metric].mean()
-        mixed_val = mixed_results[mixed_results["fleet_category"] == "Pure MCV"][metric].mean()
+        scv_val = mixed_results[mixed_results["fleet_category"] == "Pure SCV"][
+            metric
+        ].mean()
+        mixed_val = mixed_results[mixed_results["fleet_category"] == "Pure MCV"][
+            metric
+        ].mean()
         scv_means.append(scv_val if not pd.isna(scv_val) else 0)
         mixed_means.append(mixed_val if not pd.isna(mixed_val) else 0)
 
-    ax4.bar(x_pos - width/2, scv_means, width, label="Pure SCV", color=SCV_COLOR, alpha=0.8)
-    ax4.bar(x_pos + width/2, mixed_means, width, label="Pure MCV", color=MCV_COLOR, alpha=0.8)
+    ax4.bar(
+        x_pos - width / 2,
+        scv_means,
+        width,
+        label="Pure SCV",
+        color=SCV_COLOR,
+        alpha=0.8,
+    )
+    ax4.bar(
+        x_pos + width / 2,
+        mixed_means,
+        width,
+        label="Pure MCV",
+        color=MCV_COLOR,
+        alpha=0.8,
+    )
 
     ax4.set_xlabel("Operational Metrics", fontsize=11)
     ax4.set_ylabel("Average Value", fontsize=11)
@@ -354,7 +383,7 @@ def create_fleet_composition_analysis(mixed_results):
     ax4.grid(True, alpha=0.3)
 
     plt.suptitle("Fleet Composition Analysis", fontsize=16, y=0.98)
-    
+
     return fig
 
 
@@ -365,7 +394,7 @@ def create_efficiency_cascade():
     # Data for waterfall chart
     categories = [
         "SCV\nBaseline",
-        "Visit\nReduction", 
+        "Visit\nReduction",
         "Route Time\nSavings",
         "Fleet Size\nReduction",
         "Variable\nCost Savings",
@@ -381,7 +410,7 @@ def create_efficiency_cascade():
     colors = [
         "#95a5a6",
         "#27ae60",
-        "#27ae60", 
+        "#27ae60",
         "#27ae60",
         "#95a5a6",
         "#e74c3c",
@@ -471,7 +500,8 @@ def create_tipping_point_analysis(mixed_results):
     if tipping_data.empty:
         # Fallback to closest available data
         tipping_data = mixed_results[
-            (abs(mixed_results["alpha"] - 1.6) < 0.1) & (abs(mixed_results["C"] - 20) < 5)
+            (abs(mixed_results["alpha"] - 1.6) < 0.1)
+            & (abs(mixed_results["C"] - 20) < 5)
         ].copy()
 
     fig = plt.figure(figsize=(14, 8))
@@ -488,12 +518,12 @@ def create_tipping_point_analysis(mixed_results):
             edgecolor="black",
         )
         ax1.axvline(x=0, color="red", linestyle="--", linewidth=2, label="Break-even")
-        
+
         # Add statistics
         wins = (tipping_data["delta_cost_pct_vs_scv"] < 0).sum()
         total = len(tipping_data)
         mean_val = tipping_data["delta_cost_pct_vs_scv"].mean()
-        
+
         ax1.text(
             0.05,
             0.95,
@@ -541,13 +571,14 @@ def create_tipping_point_analysis(mixed_results):
 
     # 4-6. Additional insights panels
     ax4 = fig.add_subplot(gs[1, :])
-    
+
     # Show parameter sensitivity across broader range
-    sensitivity_data = mixed_results.groupby(["alpha", "C"]).agg({
-        "delta_cost_pct_vs_scv": "mean",
-        "mcv_share": "mean"
-    }).reset_index()
-    
+    sensitivity_data = (
+        mixed_results.groupby(["alpha", "C"])
+        .agg({"delta_cost_pct_vs_scv": "mean", "mcv_share": "mean"})
+        .reset_index()
+    )
+
     # Create scatter plot
     scatter = ax4.scatter(
         sensitivity_data["alpha"],
@@ -557,39 +588,43 @@ def create_tipping_point_analysis(mixed_results):
         cmap="RdYlGn_r",
         alpha=0.7,
         edgecolors="black",
-        linewidth=0.5
+        linewidth=0.5,
     )
-    
+
     ax4.set_xlabel("α: MCV Fixed Cost Premium", fontsize=11)
     ax4.set_ylabel("C: Compartment Setup Cost", fontsize=11)
-    ax4.set_title("Parameter Space Overview (size = MCV share, color = cost performance)", fontsize=12)
-    
+    ax4.set_title(
+        "Parameter Space Overview (size = MCV share, color = cost performance)",
+        fontsize=12,
+    )
+
     # Add colorbar
     cbar = plt.colorbar(scatter, ax=ax4)
     cbar.set_label("Cost vs SCV (%)", fontsize=10)
-    
+
     # Add contour line at break-even
     try:
         X = sensitivity_data["alpha"].values.reshape(-1, 1)
         Y = sensitivity_data["C"].values.reshape(-1, 1)
         Z = sensitivity_data["delta_cost_pct_vs_scv"].values
-        
+
         # Create grid for contour
         xi = np.linspace(X.min(), X.max(), 50)
         yi = np.linspace(Y.min(), Y.max(), 50)
         Xi, Yi = np.meshgrid(xi, yi)
-        
+
         # Interpolate Z values
-        from scipy.interpolate import griddata
-        Zi = griddata((X.flatten(), Y.flatten()), Z, (Xi, Yi), method='linear')
-        
+        from scipy.interpolate import griddata  # type: ignore
+
+        Zi = griddata((X.flatten(), Y.flatten()), Z, (Xi, Yi), method="linear")
+
         # Add break-even contour
-        contour = ax4.contour(Xi, Yi, Zi, levels=[0], colors='black', linewidths=2)
-        ax4.clabel(contour, inline=True, fontsize=8, fmt='Break-even')
-        
-    except:
+        contour = ax4.contour(Xi, Yi, Zi, levels=[0], colors="black", linewidths=2)
+        ax4.clabel(contour, inline=True, fontsize=8, fmt="Break-even")
+
+    except Exception:
         pass  # Skip contour if interpolation fails
-    
+
     plt.suptitle("Tipping Point Analysis", fontsize=16, y=0.95)
 
     return fig
@@ -643,8 +678,14 @@ def create_executive_summary_figure(mixed_results):
             if not pd.isna(mcv_share):
                 text_color = "white" if mcv_share > 0.5 else "black"
                 ax_main.text(
-                    j, i, f"{mcv_share:.0%}", ha="center", va="center",
-                    color=text_color, fontsize=8, weight="bold"
+                    j,
+                    i,
+                    f"{mcv_share:.0%}",
+                    ha="center",
+                    va="center",
+                    color=text_color,
+                    fontsize=8,
+                    weight="bold",
                 )
 
     ax_main.set_xticks(range(len(pivot_mcv.columns)))
@@ -665,32 +706,44 @@ def create_executive_summary_figure(mixed_results):
 
     # 2. Key statistics panel
     ax_stats = fig.add_subplot(gs[1, 0])
-    
+
     # Calculate key stats
     total_scenarios = len(mixed_results)
     mcv_dominant = (mixed_results["mcv_share"] > 0.5).sum()
     cost_winners = (mixed_results["delta_cost_pct_vs_scv"] < 0).sum()
     avg_fleet_reduction = ((27 - mixed_results["total_vehicles"]) / 27 * 100).mean()
-    
+
     stats_text = f"""KEY STATISTICS
     
 Total Scenarios: {total_scenarios:,}
-MCV Dominant: {mcv_dominant/total_scenarios:.0%}
-Cost Winners: {cost_winners/total_scenarios:.0%}
+MCV Dominant: {mcv_dominant / total_scenarios:.0%}
+Cost Winners: {cost_winners / total_scenarios:.0%}
 Avg Fleet Reduction: {avg_fleet_reduction:.0f}%
 
-Mean MCV Share: {mixed_results['mcv_share'].mean():.0%}
-Best Cost Savings: {mixed_results['delta_cost_pct_vs_scv'].min():.0f}%
-Worst Cost Impact: {mixed_results['delta_cost_pct_vs_scv'].max():.0f}%"""
+Mean MCV Share: {mixed_results["mcv_share"].mean():.0%}
+Best Cost Savings: {mixed_results["delta_cost_pct_vs_scv"].min():.0f}%
+Worst Cost Impact: {mixed_results["delta_cost_pct_vs_scv"].max():.0f}%"""
 
-    ax_stats.text(0.05, 0.95, stats_text, transform=ax_stats.transAxes, 
-                  verticalalignment='top', fontsize=11, fontfamily='monospace')
-    ax_stats.axis('off')
+    ax_stats.text(
+        0.05,
+        0.95,
+        stats_text,
+        transform=ax_stats.transAxes,
+        verticalalignment="top",
+        fontsize=11,
+        fontfamily="monospace",
+    )
+    ax_stats.axis("off")
 
     # 3. Cost distribution
     ax_cost = fig.add_subplot(gs[1, 1])
-    ax_cost.hist(mixed_results["delta_cost_pct_vs_scv"], bins=30, alpha=0.7, 
-                 color=ACCENT_COLOR, edgecolor="black")
+    ax_cost.hist(
+        mixed_results["delta_cost_pct_vs_scv"],
+        bins=30,
+        alpha=0.7,
+        color=ACCENT_COLOR,
+        edgecolor="black",
+    )
     ax_cost.axvline(x=0, color="red", linestyle="--", linewidth=2, label="Break-even")
     ax_cost.set_xlabel("Cost vs SCV (%)", fontsize=11)
     ax_cost.set_ylabel("Count", fontsize=11)
@@ -699,25 +752,36 @@ Worst Cost Impact: {mixed_results['delta_cost_pct_vs_scv'].max():.0f}%"""
 
     # 4. MCV share distribution
     ax_share = fig.add_subplot(gs[1, 2])
-    ax_share.hist(mixed_results["mcv_share"], bins=20, alpha=0.7,
-                  color=MCV_COLOR, edgecolor="black")
+    ax_share.hist(
+        mixed_results["mcv_share"],
+        bins=20,
+        alpha=0.7,
+        color=MCV_COLOR,
+        edgecolor="black",
+    )
     ax_share.set_xlabel("MCV Share in Fleet", fontsize=11)
     ax_share.set_ylabel("Count", fontsize=11)
     ax_share.set_title("Fleet Composition Distribution", fontsize=12)
 
     # 5. Bottom panel - insights
     ax_insights = fig.add_subplot(gs[2, :])
-    
+
     insights_text = """KEY INSIGHTS:
 • MCV dominance emerges naturally - optimization algorithms prefer MCVs in most scenarios due to operational efficiency
 • True "mixed" fleets are rare - the optimization tends toward pure MCV or pure SCV solutions  
 • Cost premiums up to 60-80% can be justified by operational savings in many demand contexts
 • Fleet size reduction of ~35% is typical when transitioning from SCV to MCV-dominant fleets"""
 
-    ax_insights.text(0.02, 0.5, insights_text, transform=ax_insights.transAxes,
-                     verticalalignment='center', fontsize=12, 
-                     bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.3))
-    ax_insights.axis('off')
+    ax_insights.text(
+        0.02,
+        0.5,
+        insights_text,
+        transform=ax_insights.transAxes,
+        verticalalignment="center",
+        fontsize=12,
+        bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.3),
+    )
+    ax_insights.axis("off")
 
     plt.suptitle("Mixed Fleet Optimization - Executive Summary", fontsize=18, y=0.98)
 
@@ -728,174 +792,251 @@ def create_operational_metrics_analysis(mixed_results):
     """Create comprehensive analysis of vehicle utilization and operational metrics."""
     fig = plt.figure(figsize=(16, 12))
     gs = GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3)
-    
+
     # 1. Fleet utilization by MCV share
     ax1 = fig.add_subplot(gs[0, :2])
-    
+
     # Create bins for MCV share
-    mixed_results['mcv_share_bin'] = pd.cut(
-        mixed_results['mcv_share'], 
+    mixed_results["mcv_share_bin"] = pd.cut(
+        mixed_results["mcv_share"],
         bins=[0, 0.1, 0.5, 0.9, 1.0],
-        labels=['Pure SCV', 'SCV Dominant', 'MCV Dominant', 'Pure MCV']
+        labels=["Pure SCV", "SCV Dominant", "MCV Dominant", "Pure MCV"],
     )
-    
+
     # Calculate utilization metrics by fleet type
-    utilization_data = mixed_results.groupby('mcv_share_bin').agg({
-        'total_vehicles': 'mean',
-        'total_route_time_hours': 'mean',
-        'average_visits_per_customer': 'mean',
-        'split_rate': 'mean'
-    }).reset_index()
-    
+    utilization_data = (
+        mixed_results.groupby("mcv_share_bin")
+        .agg(
+            {
+                "total_vehicles": "mean",
+                "total_route_time_hours": "mean",
+                "average_visits_per_customer": "mean",
+                "split_rate": "mean",
+            }
+        )
+        .reset_index()
+    )
+
     # Bar chart of fleet sizes
     x_pos = np.arange(len(utilization_data))
     width = 0.35
-    
-    bars1 = ax1.bar(x_pos - width/2, utilization_data['total_vehicles'], width, 
-                   label='Fleet Size', color=MCV_COLOR, alpha=0.7)
-    
+
+    bars1 = ax1.bar(
+        x_pos - width / 2,
+        utilization_data["total_vehicles"],
+        width,
+        label="Fleet Size",
+        color=MCV_COLOR,
+        alpha=0.7,
+    )
+
     # Add route time on secondary axis
     ax1_twin = ax1.twinx()
-    bars2 = ax1_twin.bar(x_pos + width/2, utilization_data['total_route_time_hours'], width,
-                        label='Route Time (hrs)', color=ACCENT_COLOR, alpha=0.7)
-    
-    ax1.set_xlabel('Fleet Composition Type', fontsize=11)
-    ax1.set_ylabel('Average Fleet Size', fontsize=11, color=MCV_COLOR)
-    ax1_twin.set_ylabel('Route Time (hours/day)', fontsize=11, color=ACCENT_COLOR)
-    ax1.set_title('Fleet Size and Route Time by Fleet Composition', fontsize=13)
+    bars2 = ax1_twin.bar(
+        x_pos + width / 2,
+        utilization_data["total_route_time_hours"],
+        width,
+        label="Route Time (hrs)",
+        color=ACCENT_COLOR,
+        alpha=0.7,
+    )
+
+    ax1.set_xlabel("Fleet Composition Type", fontsize=11)
+    ax1.set_ylabel("Average Fleet Size", fontsize=11, color=MCV_COLOR)
+    ax1_twin.set_ylabel("Route Time (hours/day)", fontsize=11, color=ACCENT_COLOR)
+    ax1.set_title("Fleet Size and Route Time by Fleet Composition", fontsize=13)
     ax1.set_xticks(x_pos)
-    ax1.set_xticklabels(utilization_data['mcv_share_bin'])
-    
+    ax1.set_xticklabels(utilization_data["mcv_share_bin"])
+
     # Add value labels on bars
     for i, (bar1, bar2) in enumerate(zip(bars1, bars2)):
         height1 = bar1.get_height()
         height2 = bar2.get_height()
-        ax1.text(bar1.get_x() + bar1.get_width()/2., height1,
-                f'{height1:.1f}', ha='center', va='bottom', fontsize=9)
-        ax1_twin.text(bar2.get_x() + bar2.get_width()/2., height2,
-                     f'{height2:.0f}', ha='center', va='bottom', fontsize=9)
-    
-    ax1.legend(loc='upper left')
-    ax1_twin.legend(loc='upper right')
-    
+        ax1.text(
+            bar1.get_x() + bar1.get_width() / 2.0,
+            height1,
+            f"{height1:.1f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+        ax1_twin.text(
+            bar2.get_x() + bar2.get_width() / 2.0,
+            height2,
+            f"{height2:.0f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
+    ax1.legend(loc="upper left")
+    ax1_twin.legend(loc="upper right")
+
     # 2. Vehicle efficiency trends
     ax2 = fig.add_subplot(gs[0, 2])
-    
+
     # Efficiency per vehicle (customers served per vehicle)
     # Assuming ~90 customers total based on typical problem size
-    customers_per_vehicle = 90 / utilization_data['total_vehicles']
-    
+    customers_per_vehicle = 90 / utilization_data["total_vehicles"]
+
     ax2.bar(x_pos, customers_per_vehicle, color=NEUTRAL_COLOR, alpha=0.7)
-    ax2.set_xlabel('Fleet Type', fontsize=11)
-    ax2.set_ylabel('Customers per Vehicle', fontsize=11)
-    ax2.set_title('Vehicle Efficiency', fontsize=12)
+    ax2.set_xlabel("Fleet Type", fontsize=11)
+    ax2.set_ylabel("Customers per Vehicle", fontsize=11)
+    ax2.set_title("Vehicle Efficiency", fontsize=12)
     ax2.set_xticks(x_pos)
-    ax2.set_xticklabels(utilization_data['mcv_share_bin'], rotation=45)
-    
+    ax2.set_xticklabels(utilization_data["mcv_share_bin"], rotation=45)
+
     # Add value labels
     for i, bar in enumerate(ax2.patches):
-        height = bar.get_height()
-        ax2.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.1f}', ha='center', va='bottom', fontsize=9)
-    
+        height = bar.get_height()  # type: ignore
+        ax2.text(
+            bar.get_x() + bar.get_width() / 2.0,  # type: ignore
+            height,
+            f"{height:.1f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
     # 3. Visit efficiency analysis
     ax3 = fig.add_subplot(gs[1, :])
-    
+
     # Create scatter plot of visits per customer vs cost performance
     scatter = ax3.scatter(
-        mixed_results['average_visits_per_customer'],
-        mixed_results['delta_cost_pct_vs_scv'],
-        c=mixed_results['mcv_share'],
-        s=mixed_results['total_vehicles'] * 3,  # Size by fleet size
-        cmap='viridis',
+        mixed_results["average_visits_per_customer"],
+        mixed_results["delta_cost_pct_vs_scv"],
+        c=mixed_results["mcv_share"],
+        s=mixed_results["total_vehicles"] * 3,  # Size by fleet size
+        cmap="viridis",
         alpha=0.6,
-        edgecolors='black',
-        linewidth=0.5
+        edgecolors="black",
+        linewidth=0.5,
     )
-    
-    ax3.axhline(y=0, color='red', linestyle='--', alpha=0.7, label='Break-even')
-    ax3.set_xlabel('Average Visits per Customer', fontsize=11)
-    ax3.set_ylabel('Cost vs SCV Baseline (%)', fontsize=11)
-    ax3.set_title('Visit Efficiency vs Cost Performance (color=MCV share, size=fleet size)', fontsize=13)
+
+    ax3.axhline(y=0, color="red", linestyle="--", alpha=0.7, label="Break-even")
+    ax3.set_xlabel("Average Visits per Customer", fontsize=11)
+    ax3.set_ylabel("Cost vs SCV Baseline (%)", fontsize=11)
+    ax3.set_title(
+        "Visit Efficiency vs Cost Performance (color=MCV share, size=fleet size)",
+        fontsize=13,
+    )
     ax3.legend()
     ax3.grid(True, alpha=0.3)
-    
+
     # Add colorbar
     cbar = plt.colorbar(scatter, ax=ax3)
-    cbar.set_label('MCV Share', fontsize=10)
-    
+    cbar.set_label("MCV Share", fontsize=10)
+
     # 4. Split delivery analysis
     ax4 = fig.add_subplot(gs[2, 0])
-    
-    ax4.bar(x_pos, utilization_data['split_rate'] * 100, color=SCV_COLOR, alpha=0.7)
-    ax4.set_xlabel('Fleet Type', fontsize=11)
-    ax4.set_ylabel('Split Delivery Rate (%)', fontsize=11)
-    ax4.set_title('Customer Split Deliveries', fontsize=12)
+
+    ax4.bar(x_pos, utilization_data["split_rate"] * 100, color=SCV_COLOR, alpha=0.7)
+    ax4.set_xlabel("Fleet Type", fontsize=11)
+    ax4.set_ylabel("Split Delivery Rate (%)", fontsize=11)
+    ax4.set_title("Customer Split Deliveries", fontsize=12)
     ax4.set_xticks(x_pos)
-    ax4.set_xticklabels(utilization_data['mcv_share_bin'], rotation=45)
-    
+    ax4.set_xticklabels(utilization_data["mcv_share_bin"], rotation=45)
+
     # Add value labels
     for i, bar in enumerate(ax4.patches):
-        height = bar.get_height()
-        ax4.text(bar.get_x() + bar.get_width()/2., height,
-                f'{height:.0f}%', ha='center', va='bottom', fontsize=9)
-    
+        height = bar.get_height()  # type: ignore
+        ax4.text(
+            bar.get_x() + bar.get_width() / 2.0,  # type: ignore
+            height,
+            f"{height:.0f}%",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
+
     # 5. Operational efficiency correlation matrix
     ax5 = fig.add_subplot(gs[2, 1:])
-    
+
     # Select key operational metrics
-    ops_metrics = mixed_results[['total_vehicles', 'average_visits_per_customer', 
-                                'total_route_time_hours', 'split_rate', 'mcv_share',
-                                'delta_cost_pct_vs_scv']].copy()
-    ops_metrics.columns = ['Fleet Size', 'Visits/Customer', 'Route Time', 'Split Rate', 'MCV Share', 'Cost vs SCV']
-    
+    ops_metrics = mixed_results[
+        [
+            "total_vehicles",
+            "average_visits_per_customer",
+            "total_route_time_hours",
+            "split_rate",
+            "mcv_share",
+            "delta_cost_pct_vs_scv",
+        ]
+    ].copy()
+    ops_metrics.columns = [
+        "Fleet Size",
+        "Visits/Customer",
+        "Route Time",
+        "Split Rate",
+        "MCV Share",
+        "Cost vs SCV",
+    ]
+
     # Calculate correlation matrix
     corr_matrix = ops_metrics.corr()
-    
+
     # Create heatmap
-    sns.heatmap(corr_matrix, annot=True, cmap='RdBu_r', center=0, 
-                square=True, ax=ax5, cbar_kws={'label': 'Correlation'})
-    ax5.set_title('Operational Metrics Correlation Matrix', fontsize=12)
-    
+    sns.heatmap(
+        corr_matrix,
+        annot=True,
+        cmap="RdBu_r",
+        center=0,
+        square=True,
+        ax=ax5,
+        cbar_kws={"label": "Correlation"},
+    )
+    ax5.set_title("Operational Metrics Correlation Matrix", fontsize=12)
+
     # 6. Fleet size vs demand relationship
     ax6 = fig.add_subplot(gs[3, :])
-    
+
     # Group by alpha and C to show parameter sensitivity
-    param_summary = mixed_results.groupby(['alpha', 'C']).agg({
-        'total_vehicles': 'mean',
-        'mcv_share': 'mean',
-        'delta_cost_pct_vs_scv': 'mean',
-        'total_route_time_hours': 'mean'
-    }).reset_index()
-    
+    param_summary = (
+        mixed_results.groupby(["alpha", "C"])
+        .agg(
+            {
+                "total_vehicles": "mean",
+                "mcv_share": "mean",
+                "delta_cost_pct_vs_scv": "mean",
+                "total_route_time_hours": "mean",
+            }
+        )
+        .reset_index()
+    )
+
     # Create bubble chart
     scatter = ax6.scatter(
-        param_summary['alpha'],
-        param_summary['total_vehicles'],
-        s=param_summary['C'] * 5,  # Size by setup cost
-        c=param_summary['delta_cost_pct_vs_scv'],
-        cmap='RdYlGn_r',
+        param_summary["alpha"],
+        param_summary["total_vehicles"],
+        s=param_summary["C"] * 5,  # Size by setup cost
+        c=param_summary["delta_cost_pct_vs_scv"],
+        cmap="RdYlGn_r",
         alpha=0.7,
-        edgecolors='black',
-        linewidth=0.5
+        edgecolors="black",
+        linewidth=0.5,
     )
-    
-    ax6.set_xlabel('α: MCV Fixed Cost Premium', fontsize=11)
-    ax6.set_ylabel('Average Fleet Size', fontsize=11)
-    ax6.set_title('Fleet Size vs Cost Parameters (size=setup cost C, color=cost performance)', fontsize=12)
+
+    ax6.set_xlabel("α: MCV Fixed Cost Premium", fontsize=11)
+    ax6.set_ylabel("Average Fleet Size", fontsize=11)
+    ax6.set_title(
+        "Fleet Size vs Cost Parameters (size=setup cost C, color=cost performance)",
+        fontsize=12,
+    )
     ax6.grid(True, alpha=0.3)
-    
+
     # Add colorbar
     cbar = plt.colorbar(scatter, ax=ax6)
-    cbar.set_label('Cost vs SCV (%)', fontsize=10)
-    
+    cbar.set_label("Cost vs SCV (%)", fontsize=10)
+
     # Format x-axis
-    alpha_vals = sorted(param_summary['alpha'].unique())
+    alpha_vals = sorted(param_summary["alpha"].unique())
     ax6.set_xticks(alpha_vals)
-    ax6.set_xticklabels([f'+{int((a-1)*100)}%' for a in alpha_vals])
-    
-    plt.suptitle('Vehicle Load Utilization and Operational Metrics Analysis', fontsize=16, y=0.98)
-    
+    ax6.set_xticklabels([f"+{int((a - 1) * 100)}%" for a in alpha_vals])
+
+    plt.suptitle(
+        "Vehicle Load Utilization and Operational Metrics Analysis", fontsize=16, y=0.98
+    )
+
     return fig
 
 
@@ -913,7 +1054,9 @@ def create_html_report():
     efficiency_cascade = encode_image(create_efficiency_cascade())
     tipping_point = encode_image(create_tipping_point_analysis(mixed_results))
     executive_summary = encode_image(create_executive_summary_figure(mixed_results))
-    operational_metrics = encode_image(create_operational_metrics_analysis(mixed_results))
+    operational_metrics = encode_image(
+        create_operational_metrics_analysis(mixed_results)
+    )
 
     # HTML template
     html_content = f"""<!DOCTYPE html>
@@ -1339,9 +1482,9 @@ def create_html_report():
             </tr>
             <tr>
                 <td>Customers per Vehicle</td>
-                <td>{90/27:.1f}</td>
-                <td>{90/mixed_results["total_vehicles"].mean():.1f}</td>
-                <td>{90/mixed_results[mixed_results["mcv_share"] >= 0.99]["total_vehicles"].mean():.1f}</td>
+                <td>{90 / 27:.1f}</td>
+                <td>{90 / mixed_results["total_vehicles"].mean():.1f}</td>
+                <td>{90 / mixed_results[mixed_results["mcv_share"] >= 0.99]["total_vehicles"].mean():.1f}</td>
                 <td class="highlight-green">Pure MCV</td>
             </tr>
             <tr>
@@ -1368,8 +1511,8 @@ def create_html_report():
             <tr>
                 <td>Fleet Utilization</td>
                 <td>100% deployment</td>
-                <td>{mixed_results["total_vehicles"].mean()/27*100:.0f}% of SCV fleet size</td>
-                <td>{mixed_results[mixed_results["mcv_share"] >= 0.99]["total_vehicles"].mean()/27*100:.0f}% of SCV fleet size</td>
+                <td>{mixed_results["total_vehicles"].mean() / 27 * 100:.0f}% of SCV fleet size</td>
+                <td>{mixed_results[mixed_results["mcv_share"] >= 0.99]["total_vehicles"].mean() / 27 * 100:.0f}% of SCV fleet size</td>
                 <td class="highlight-green">Pure MCV</td>
             </tr>
         </table>
@@ -1549,13 +1692,13 @@ def create_html_report():
 def main():
     """Generate the comprehensive mixed fleet report."""
     print("Creating mixed fleet optimization report...")
-    
+
     # Check if data exists
     if not SUMMARY_PATH.exists():
         print(f"Error: Summary data not found at {SUMMARY_PATH}")
         print("Please run the mixed fleet experiments first using run_grid_mixed.py")
         return
-    
+
     try:
         report_path = create_html_report()
         print(f"Report successfully created: {report_path}")
@@ -1591,10 +1734,11 @@ types, but rather as the flexibility to choose the superior option.
 
         print("\nKey findings summary:")
         print(stats_summary)
-        
+
     except Exception as e:
         print(f"Error generating report: {e}")
         import traceback
+
         traceback.print_exc()
 
 

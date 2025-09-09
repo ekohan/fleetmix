@@ -6,7 +6,7 @@ Mirrors run_grid.py, reuses alpha_analysis config and metrics.
 import json
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ def convert_numpy_types(obj):
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
     elif is_dataclass(obj):
-        return convert_numpy_types(asdict(obj))
+        return convert_numpy_types(asdict(obj))  # type: ignore
     elif isinstance(obj, dict):
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, (list, tuple)):
@@ -80,7 +80,7 @@ def _vehicle_classification(params) -> Dict[str, str]:
 
 def _collect_day_summary(
     demand_path: Path, params, fleet_label: str, alpha: float, C: float
-) -> dict:
+) -> Any:
     """Run optimization for one day and collect comprehensive metrics."""
     customers_df = load_customer_demand(str(demand_path))
     num_customers = len(customers_df)
@@ -104,7 +104,9 @@ def _collect_day_summary(
     mcv_share = float(mcv_used / total_used) if total_used > 0 else 0.0
 
     # Express α and C as percentages relative to base SCV fixed cost
-    base_conf = load_fleetmix_params(Path("src/fleetmix/config/default_config_experiments.yaml"))
+    base_conf = load_fleetmix_params(
+        Path("src/fleetmix/config/default_config_experiments.yaml")
+    )
     base_fc = float(next(iter(base_conf.problem.vehicles.values())).fixed_cost)
     alpha_pct = 100.0 * (alpha - 1.0)
     c_pct_scv = 100.0 * (C / base_fc) if base_fc else 0.0
@@ -114,54 +116,79 @@ def _collect_day_summary(
     total_route_time_hours = (
         float(solution.total_variable_cost / vph) if vph > 0 else 0.0
     )
-    
+
     # Calculate vehicle utilization from selected clusters
     vehicle_utilizations = []
     scv_utilizations = []
     mcv_utilizations = []
-    total_distance = 0.0  # We don't have exact distance but can estimate from route time
-    
+    total_distance = (
+        0.0  # We don't have exact distance but can estimate from route time
+    )
+
     if solution.selected_clusters:
         # Create a mapping of config_id to capacity
-        config_capacities = {str(cfg.config_id): cfg.capacity for cfg in solution.configurations} if hasattr(solution, 'configurations') else {}
-        
+        config_capacities = (
+            {str(cfg.config_id): cfg.capacity for cfg in solution.configurations}
+            if hasattr(solution, "configurations")
+            else {}
+        )
+
         # If configurations not in solution, get from params
         if not config_capacities:
-            from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
-            configs = generate_vehicle_configurations(params.problem.vehicles, params.problem.goods)
+            from fleetmix.utils.vehicle_configurations import (
+                generate_vehicle_configurations,
+            )
+
+            configs = generate_vehicle_configurations(
+                params.problem.vehicles, params.problem.goods
+            )
             config_capacities = {str(cfg.config_id): cfg.capacity for cfg in configs}
-        
+
         for cluster in solution.selected_clusters:
             # Calculate total demand weight for this cluster
-            cluster_demand = sum(cluster.total_demand.values()) if cluster.total_demand else 0.0
-            
+            cluster_demand = (
+                sum(cluster.total_demand.values()) if cluster.total_demand else 0.0
+            )
+
             # Get vehicle capacity from config
-            capacity = config_capacities.get(str(cluster.config_id), 1000)  # Default to 1000 if not found
-            
+            capacity = config_capacities.get(
+                str(cluster.config_id), 1000
+            )  # Default to 1000 if not found
+
             # Calculate utilization percentage
             utilization = (cluster_demand / capacity * 100) if capacity > 0 else 0.0
             vehicle_utilizations.append(utilization)
-            
+
             # Track by vehicle type
             if vt_class.get(cluster.vehicle_type, "SCV") == "SCV":
                 scv_utilizations.append(utilization)
             else:
                 mcv_utilizations.append(utilization)
-            
+
             # Estimate distance from route time (using avg speed)
-            avg_speed = params.problem.vehicles.get(cluster.vehicle_type, {}).avg_speed if hasattr(params.problem.vehicles.get(cluster.vehicle_type, {}), 'avg_speed') else 30.0
+            avg_speed = (
+                params.problem.vehicles.get(cluster.vehicle_type, {}).avg_speed
+                if hasattr(
+                    params.problem.vehicles.get(cluster.vehicle_type, {}), "avg_speed"
+                )
+                else 30.0
+            )
             total_distance += cluster.route_time * avg_speed
-    
+
     # Calculate average utilizations
-    avg_utilization = float(np.mean(vehicle_utilizations)) if vehicle_utilizations else 0.0
+    avg_utilization = (
+        float(np.mean(vehicle_utilizations)) if vehicle_utilizations else 0.0
+    )
     avg_scv_utilization = float(np.mean(scv_utilizations)) if scv_utilizations else 0.0
     avg_mcv_utilization = float(np.mean(mcv_utilizations)) if mcv_utilizations else 0.0
-    
+
     # Calculate utilization statistics
     utilization_stats = {
         "min": float(np.min(vehicle_utilizations)) if vehicle_utilizations else 0.0,
         "max": float(np.max(vehicle_utilizations)) if vehicle_utilizations else 0.0,
-        "median": float(np.median(vehicle_utilizations)) if vehicle_utilizations else 0.0,
+        "median": float(np.median(vehicle_utilizations))
+        if vehicle_utilizations
+        else 0.0,
         "std": float(np.std(vehicle_utilizations)) if vehicle_utilizations else 0.0,
     }
 

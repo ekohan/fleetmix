@@ -10,7 +10,7 @@ from fleetmix.core_types import FleetmixSolution
 
 def _count_customer_visits(solution: FleetmixSolution) -> Dict[str, int]:
     """Helper function to count visits per physical customer across all clusters."""
-    customer_counts = defaultdict(int)
+    customer_counts: Dict[str, int] = defaultdict(int)
     for cluster in solution.selected_clusters:
         # Count each physical customer at most once per cluster visit
         origins_in_cluster = set()

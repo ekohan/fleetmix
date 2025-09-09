@@ -29,6 +29,7 @@ def clusters_to_dataframe(clusters: list[Cluster]) -> pd.DataFrame:
         row = {
             "Cluster_ID": cluster.cluster_id,
             "Config_ID": cluster.config_id,
+            "Vehicle_Type": cluster.vehicle_type,
             "Customers": cluster.customers,
             "Total_Demand": cluster.total_demand,
             "Centroid_Latitude": cluster.centroid_latitude,
@@ -91,6 +92,9 @@ def dataframe_to_clusters(df: pd.DataFrame) -> list[Cluster]:
         cluster = Cluster(
             cluster_id=row["Cluster_ID"],
             config_id=row.get("Config_ID", "unassigned"),  # Handle missing Config_ID
+            vehicle_type=row.get(
+                "Vehicle_Type", "unknown"
+            ),  # Handle missing Vehicle_Type
             customers=row["Customers"]
             if isinstance(row.get("Customers"), list)
             else [],

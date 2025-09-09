@@ -3,8 +3,11 @@ Command-line interface for Fleetmix using Typer.
 """
 
 import dataclasses
+import importlib
+import pathlib
+import pkgutil
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import pandas as pd
 import typer
@@ -1241,6 +1244,70 @@ def _setup_logging_from_flags(
     else:
         # No flags set, let setup_logging handle it (will check env var)
         setup_logging()
+
+
+@app.command("exp")
+def experiments(
+    action: Annotated[str, typer.Argument(help="list | run | analyze")],
+    experiment: Annotated[str | None, typer.Option("-e", "--experiment")] = None,
+    config_path: Annotated[pathlib.Path | None, typer.Option("-c", "--config")] = None,
+):
+    """
+    Run experimental analyses.
+
+    Actions:
+    - list: Show available experiments
+    - run: Execute experiment grid runs
+    - analyze: Analyze experiment results
+    """
+    if action == "list":
+        import fleetmix.experiments as exp_pkg
+
+        available = [
+            name for _, name, is_pkg in pkgutil.iter_modules(exp_pkg.__path__) if is_pkg
+        ]
+        if available:
+            console.print("Available experiments:")
+            for exp_name in available:
+                console.print(f"  - {exp_name}")
+        else:
+            console.print("No experiments found")
+        return
+
+    if experiment is None:
+        log_error("Missing --experiment / -e")
+        raise typer.Exit(1)
+
+    # Import and run the appropriate module
+    try:
+        if action == "run":
+            if experiment == "alpha_analysis":
+                from fleetmix.experiments.alpha_analysis.run_grid import main
+
+                main(config_path)
+            else:
+                log_error(f"Unknown experiment '{experiment}' for action 'run'")
+                raise typer.Exit(1)
+
+        elif action == "analyze":
+            if experiment == "alpha_analysis":
+                from fleetmix.experiments.alpha_analysis.analyze import main
+
+                main(config_path)
+            else:
+                log_error(f"Unknown experiment '{experiment}' for action 'analyze'")
+                raise typer.Exit(1)
+
+        else:
+            log_error(f"Unknown action '{action}'. Use 'list', 'run', or 'analyze'")
+            raise typer.Exit(1)
+
+    except ImportError as e:
+        log_error(f"Failed to import experiment module: {e}")
+        raise typer.Exit(1)
+    except Exception as e:
+        log_error(f"Error running experiment: {e}")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

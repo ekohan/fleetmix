@@ -131,6 +131,7 @@ def _make_test_data():
     cluster_multi = Cluster(
         cluster_id=101,
         config_id=3,  # Uses the multi-compartment vehicle
+        vehicle_type="MultiDryChilled",
         customers=[pc_both.customer_id],
         total_demand={"Dry": 10.0, "Chilled": 5.0, "Frozen": 0.0},
         centroid_latitude=0.0,
@@ -143,6 +144,7 @@ def _make_test_data():
     cluster_dry = Cluster(
         cluster_id=102,
         config_id=1,
+        vehicle_type="SingleDry",
         customers=[pc_dry.customer_id],
         total_demand={"Dry": 10.0, "Chilled": 0.0, "Frozen": 0.0},
         centroid_latitude=0.0,
@@ -155,6 +157,7 @@ def _make_test_data():
     cluster_chilled = Cluster(
         cluster_id=103,
         config_id=2,
+        vehicle_type="SingleChilled",
         customers=[pc_chilled.customer_id],
         total_demand={"Dry": 0.0, "Chilled": 5.0, "Frozen": 0.0},
         centroid_latitude=0.0,

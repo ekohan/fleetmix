@@ -89,6 +89,7 @@ def test_improve_solution_missing_goods_columns(params_with_post_opt):
         Cluster(
             cluster_id="C1",
             config_id="Small",
+            vehicle_type="Small",
             customers=["Cust1", "Cust2"],
             total_demand={"Dry": 20, "Chilled": 0, "Frozen": 0},
             centroid_latitude=0.1,

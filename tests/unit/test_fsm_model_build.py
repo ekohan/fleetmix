@@ -30,6 +30,18 @@ def dataframe_to_configurations(df: pd.DataFrame) -> list[VehicleConfiguration]:
 def test_create_model_basic(toy_fsm_model_build_data):
     """Test that _create_model creates appropriate variables and constraints."""
     clusters_df, config_df, params = toy_fsm_model_build_data
+    # Disable split-stop mode to use legacy Customer_Coverage constraints
+    from fleetmix.config.params import ProblemParams
+    params.problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
     
     # Create a simple customers_df for the test
     customers_df = pd.DataFrame({

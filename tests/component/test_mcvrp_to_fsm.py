@@ -17,7 +17,7 @@ def test_total_demand_preserved_and_expected_vehicles():
         / "benchmarking"
         / "datasets"
         / "mcvrp"
-        / "10_3_3_3_(01).dat"
+        / "2015_10_3_3_3_(01).dat"
     )
     # Parse original instance
     instance = parse_mcvrp(dat_path)
@@ -49,7 +49,7 @@ def test_dataframe_schema_and_vehicle_config():
         / "benchmarking"
         / "datasets"
         / "mcvrp"
-        / "10_3_3_3_(01).dat"
+        / "2015_10_3_3_3_(01).dat"
     )
     # Parse original instance
     instance = parse_mcvrp(dat_path)
@@ -92,7 +92,7 @@ def test_multi_instance_conversion():
         / "benchmarking"
         / "datasets"
         / "mcvrp"
-        / "10_3_3_3_(01).dat"
+        / "2015_10_3_3_3_(01).dat"
     )
     # Parse original instance
     instance = parse_mcvrp(dat_path)

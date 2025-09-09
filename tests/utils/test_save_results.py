@@ -38,6 +38,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
             Cluster(
                 cluster_id="CL1",
                 config_id="C1",
+                vehicle_type="Test",
                 customers=["A", "B"],
                 total_demand={"Dry": 100, "Chilled": 50, "Frozen": 0},
                 centroid_latitude=4.5,
@@ -49,6 +50,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
             Cluster(
                 cluster_id="CL2",
                 config_id="C2",
+                vehicle_type="Test",
                 customers=["C", "D"],
                 total_demand={"Dry": 200, "Chilled": 0, "Frozen": 100},
                 centroid_latitude=4.6,

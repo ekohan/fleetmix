@@ -48,7 +48,7 @@ light_load_threshold: 0  # Threshold for light load (e.g., 0.2 for 20%) -- when 
 compartment_setup_cost: 0  # Cost per additional compartment beyond the first one
 
 # Split-stop capability
-allow_split_stops: false  # Allow customers to be served by multiple vehicles
+allow_split_stops: true  # Allow customers to be served by multiple vehicles
 
 # ---------------------------------------------------------------------------
 # ALGORITHM params
@@ -94,5 +94,5 @@ verbose: true       # Enable verbose output
 debug: false        # Enable debug mode for solver and model
 # TODO: check debug-milp mode
 solver: gurobi      # auto | gurobi | cbc
-gap_rel: 0.0        # relative MIP gap
-time_limit: 180     # seconds; None = no limit
+gap_rel: 0.005        # relative MIP gap
+time_limit: 60     # seconds; None = no limit

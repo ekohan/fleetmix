@@ -268,7 +268,7 @@ def maybe_explode(
         f"Split-stops enabled, exploding {len(customers_df)} customers into pseudo-customers"
     )
 
-    if configurations:
+    if configurations is not None and len(configurations) > 0:
         logger.info(
             f"Using smart explosion with {len(configurations)} vehicle configurations"
         )
@@ -287,7 +287,7 @@ def maybe_explode(
     )
 
     # Debug: Show which customers needed multiple vehicles
-    if configurations:
+    if configurations is not None and len(configurations) > 0:
         multi_vehicle_customers = {}
         for customer in customers:
             pseudo_count = sum(
@@ -310,22 +310,26 @@ def maybe_explode(
 
 # Legacy utility functions - DEPRECATED - Use CustomerBase methods instead
 # TODO: remove these.
-def is_pseudo_customer(customer_id: str) -> bool:
-    """Check if a customer ID represents a pseudo-customer (contains '::').
+def is_pseudo_customer(customer_id: str | int) -> bool:
+    """Return True if *customer_id* belongs to a pseudo-customer (contains "::").
 
-    DEPRECATED: Use customer.is_pseudo_customer() method instead.
+    The helper tolerates non-string input (e.g. the integer IDs often used in
+    unit tests) by coercing *customer_id* to *str* before inspection.  This
+    avoids ``TypeError: argument of type 'int' is not iterable`` that surfaced
+    after refactoring.
     """
-    return "::" in customer_id
+    return "::" in str(customer_id)
 
 
-def get_origin_id(customer_id: str) -> str:
+def get_origin_id(customer_id: str | int) -> str:
     """Extract the original customer ID from a pseudo-customer ID.
 
     DEPRECATED: Use customer.get_origin_id() method instead.
     """
-    if is_pseudo_customer(customer_id):
-        return customer_id.split("::")[0]
-    return customer_id
+    cid_str = str(customer_id)
+    if is_pseudo_customer(cid_str):
+        return cid_str.split("::")[0]
+    return cid_str
 
 
 def get_subset_from_id(customer_id: str) -> tuple[str, ...]:

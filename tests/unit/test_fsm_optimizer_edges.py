@@ -42,6 +42,18 @@ def test_create_model_constraints(toy_fsm_edge_data):
     })
     
     configurations = dataframe_to_configurations(config_df)
+    # Disable split-stop mode to rely on Customer_Coverage constraints
+    from fleetmix.config.params import ProblemParams
+    params.problem = ProblemParams(
+        vehicles=params.problem.vehicles,
+        depot=params.problem.depot,
+        goods=params.problem.goods,
+        variable_cost_per_hour=params.problem.variable_cost_per_hour,
+        light_load_penalty=params.problem.light_load_penalty,
+        light_load_threshold=params.problem.light_load_threshold,
+        compartment_setup_cost=params.problem.compartment_setup_cost,
+        allow_split_stops=False,
+    )
     model, y_vars, x_vars, c_vk = _create_model(clusters_df, configurations, customers_df, params)
     # Each customer coverage constraint exists
     for cid in ["C1", "C2"]:

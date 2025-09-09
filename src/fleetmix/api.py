@@ -124,7 +124,8 @@ def _two_phase_solve(
 
             if (
                 phase2_solution.total_cost < baseline_solution.total_cost
-                and phase2_vehicles <= baseline_vehicles
+                # TODO: saco esto por comparacion con scv baseline
+                # and phase2_vehicles <= baseline_vehicles
             ):
                 logger.info("Using Phase 2 solution (better cost and no more vehicles)")
                 return phase2_solution

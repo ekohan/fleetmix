@@ -3,15 +3,17 @@ Command-line interface for Fleetmix using Typer.
 """
 
 import dataclasses
+import importlib
+import pathlib
+import pkgutil
 from pathlib import Path
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
 import pandas as pd
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-import importlib, pkgutil, pathlib
 
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
@@ -1251,42 +1253,57 @@ def experiments(
     config_path: Annotated[pathlib.Path | None, typer.Option("-c", "--config")] = None,
 ):
     """
-    Lightweight dispatcher to experiments.<pkg>.<module>.main().
-    run     -> <pkg>.run_grid.main
-    analyze -> <pkg>.analyze.main
+    Run experimental analyses.
+    
+    Actions:
+    - list: Show available experiments
+    - run: Execute experiment grid runs
+    - analyze: Analyze experiment results
     """
-    import sys
-
-    # Add project root to path to allow finding 'experiments' package,
-    # which lives outside the 'src' directory.
-    project_root = pathlib.Path(__file__).resolve().parent.parent.parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-
     if action == "list":
-        import experiments as _exp_pkg  # noqa: F401
-        pkgs = [n for _, n, ispkg in pkgutil.iter_modules(_exp_pkg.__path__) if ispkg]
-        console.print("\n".join(pkgs) if pkgs else "No experiments found")
+        import fleetmix.experiments as exp_pkg
+        
+        available = [name for _, name, is_pkg in pkgutil.iter_modules(exp_pkg.__path__) if is_pkg]
+        if available:
+            console.print("Available experiments:")
+            for exp_name in available:
+                console.print(f"  - {exp_name}")
+        else:
+            console.print("No experiments found")
         return
 
     if experiment is None:
         log_error("Missing --experiment / -e")
         raise typer.Exit(1)
 
-    module_suffix = "run_grid" if action == "run" else "analyze"
-    module_path   = f"experiments.{experiment}.{module_suffix}"
-
+    # Import and run the appropriate module
     try:
-        mod = importlib.import_module(module_path)
-    except ModuleNotFoundError as exc:
-        log_error(str(exc))
+        if action == "run":
+            if experiment == "alpha_analysis":
+                from fleetmix.experiments.alpha_analysis.run_grid import main
+                main(config_path)
+            else:
+                log_error(f"Unknown experiment '{experiment}' for action 'run'")
+                raise typer.Exit(1)
+                
+        elif action == "analyze":
+            if experiment == "alpha_analysis":
+                from fleetmix.experiments.alpha_analysis.analyze import main
+                main(config_path)
+            else:
+                log_error(f"Unknown experiment '{experiment}' for action 'analyze'")
+                raise typer.Exit(1)
+                
+        else:
+            log_error(f"Unknown action '{action}'. Use 'list', 'run', or 'analyze'")
+            raise typer.Exit(1)
+            
+    except ImportError as e:
+        log_error(f"Failed to import experiment module: {e}")
         raise typer.Exit(1)
-
-    if not hasattr(mod, "main"):
-        log_error(f"{module_path}.main() not found")
+    except Exception as e:
+        log_error(f"Error running experiment: {e}")
         raise typer.Exit(1)
-
-    mod.main(config_path)
 
 
 if __name__ == "__main__":

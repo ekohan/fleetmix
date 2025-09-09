@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -334,11 +334,11 @@ def plot_causality_diagram() -> None:
     for box in boxes:
         fancy_box = FancyBboxPatch(
             (
-                float(box["x"]) - float(box["w"]) / 2,
-                float(box["y"]) - float(box["h"]) / 2,
-            ),  # type: ignore
-            float(box["w"]),  # type: ignore
-            float(box["h"]),  # type: ignore
+                float(cast(float, box["x"])) - float(cast(float, box["w"])) / 2,
+                float(cast(float, box["y"])) - float(cast(float, box["h"])) / 2,
+            ),
+            float(cast(float, box["w"])),
+            float(cast(float, box["h"])),
             boxstyle="round,pad=0.1",
             facecolor=str(box["color"]),
             edgecolor=str(box["color"]),  # Match edge to face color for borderless look

@@ -27,7 +27,10 @@ from fleetmix.experiments.alpha_analysis.metrics import (
     average_visits_per_customer,
     cost_per_drop,
     cost_per_kg,
+    distance_ratios,
+    route_time_stats,
     split_rate,
+    stops_stats,
 )
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.logging import LogLevel, setup_logging
@@ -192,6 +195,11 @@ def _collect_day_summary(
         "std": float(np.std(vehicle_utilizations)) if vehicle_utilizations else 0.0,
     }
 
+    # Route and stop stats using helper functions
+    rt_stats = route_time_stats(solution)
+    st_stats = stops_stats(solution)
+    dist_stats = distance_ratios(total_distance, num_customers, total_used)
+
     return convert_numpy_types(
         {
             "instance": demand_path.stem,
@@ -214,6 +222,8 @@ def _collect_day_summary(
             "split_rate": float(sr),
             "average_visits_per_customer": float(avg_visits),
             "total_route_time_hours": float(total_route_time_hours),
+            **rt_stats,
+            **st_stats,
             # Vehicle utilization metrics
             "avg_vehicle_utilization_pct": float(avg_utilization),
             "avg_scv_utilization_pct": float(avg_scv_utilization),
@@ -223,6 +233,7 @@ def _collect_day_summary(
             "utilization_median_pct": float(utilization_stats["median"]),
             "utilization_std_pct": float(utilization_stats["std"]),
             "total_distance_km": float(total_distance),
+            **dist_stats,
             # Additional solution details
             "total_fixed_cost": float(solution.total_fixed_cost),
             "total_variable_cost": float(solution.total_variable_cost),

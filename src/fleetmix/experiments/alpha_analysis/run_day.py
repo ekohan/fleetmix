@@ -3,8 +3,9 @@ Day-level optimization runner.
 """
 
 from pathlib import Path
+from typing import Any
 
-import pandas as pd
+import numpy as np
 
 from fleetmix.api import optimize
 
@@ -15,11 +16,30 @@ from fleetmix.experiments.alpha_analysis.metrics import (
     average_visits_per_customer,
     cost_per_drop,
     cost_per_kg,
+    distance_ratios,
+    route_time_stats,
     split_rate,
+    stops_stats,
 )
 from fleetmix.utils.data_processing import load_customer_demand
 
 BASE_CONFIG_PATH = Path("src/fleetmix/config/default_config_experiments.yaml")
+
+
+# Copied utility from run_grid to safely convert numpy & other objects to native types
+def _convert_numpy_types(obj) -> Any:  # local func to keep this module self-contained
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, dict):
+        return {k: _convert_numpy_types(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        conv = [_convert_numpy_types(x) for x in obj]
+        return conv if isinstance(obj, list) else tuple(conv)
+    return obj
 
 
 def run_day(
@@ -28,7 +48,7 @@ def run_day(
     fleet_type: str,
     alpha: float = 1.0,
     C: float = 0.0,
-) -> dict:
+) -> dict[Any, Any]:
     """Run optimization for one demand day and compute metrics."""
     customers_df = load_customer_demand(str(demand_path))
     num_customers = len(customers_df)
@@ -59,8 +79,23 @@ def run_day(
         else 0.0
     )
 
+    # Route-level stats
+    rt_stats = route_time_stats(solution)
+    st_stats = stops_stats(solution)
+
+    # Estimate total distance similar to run_grid_mixed logic (route_time * avg_speed)
+    total_distance_km = 0.0
+    for cl in solution.selected_clusters:
+        vt_spec = fleet_params.problem.vehicles.get(cl.vehicle_type, None)
+        avg_speed = getattr(vt_spec, "avg_speed", 30.0) if vt_spec is not None else 30.0
+        total_distance_km += cl.route_time * avg_speed
+
+    dist_stats = distance_ratios(
+        total_distance_km, num_customers, solution.total_vehicles
+    )
+
     day_id = demand_path.stem
-    return {
+    result = {
         "day_id": day_id,
         "num_customers": num_customers,
         "total_demand_kg": total_demand_kg,
@@ -86,4 +121,11 @@ def run_day(
         "solver_runtime_sec": solution.solver_runtime_sec,
         "optimality_gap": solution.optimality_gap,
         "total_route_time_hours": total_route_time_hours,
+        # New aggregated route metrics
+        **rt_stats,
+        **st_stats,
+        "total_distance_km": total_distance_km,
+        **dist_stats,
     }
+
+    return _convert_numpy_types(result)  # type: ignore[no-any-return]

@@ -284,6 +284,7 @@ class Cluster:
 
     cluster_id: int
     config_id: str | int  # Accept both string and int for compatibility
+    vehicle_type: str  # Vehicle type that serves this cluster
     customers: list[str]
     total_demand: dict[str, float]
     centroid_latitude: float
@@ -323,6 +324,9 @@ class Cluster:
                 config_id=row.get(
                     "Config_ID", "unassigned"
                 ),  # Handle missing Config_ID
+                vehicle_type=row.get(
+                    "Vehicle_Type", "unknown"
+                ),  # Handle missing Vehicle_Type
                 customers=row["Customers"]
                 if isinstance(row["Customers"], list)
                 else [],
@@ -354,6 +358,7 @@ class Cluster:
             row = {
                 "Cluster_ID": cluster.cluster_id,
                 "Config_ID": cluster.config_id,
+                "Vehicle_Type": cluster.vehicle_type,
                 "Customers": cluster.customers,
                 "Total_Demand": cluster.total_demand,
                 "Centroid_Latitude": cluster.centroid_latitude,
@@ -374,6 +379,7 @@ class Cluster:
         data = {
             "Cluster_ID": self.cluster_id,
             "Config_ID": self.config_id,
+            "Vehicle_Type": self.vehicle_type,
             "Customers": self.customers,
             "Total_Demand": self.total_demand,
             "Centroid_Latitude": self.centroid_latitude,

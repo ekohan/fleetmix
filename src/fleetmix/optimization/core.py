@@ -183,7 +183,7 @@ def _solve_internal(
             selected_clusters=[],
             vehicles_used={},
             total_vehicles=0,
-            missing_customers=set(customers_df["Customer_ID"]),
+            missing_customers=set(),
             solver_name="None",
             solver_status="No clusters to optimize",
             solver_runtime_sec=0.0,
@@ -613,8 +613,11 @@ def _calculate_solution_statistics(
     """Calculate solution statistics using the optimization results."""
 
     # Get selected assignments and their actual costs from the optimization
+    # Use a tolerant selection consistent with _extract_solution (> 0.5)
     selected_assignments = {
-        (v, k): c_vk[(v, k)] for (v, k), var in x_vars.items() if var.varValue == 1
+        (v, k): c_vk[(v, k)]
+        for (v, k), var in x_vars.items()
+        if (var.varValue or 0.0) > 0.5
     }
 
     # Calculate compartment penalties

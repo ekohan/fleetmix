@@ -1,101 +1,223 @@
-# Experimental Design for FleetMix Comparison Study
-<!-- TODO: make shorter -->
+# Experimental Design for Multi-Compartment Vehicle Fleet Optimization Study
 
-## 1. Objective
+## Abstract
 
-Quantify the cost and operational performance difference between **single‑compartment vehicle (SCV)** fleets and **multi‑compartment vehicle (MCV)** fleets for last‑mile food distribution, across a grid of MCV cost parameters *(α, C)*.
+This document presents the experimental design for a comprehensive comparison study evaluating the cost-effectiveness of Multi-Compartment Vehicles (MCVs) versus Single-Compartment Vehicles (SCVs) in last-mile food distribution. The study comprises two complementary experiments: (1) homogeneous fleet comparison and (2) mixed fleet optimization, both employing a Randomized Complete Block Design (RCBD) with 70 historical demand days as blocks.
 
-## 2. Design Summary – Randomised Complete Block Design (RCBD)
+## 1. Research Objectives
 
-| Element                    | Description                                                                                                     |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Blocks**                 | 70 historical demand days (real customer orders & routes)                                                       |
-| **Treatments**             | 1 × SCV baseline + *J* MCV configurations (unique combinations of vehicle‑surcharge **α** and setup‑cost **C**) |
-| **Observations per block** | *J + 1* total‑cost evaluations — one for each fleet configuration                                               |
-| **Replication**            | Every block receives *all* treatments (hence “complete”)                                                        |
-| **Randomisation**          | Order of fleet runs within each block is randomised to avoid systematic solver side‑effects                     |
+### Primary Objective
+Quantify the cost and operational performance differences between traditional single-compartment vehicle fleets and multi-compartment vehicle fleets for temperature-controlled last-mile delivery across varying MCV cost parameters.
 
-## 3. Control Variables (held *ceteris paribus* within each block)
+### Research Questions
+1. Under what cost conditions do homogeneous MCV fleets outperform homogeneous SCV fleets?
+2. When given the choice, how does an optimizer balance SCVs and MCVs in a mixed fleet configuration?
+3. What is the relative benefit of fleet heterogeneity versus homogeneity in multi-temperature distribution?
 
-* Route‑time limit per driver (hours)
-* Gross payload capacity (kg)
-* Per‑stop service time (minutes)
-* Geographic customer locations
-* SKU‑level demand quantities & temperature mix (Dry/Chill/Frozen)
-* External operating conditions (traffic, weather) through the **common‑random‑numbers (CRN)** principle
+## 2. Experimental Framework
 
-## 4. Cost Model
+### 2.1 Overall Design Structure
 
-\$\text{TotalCost} = f\_{\text{veh}} + C\_{\text{setup}} + c\_{\text{dist}}\$
+| Component | Description |
+|-----------|-------------|
+| **Design Type** | Randomized Complete Block Design (RCBD) with paired comparisons |
+| **Blocks** | 70 unique historical demand days capturing real-world variation in customer orders, volumes, and geographic patterns |
+| **Replication** | Every block receives all treatments (complete design) |
+| **Randomization** | Order of treatment application within blocks randomized to avoid systematic bias |
+| **Common Random Numbers** | Identical demand realizations and external conditions across treatments within each block |
 
-* **α (vehicle surcharge)**: \$f\_{\text{MCV}} = α,f\_{\text{SCV}}\$
-  Reported as “+ % over SCV”.
-* **C (compartment setup)**: Per‑additional‑compartment cost, expressed as a % of SCV fixed cost.
+### 2.2 Two-Experiment Structure
 
-## 5. Statistical Analysis Plan
+The study consists of two parallel experiments sharing the same blocking structure and parameter grid:
 
-### 5.1 Linear Mixed‑Effects Model
+**Experiment 1: Homogeneous Fleet Comparison**
+- Control: Homogeneous SCV fleet (baseline)
+- Treatment: Homogeneous MCV fleet with varying cost parameters
 
-```text
-Cost_{ij} = μ + τ_j + β_i + ε_{ij}
-```
+**Experiment 2: Mixed Fleet Optimization**
+- Control: Homogeneous SCV fleet (same baseline)
+- Treatment: Heterogeneous fleet where optimizer selects from both SCV and MCV options
 
-* *i* = day (1…70) — random block effect βᵢ ∼ 𝒩(0, σ²\_β)
-* *j* = fleet configuration (1…J+1) — fixed treatment effect τⱼ
+## 3. Treatment Structure
 
-> Implemented with `statsmodels.MixedLM` (Python) or `lme4::lmer` (R).
+### 3.1 Fleet Configurations
 
-### 5.2 Global Hypothesis Test
+| Experiment | Fleet Type | Vehicle Options | Description |
+|------------|------------|-----------------|-------------|
+| 1 | SCV Baseline | SCV only | Each vehicle handles single temperature class |
+| 1 | MCV Homogeneous | MCV only | Each vehicle handles multiple temperature classes |
+| 2 | SCV Baseline | SCV only | Identical to Experiment 1 baseline |
+| 2 | Mixed Fleet | SCV + MCV | Optimizer chooses vehicle mix based on demand and costs |
 
-* *H₀*: all treatment effects equal (τ₁ = … = τⱼ).
-* F‑test (or likelihood‑ratio) at α = 0.05.
+### 3.2 Cost Parameter Grid
 
-### 5.3 Post‑hoc Contrasts
+The MCV cost structure is parameterized by two factors:
 
-* Pairwise contrasts **MCVⱼ – SCV** with 95 % CIs.
-* Adjust p-values for multiple comparisons (Benjamini–Hochberg).
+**α (Vehicle Surcharge Factor)**
+- Definition: Fixed cost multiplier where MCV fixed cost = α × SCV fixed cost
+- Grid: α ∈ {1.00, 1.05, 1.10, ..., 1.40}
+- Interpretation: Percentage premium for MCV acquisition/operation
 
-### 5.4 Non‑parametric Robustness
+**C (Compartment Setup Cost)**
+- Definition: Additional fixed cost per compartment beyond the first
+- Grid: C ∈ {0%, 5%, 10%, 15%} of baseline SCV fixed cost
+- Interpretation: Operational overhead for multi-compartment configuration
 
-* Friedman test (k‑sample extension of Wilcoxon signed‑rank).
-* Nemenyi or Dunn–Šidák post‑hoc if distributional assumptions fail.
+**Note**: Cost surcharges apply exclusively to MCVs; SCV costs remain at baseline across all treatments.
 
-## 6. Parameter‑Sensitivity Surface
+### 3.3 Complete Treatment Set
 
-* Grid over α ∈ {0 %, 5 %, … 40 %} and C ∈ {0 %, 5 %, 10 %, 15 %}.
-* For each (α, C) cell: run full RCBD, compute Δ% cost and operational KPIs.
-* Visualise with:
+Each experiment evaluates:
+- 1 SCV baseline configuration
+- |α| × |C| MCV configurations (9 × 4 = 36 in standard grid)
+- Total treatments per experiment: 37 configurations
+- Total observations: 37 configurations × 70 blocks = 2,590 per experiment
 
-  * **Break‑even heat‑map** — Δ% cost surface, contour at 0 %.
-  * **Probability‑of‑superiority** — % of days where MCV < SCV.
+## 4. Control Variables
 
-## 7. Key Metrics Reported (all indexed to SCV = 1.00)
+The following variables are held constant within each block to ensure fair comparison:
 
-* Δ% Total cost, cost‑per‑kg, cost‑per‑drop
-* Vehicles per day, average load factor, split‑delivery rate
-* Driver‑hours (if modelled)
-* 95 % confidence intervals across demand days
+### 4.1 Operational Constraints
+- Maximum route duration per driver (hours)
+- Vehicle gross payload capacity (kg)
+- Per-stop service time (minutes)
+- Driver shift patterns and availability
 
-## 8. Advantages of This Design
+### 4.2 Demand Characteristics
+- Customer geographic locations (longitude, latitude)
+- Demand quantities & mix
 
-1. **Variance reduction** — blocking removes day‑to‑day heterogeneity.
-2. **Fair comparison** — CRN enforces identical demand realisations across fleets.
-3. **Statistical power** — 70 paired observations more efficient than 140 unpaired.
-4. **Scalability insights** — same framework reused across the (α, C) grid.
+### 4.3 External Conditions
+- External operating conditions (traffic, weather) through the **common‑random‑numbers (CRN)** principle
 
-## 9. Reproducibility & Artefacts
+## 5. Response Variables
 
-* Solver: **FleetMix** (open‑source, PyPI & GitHub).
-* Data: 70 anonymised distribution days (available upon request or via companion repo).
-* RNG seeds fixed per block to guarantee CRN.
-* Analysis notebooks & figures auto‑generated; CI propagation via bootstrapping.
+### 5.1 Primary Metrics
+- **Total Cost**: Sum of fixed vehicle costs, variable routing costs, and compartment setup costs
+- **Cost Difference**: d_ij = Cost_Treatment_ij - Cost_SCV_ij for block i, configuration j
 
-## 10. References
+### 5.2 Secondary Metrics
+| Metric | Definition | Unit |
+|--------|------------|------|
+| Fleet Size | Number of vehicles deployed | vehicles |
+| MCV Share | Proportion of MCVs in mixed fleet (Exp. 2 only) | % |
+| Cost per Drop | Total cost / number of deliveries | $/delivery |
+| Cost per kg | Total cost / total demand weight | $/kg |
+| Split Delivery Rate | Customers receiving multiple visits | % |
+| Vehicle Utilization | Average payload usage | % |
+| Route Duration | Average time per route | hours |
 
-* Montgomery, *Design and Analysis of Experiments*, 9th ed.
-* Law & Kelton, *Simulation Modeling and Analysis*, 5th ed.
-* Benjamini & Hochberg, “Controlling the False Discovery Rate,” 1995.
+## 6. Mathematical Formulation
 
----
+### 6.1 Cost Model
 
-*Last update: July 26, 2025.*
+For any fleet configuration:
+
+TotalCost = Σ(f_v × x_v) + Σ(c_r × y_r) + Σ(C × n_v^comp)
+
+Where:
+- f_v = fixed cost of vehicle type v
+- x_v = number of vehicles of type v used
+- c_r = variable cost of route r
+- y_r = binary indicator for route r selection
+- n_v^comp = additional compartments in vehicle type v
+
+### 6.2 MCV Cost Application
+
+For MCV vehicles specifically:
+- f_MCV = α × f_SCV (vehicle surcharge)
+- Additional cost = C × (compartments - 1) per vehicle
+
+## 7. Statistical Analysis Plan
+
+### 7.1 Linear Mixed-Effects Model
+
+For each experiment:
+
+Cost_ij = μ + τ_j + β_i + ε_ij
+
+Where:
+- i = block (demand day), i ∈ {1, ..., 70}
+- j = treatment configuration, j ∈ {1, ..., J}
+- μ = grand mean
+- τ_j = fixed treatment effect
+- β_i ~ N(0, σ²_β) = random block effect
+- ε_ij ~ N(0, σ²) = residual error
+
+### 7.2 Hypothesis Testing
+
+**Global Test**
+- H₀: All treatment effects equal (τ₁ = τ₂ = ... = τ_J)
+- H_A: At least one treatment differs
+- Test: F-test or likelihood ratio test at α = 0.05
+
+**Pairwise Comparisons**
+- Primary contrasts: Each MCV configuration vs SCV baseline
+- Method: 95% confidence intervals with Benjamini-Hochberg adjustment
+- Effect size: Cohen's d for paired differences
+
+### 7.3 Non-parametric Alternatives
+
+If normality assumptions violated:
+- Friedman test for global hypothesis
+- Wilcoxon signed-rank test for pairwise comparisons
+- Nemenyi post-hoc test with appropriate corrections
+
+## 8. Implementation Details
+
+### 8.1 Computational Infrastructure
+- **Optimization Solver**: FleetMix matheuristic (open-source)
+- **Clustering Algorithm**: Temperature-aware hierarchical clustering
+- **Route Optimization**: Variable Neighborhood Search (VNS) with local search operators
+- **Computing Environment**: Parallel execution across parameter grid
+
+### 8.2 Data Sources
+- **Demand Data**: 70 days of real-world historical demand from commercial food distributor
+  - Captures natural variation in daily order patterns, customer mix, and volumes
+  - Each day represents a unique demand realization with different characteristics
+- **Geographic Data**: Real customer locations with actual driving distances
+- **Product Mix**: Actual SKU-level demand across three temperature classes (Ambient/Chilled/Frozen)
+
+### 8.3 Reproducibility Measures
+- Fixed random seeds per block for stochastic components
+- Version-controlled configuration files
+- Complete audit trail of solver decisions
+
+## 9. Expected Outcomes and Interpretation
+
+### 9.1 Parameter Sensitivity Analysis
+- Heat map of cost differences across (α, C) grid
+- Break-even contours where MCV = SCV performance
+- Probability of superiority surfaces
+
+### 9.2 Fleet Composition Analysis (Experiment 2 only)
+- MCV adoption rate as function of cost parameters
+- Demand characteristics driving vehicle type selection
+- Economies of scope in multi-temperature distribution
+
+## 10. Limitations and Assumptions
+
+### 10.1 Scope Limitations
+- Single depot operations only
+- Homogeneous vehicle capacities within type
+- Historical demand realization (no forecasting uncertainty modeled)
+- No driver-specific constraints or preferences
+
+### 10.2 Key Assumptions
+- Linear cost scaling with compartments
+- No learning curve effects in MCV operations
+- Perfect information about demand at planning time
+- Negligible differences in vehicle reliability/maintenance
+
+## 11. Key Differentiators Between Experiments
+
+### Experiment 1: Homogeneous Fleet Analysis
+- **Objective**: Establish pure performance comparison between vehicle types
+- **Constraint**: Fleet must be entirely SCV or entirely MCV
+- **Interpretation**: Reveals maximum theoretical benefit of MCVs under perfect fleet homogeneity
+
+### Experiment 2: Mixed Fleet Analysis
+- **Objective**: Determine optimal fleet composition under realistic operational flexibility
+- **Constraint**: Optimizer free to choose any combination of SCVs and MCVs
+- **Interpretation**: Reveals practical benefit when fleet heterogeneity is permitted
+- **Additional Insight**: MCV adoption rate indicates demand patterns favoring multi-compartment solutions

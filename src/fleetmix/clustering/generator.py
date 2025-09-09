@@ -10,6 +10,7 @@ import itertools
 import os
 from dataclasses import replace
 from multiprocessing import Manager
+from typing import Dict, List, Optional, Tuple
 
 from joblib import Parallel, delayed
 
@@ -195,10 +196,8 @@ def generate_feasible_clusters(
             lambda x: config_lookup[str(x)].capacity if str(x) in config_lookup else 0
         )
 
-    # Neighbour‐merge candidate generation ahead of the MILP uses tighter
-    # thresholds than the post-optimization step.  Pass those overrides
-    # explicitly instead of mutating the Parameters object.
-
+    # Generate additional clusters through vehicle-type-aware merging
+    # The merging function now handles vehicle type checking internally
     merged_df = generate_merge_phase_clusters(
         selected_clusters=base_df,
         configurations=configurations,
@@ -209,18 +208,19 @@ def generate_feasible_clusters(
     )
 
     if not merged_df.empty:
-        logger.info(f"➕ Added {len(merged_df)} merged neighbour clusters (pre-MILP)")
-
-        # Ensure unique Cluster_IDs
         next_id = max(c.cluster_id for c in unique_clusters) + 1
-        merged_clusters: list[Cluster] = Cluster.from_dataframe(merged_df)
-        for cl in merged_clusters:
-            cl.cluster_id = next_id
+        merged_clusters = Cluster.from_dataframe(merged_df)
+        for cluster in merged_clusters:
+            cluster.cluster_id = next_id
             next_id += 1
-        unique_clusters.extend(merged_clusters)
+            unique_clusters.append(cluster)
 
-        # Final deduplication
-        unique_clusters = _deduplicate_clusters(unique_clusters)
+        logger.info(
+            f"➕ Added {len(merged_clusters)} merged neighbour clusters (pre-MILP)"
+        )
+
+    # Final deduplication
+    unique_clusters = _deduplicate_clusters(unique_clusters)
 
     # Validate cluster coverage
     validate_cluster_coverage(unique_clusters, customers)
@@ -316,6 +316,10 @@ def _generate_feasibility_mapping(
         if feasible_configs:
             feasible_customers[customer_id] = feasible_configs
 
+    logger.debug(
+        f"Feasibility mapping: {len(feasible_customers)} customers have feasible configs"
+    )
+
     return feasible_customers
 
 
@@ -332,30 +336,53 @@ def _is_customer_feasible(
 
 
 def _deduplicate_clusters(clusters: list[Cluster]) -> list[Cluster]:
-    """Removes duplicate clusters based on the set of customers."""
+    """Removes duplicate clusters based on the set of customers, deduplicating within each vehicle type."""
     if not clusters:
         return clusters
 
-    logger.debug(f"Starting deduplication with {len(clusters)} clusters.")
+    logger.debug(
+        f"Starting vehicle-type-aware deduplication with {len(clusters)} clusters."
+    )
 
-    # Create mapping from customer sets to clusters
-    seen_customer_sets = {}
-    unique_clusters = []
-
+    # Group clusters by vehicle type
+    clusters_by_vehicle_type: Dict[str, List[Cluster]] = {}
     for cluster in clusters:
-        customer_set = frozenset(cluster.customers)
-        if customer_set not in seen_customer_sets:
-            seen_customer_sets[customer_set] = cluster
-            unique_clusters.append(cluster)
+        vehicle_type = cluster.vehicle_type
 
-    if len(unique_clusters) < len(clusters):
-        logger.debug(
-            f"Finished deduplication: Removed {len(clusters) - len(unique_clusters)} duplicate clusters, {len(unique_clusters)} unique clusters remain."
-        )
-    else:
-        logger.debug(
-            f"Finished deduplication: No duplicate clusters found ({len(unique_clusters)} clusters)."
-        )
+        if vehicle_type not in clusters_by_vehicle_type:
+            clusters_by_vehicle_type[vehicle_type] = []
+        clusters_by_vehicle_type[vehicle_type].append(cluster)
+
+    # Deduplicate within each vehicle type
+    unique_clusters = []
+    total_duplicates = 0
+
+    for vehicle_type, vehicle_clusters in clusters_by_vehicle_type.items():
+        seen_customer_sets = {}
+        vehicle_unique = []
+
+        for cluster in vehicle_clusters:
+            customer_set = frozenset(cluster.customers)
+            if customer_set not in seen_customer_sets:
+                seen_customer_sets[customer_set] = cluster
+                vehicle_unique.append(cluster)
+
+        duplicates_removed = len(vehicle_clusters) - len(vehicle_unique)
+        total_duplicates += duplicates_removed
+
+        if duplicates_removed > 0:
+            logger.debug(
+                f"Vehicle type {vehicle_type}: Removed {duplicates_removed} duplicate clusters, "
+                f"{len(vehicle_unique)} unique clusters remain."
+            )
+
+        unique_clusters.extend(vehicle_unique)
+
+    logger.debug(
+        f"Finished vehicle-type-aware deduplication: Removed {total_duplicates} duplicate clusters "
+        f"across all vehicle types, {len(unique_clusters)} unique clusters remain."
+    )
+
     return unique_clusters
 
 

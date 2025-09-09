@@ -22,7 +22,6 @@ from fleetmix.pipeline import VRPType, convert_to_fsm, run_optimization
 class TestSimpleBenchmarking:
     """Simple end-to-end tests for VRP benchmarking."""
 
-    @pytest.mark.skip(reason="TODO: Fix time_limit_minutes and use_vrp_solver attributes for FleetmixParams")
     def test_cvrp_simple_instance(self, tmp_path):
         """Test CVRP with a minimal 3-customer instance."""
         # Create a simple CVRP instance file
@@ -92,7 +91,7 @@ EOF"""
 
         # Run optimization
         solution = run_optimization(
-            customers_df=customers_df, params=params, verbose=False
+            customers_df=customers_df, params=params
         )
 
         # Verify we got a solution
@@ -112,7 +111,6 @@ EOF"""
             total_vehicles = sum(solution.vehicles_used.values())
             assert total_vehicles > 0
 
-    @pytest.mark.skip(reason="TODO: Fix time_limit_minutes attribute for FleetmixParams")
     def test_mcvrp_simple_instance(self, tmp_path):
         """Test MCVRP with a minimal 3-customer, 3-product instance."""
         # Create a simple MCVRP instance file
@@ -189,7 +187,7 @@ EOF"""
 
         # Run optimization
         solution = run_optimization(
-            customers_df=customers_df, params=params, verbose=False
+            customers_df=customers_df, params=params
         )
 
         # Verify solution
@@ -208,7 +206,6 @@ EOF"""
             total_vehicles = sum(solution.vehicles_used.values())
             assert total_vehicles > 0
 
-    @pytest.mark.skip(reason="TODO: Fix time_limit_minutes and use_vrp_solver attributes for FleetmixParams")
     def test_cvrp_vrp_mode(self, tmp_path):
         """Test CVRP solving in VRP mode to verify route sequences."""
         # Create slightly larger instance
@@ -269,7 +266,7 @@ EOF"""
 
         # Run optimization
         solution = run_optimization(
-            customers_df=customers_df, params=params, verbose=False
+            customers_df=customers_df, params=params
         )
 
         # Verify VRP-specific output
@@ -277,7 +274,6 @@ EOF"""
 
         assert len(solution.selected_clusters) > 0
 
-    @pytest.mark.skip(reason="TODO: Fix time_limit_minutes attribute for FleetmixParams")
     def test_benchmark_type_split(self, tmp_path):
         """Test CVRP with SPLIT benchmark type."""
         # Create instance
@@ -344,13 +340,12 @@ EOF"""
         )
 
         solution = run_optimization(
-            customers_df=customers_df, params=params, verbose=False
+            customers_df=customers_df, params=params
         )
 
         assert solution is not None
         assert solution.solver_status in ["Optimal", "Feasible", "TimeLimit"]
 
-    @pytest.mark.skip(reason="TODO: Fix time_limit_minutes attribute for FleetmixParams")
     def test_small_real_dataset(self):
         """Test with real small dataset if available."""
         # Check for small MCVRP instance
@@ -398,7 +393,7 @@ EOF"""
 
             # Just verify it runs without error
             solution = run_optimization(
-                customers_df=customers_df, params=params, verbose=False
+                customers_df=customers_df, params=params
             )
 
             assert solution is not None

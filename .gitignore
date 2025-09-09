@@ -16,6 +16,12 @@ results/*.json
 results/*.html
 results/*.csv
 results/
+src/fleetmix/experiments/alpha_analysis/results/report_images
+src/fleetmix/experiments/alpha_analysis/results/mixed_fleet_report
+src/fleetmix/experiments/alpha_analysis/results/raw
+src/fleetmix/experiments/alpha_analysis/results/raw_mixed
+src/fleetmix/experiments/alpha_analysis/results/summary.parquet
+src/fleetmix/experiments/alpha_analysis/results/summary_mixed.parquet
 
 # Testing
 .hypothesis/
@@ -35,12 +41,15 @@ src/*.egg-info/
 .idea/
 .cursor/
 .cursorignore
+executive_summary_embedded.html
+executive_summary_intended_embedded.html
+scv_baseline_issue.md
 
 # TODO: do add the paper
 paper_wip.txt
-paper/*
 
 # TODO: solve optimality gap implementation
 *-pulp.lp
 *-pulp.sol
 gurobi.log
+experiments/*/results/*

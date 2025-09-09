@@ -276,18 +276,28 @@ def get_cached_route_time(
     main_params: FleetmixParams,
 ) -> tuple[float, list[str]]:
     """Get route time and sequence (if TSP) from cache or compute and cache it."""
-    key = tuple(sorted(customer.customer_id for customer in customers))
+
+    customers_key = tuple(sorted(customer.customer_id for customer in customers))
+    rt_context = make_rt_context(
+        config, clustering_context.depot, main_params.algorithm.prune_tsp
+    )
+    context_key = (
+        clustering_context.route_time_estimation,
+        float(rt_context.avg_speed),
+        float(rt_context.service_time),
+        float(rt_context.max_route_time),
+        bool(rt_context.prune_tsp),
+        float(rt_context.depot.latitude),
+        float(rt_context.depot.longitude),
+    )
+    key = (customers_key, context_key)
+
     cached_result = route_time_cache.get(key)
     if cached_result is not None:
         return cached_result
 
     # Convert to DataFrame for route time estimation (temporary until we refactor route time estimators)
     customers_df = Customer.to_dataframe(customers)
-
-    # Create RouteTimeContext using the factory
-    rt_context = make_rt_context(
-        config, clustering_context.depot, main_params.algorithm.prune_tsp
-    )
 
     # Use the new interface with RouteTimeContext
     estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(
@@ -538,6 +548,7 @@ def create_cluster(
     cluster = Cluster(
         cluster_id=cluster_id,
         config_id=config.config_id,
+        vehicle_type=config.vehicle_type,
         customers=[customer.customer_id for customer in cluster_customers],
         total_demand=total_demand,
         centroid_latitude=centroid_latitude,

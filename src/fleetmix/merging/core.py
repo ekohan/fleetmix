@@ -21,7 +21,10 @@ from fleetmix.utils.route_time import (
 logger = FleetmixLogger.get_logger(__name__)
 
 # Cache for merged cluster route times
-_merged_route_time_cache: dict[tuple[str, ...], tuple[float, list | None]] = {}
+_merged_route_time_cache: dict[
+    tuple[tuple[str, ...], tuple[str, float, float, float, bool, float, float]],
+    tuple[float, list | None],
+] = {}
 
 
 # Helper functions for working with List[VehicleConfiguration]
@@ -54,9 +57,7 @@ def _get_merged_route_time(
     Estimate (and cache) the route time and sequence for a merged cluster of customers.
     Uses the vehicle configuration's timing parameters.
     """
-    key: tuple[str, ...] = tuple(sorted(customers["Customer_ID"]))
-    if key in _merged_route_time_cache:
-        return _merged_route_time_cache[key]
+    customers_key: tuple[str, ...] = tuple(sorted(customers["Customer_ID"]))
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(
@@ -72,10 +73,25 @@ def _get_merged_route_time(
             f"Unknown route time estimation method: {params.algorithm.route_time_estimation}"
         )
 
+    # Build a context-aware cache key matching clustering cache semantics
+    context_key = (
+        params.algorithm.route_time_estimation,
+        float(config.avg_speed),
+        float(config.service_time),
+        float(config.max_route_time),
+        bool(params.algorithm.prune_tsp),
+        float(params.problem.depot.latitude),
+        float(params.problem.depot.longitude),
+    )
+    cache_key = (customers_key, context_key)
+
+    if cache_key in _merged_route_time_cache:
+        return _merged_route_time_cache[cache_key]
+
     estimator = estimator_class()
     time, sequence = estimator.estimate_route_time(customers, rt_context)
 
-    _merged_route_time_cache[key] = (time, sequence)
+    _merged_route_time_cache[cache_key] = (time, sequence)
     return time, sequence
 
 
@@ -142,6 +158,12 @@ def generate_merge_phase_clusters(
     ids = target_meta["Cluster_ID"].to_numpy()
     lat_arr = target_meta["Centroid_Latitude"].to_numpy()
     lon_arr = target_meta["Centroid_Longitude"].to_numpy()
+    # Add vehicle type array for type compatibility checking
+    vehicle_types = (
+        target_meta["Vehicle_Type"].to_numpy()
+        if "Vehicle_Type" in target_meta.columns
+        else None
+    )
 
     # Vectorized filtering loop
     for _, small in small_meta.iterrows():
@@ -156,6 +178,12 @@ def generate_merge_phase_clusters(
         cap_ok = (cap_arr >= peak) & (cap_arr >= total_small)
         not_self = ids != small["Cluster_ID"]
 
+        # Check vehicle type compatibility (only merge within same vehicle type)
+        if vehicle_types is not None and "Vehicle_Type" in small:
+            vehicle_type_ok = vehicle_types == small["Vehicle_Type"]
+        else:
+            vehicle_type_ok = np.ones_like(cap_arr, dtype=bool)
+
         # Proximity-based filtering: compute distances and pick nearest candidates
         small_point = (small["Centroid_Latitude"], small["Centroid_Longitude"])
         target_points = np.column_stack((lat_arr, lon_arr))
@@ -165,7 +193,9 @@ def generate_merge_phase_clusters(
         )
         distances = distances.flatten()  # Ensure distances is a 1D array
 
-        valid_mask = cap_ok & goods_ok & not_self & ~np.isnan(distances)
+        valid_mask = (
+            cap_ok & goods_ok & not_self & vehicle_type_ok & ~np.isnan(distances)
+        )
         valid_idxs = np.where(valid_mask)[0]
         if valid_idxs.size == 0:
             continue
@@ -254,6 +284,7 @@ def generate_merge_phase_clusters(
             new_cluster = {
                 "Cluster_ID": canonical_id,
                 "Config_ID": target["Config_ID"],
+                "Vehicle_Type": target.get("Vehicle_Type", "unknown"),
                 "Customers": merged_customer_ids,
                 "Route_Time": route_time,
                 "Total_Demand": demands,
@@ -283,6 +314,7 @@ def generate_merge_phase_clusters(
     minimal_columns = [
         "Cluster_ID",
         "Config_ID",
+        "Vehicle_Type",
         "Customers",
         "Route_Time",
         "Total_Demand",

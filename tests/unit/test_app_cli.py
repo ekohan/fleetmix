@@ -16,7 +16,7 @@ runner = CliRunner()
 
 MINIMAL_DEMAND_CSV = "tests/_assets/cli_inputs/minimal_demand.csv"
 MINIMAL_CONFIG_YAML = "tests/_assets/configs/test_config_minimal.yaml"
-MCVRP_INSTANCE = "10_3_3_1_(09)"
+MCVRP_INSTANCE = "2015_10_3_3_1_(09)"
 CVRP_INSTANCE = "X-n129-k18"
 
 EXPECTED_MINIMAL_DEMAND_CONTENT = "ClientID,Lat,Lon,ProductType,Kg\nC1,10.0,10.0,Dry,5\nC1,10.0,10.0,Chilled,0\nC1,10.0,10.0,Frozen,0\n"

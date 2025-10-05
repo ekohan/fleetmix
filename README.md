@@ -9,10 +9,12 @@
 <!-- TODO: publish PyPI -->
 
 
-*Written for transparent research, hardened for production use.*
+*A spec-driven, production-grade implementation for transparent research.*
 
 Fast, reproducible tooling for **multi‑compartment vehicle fleet design** in urban food distribution.
-This repository supports our forthcoming paper *Designing Multi‑Compartment Vehicle Fleets for Last‑Mile Food Distribution Systems* and doubles as a production‑grade library for industry users.
+This repository supports our paper *Designing Multi‑Compartment Last‑Mile Vehicle Fleets: An Open‑Source Matheuristic* (submitted to *Computers and Industrial Engineering*) and provides a production-ready library for practitioners.
+
+**🎯 Gold Standard**: Every module has comprehensive specifications bridging academic methodology and practical implementation.
 
 ---
 
@@ -25,12 +27,13 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 
 ---
 
-## ✨ Why fleetmix?
+## ✨ Why FleetMix?
 
-* ⚡ **Scales** — >1,000 customers solved in seconds via a *cluster‑first → MILP‑second* matheuristic.
-* 🧩 **Extensible** — pluggable clustering engines, route‑time estimators, and solver back‑ends.
-* 🔄 **Reproducible** — every experiment in the journal article re‑runs with one script.
-* 🖥️ **User‑friendly** — clean CLI, idiomatic Python API, and a lightweight web GUI.
+* ⚡ **Scales** — >1,000 customers solved in seconds via a *cluster‑first → MILP‑second* matheuristic
+* 🧩 **Extensible** — pluggable clustering engines, route‑time estimators, and solver back‑ends  
+* 🔄 **Reproducible** — every experiment in the journal article re‑runs with one script
+* 🖥️ **User‑friendly** — clean CLI, idiomatic Python API, and a lightweight web GUI
+* 📐 **Spec-driven** — comprehensive module specifications connecting paper mathematics to code
 
 ---
 
@@ -38,17 +41,18 @@ This repository supports our forthcoming paper *Designing Multi‑Compartment Ve
 
 1. [Installation](#installation)
 2. [Quick Start](#quick-start)
-3. [Matheuristic Overview](#matheuristic-overview)
-4. [Command‑Line Usage](#command-line-usage)
-5. [Python API](#python-api)
-6. [Configuration](#configuration)
-7. [Composability & Extensibility](#composability--extensibility)
-8. [Benchmarking Suite](#benchmarking-suite)
-9. [Repository Layout](#repository-layout)
-10. [Paper ↔ Code Map](#paper-↔-code-map)
-11. [Contributing](#contributing)
-12. [Citation](#citation)
-13. [License](#license)
+3. [📐 Specifications & Documentation](#-specifications--documentation) ⭐
+4. [Matheuristic Overview](#matheuristic-overview)
+5. [Command‑Line Usage](#command-line-usage)
+6. [Python API](#python-api)
+7. [Configuration](#configuration)
+8. [Composability & Extensibility](#composability--extensibility)
+9. [Benchmarking Suite](#benchmarking-suite)
+10. [Repository Layout](#repository-layout)
+11. [Paper ↔ Code Map](#paper-↔-code-map)
+12. [Contributing](#contributing)
+13. [Citation](#citation)
+14. [License](#license)
 
 ---
 
@@ -119,6 +123,45 @@ The GUI provides:
 * 🔎 Real‑time optimization progress
 * 🗺️ Map‑based visual results
 * 📊 Excel/JSON export
+
+---
+
+## 📐 Specifications & Documentation
+
+FleetMix is a **spec-driven codebase**: each module has detailed specifications connecting the paper's mathematical formulations to the implementation.
+
+### For Researchers
+
+| Document | Purpose |
+|----------|---------|
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System overview and module interactions |
+| **[docs/mapping.md](docs/mapping.md)** | Complete paper section ↔ code cross-reference |
+| **[docs/specs/](docs/specs/)** | Detailed module specifications with math formulations |
+| **[docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md)** | Reproduce all paper experiments |
+
+### For Practitioners
+
+| Document | Purpose |
+|----------|---------|
+| **[docs/quickstart.md](docs/quickstart.md)** | Get started in 5 minutes |
+| **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** | Complete end-to-end workflow guide |
+| **[docs/specs/configuration.md](docs/specs/configuration.md)** | All parameters explained |
+| **[docs/specs/protocols.md](docs/specs/protocols.md)** | Plugin development guide |
+
+### Module Specifications
+
+Each phase of the matheuristic has a comprehensive specification:
+
+1. **[Vehicle Configurations](docs/specs/vehicle_configurations.md)** (Paper §4.1) — Generating $2^{|M|}-1$ configurations per vehicle type
+2. **[Clustering](docs/specs/clustering.md)** (Paper §4.2) — Feasible cluster generation with capacity and route time constraints
+3. **[Route Time Estimation](docs/specs/route_time_estimation.md)** (Paper §4.2) — BHH continuous approximation vs. TSP solver
+4. **[Optimization](docs/specs/optimization.md)** (Paper §4.3) — Fleet size and mix MILP formulation
+5. **[Post-Optimization](docs/specs/post_optimization.md)** (Paper §4.4) — Iterative improvement phase
+6. **[Pipeline](docs/specs/pipeline.md)** (Paper §4) — End-to-end orchestration
+
+Supporting specs: **[Data Model](docs/specs/data_model.md)** | **[Configuration](docs/specs/configuration.md)** | **[Protocols](docs/specs/protocols.md)**
+
+**💡 Tip**: Start with [docs/README.md](docs/README.md) for a guided tour of the documentation.
 
 ---
 
@@ -325,30 +368,50 @@ docs/                   # code↔paper map • design notes
 
 ## 📝 Paper ↔ Code Map
 
-See `docs/mapping.md` for a line‑by‑line crosswalk between paper sections and implementation.
+FleetMix maintains complete traceability between the paper and code:
+
+- **[docs/mapping.md](docs/mapping.md)**: Comprehensive cross-reference between paper sections, equations, algorithms, and code
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: How modules connect to the matheuristic pipeline (Figure 1)
+- **Module specs**: Each links directly to relevant paper sections with mathematical formulations
+
+**Example**: Paper §4.2 describes the BHH formula for route time estimation → see [docs/specs/route_time_estimation.md](docs/specs/route_time_estimation.md) for full specification → implemented in `src/fleetmix/utils/route_time.py`
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork → feature branch → PR against **main**.
-2. `pytest -q --cov=src` **must** stay green.
-3. Follow *PEP‑8*, add type hints, and keep public APIs doc‑commented.
+FleetMix welcomes contributions!
 
-Bug reports and ideas via **Issues** are welcome.
+**Code contributions**:
+1. Fork → feature branch → PR against **main**
+2. `pytest -q --cov=src` **must** stay green
+3. Follow *PEP‑8*, add type hints, and keep public APIs documented
+
+**Documentation contributions**:
+1. Follow [docs/templates/MODULE_SPEC_TEMPLATE.md](docs/templates/MODULE_SPEC_TEMPLATE.md) for new specs
+2. Maintain bidirectional cross-references (paper ↔ code)
+3. Include examples for both researchers and practitioners
+
+Bug reports, feature requests, and questions via **[Issues](https://github.com/ekohan/fleetmix/issues)** are welcome.
 
 ---
 
 ## 📚 Citation
 
-```latex
+If using FleetMix in your research:
+
+```bibtex
 @article{Kohan2025FleetMix,
-  author  = {Eric Kohan},
-  title   = {Designing Multi‑Compartment Vehicle Fleets for Last‑Mile Food Distribution Systems},
-  journal = {To appear},
-  year    = {2025}
+  author  = {Eric Kohan and Fabricio Torres and Victor Silva-Febre and J.C. Pina-Pardo},
+  title   = {Designing Multi-Compartment Last-Mile Vehicle Fleets: An Open-Source Matheuristic},
+  journal = {Computers and Industrial Engineering},
+  year    = {2025},
+  note    = {Submitted}
 }
 ```
+
+**Repository**: [github.com/ekohan/fleetmix](https://github.com/ekohan/fleetmix)  
+**Paper Version**: Tagged as `paper-1.0.0`
 
 ---
 

@@ -17,13 +17,9 @@ import pandas as pd
 from fleetmix.utils.logging import log_detail
 
 
-def data_dir() -> Path:
-    return Path(__file__).resolve().parents[3] / "data"
-
-
-def get_demand_profiles_dir() -> Path:
-    """Get the demand profiles directory path."""
-    return data_dir() / "demand_profiles"
+def _get_datasets_dir() -> Path:
+    """Get the case datasets directory path."""
+    return Path(__file__).resolve().parents[2] / "benchmarking" / "datasets" / "case"
 
 
 # TODO add validations to log if e.g. diff clientIDs share same lat/lon
@@ -31,7 +27,7 @@ def load_customer_demand(demand_file: str):
     """Load customer demand from CSV file.
 
     Args:
-        demand_file: Either a filename relative to demand_profiles directory,
+        demand_file: Either a filename relative to datasets/case directory,
                     or an absolute/relative path to a CSV file.
     """
     demand_path = Path(demand_file)
@@ -40,8 +36,8 @@ def load_customer_demand(demand_file: str):
         # It's an absolute path or relative path that exists from current directory
         csv_file_path = demand_path
     else:
-        # Treat as filename relative to demand_profiles directory
-        csv_file_path = get_demand_profiles_dir() / demand_file
+        # Treat as filename relative to datasets/case directory
+        csv_file_path = _get_datasets_dir() / demand_file
 
     log_detail(f"Loading customer demand from {csv_file_path}")
 

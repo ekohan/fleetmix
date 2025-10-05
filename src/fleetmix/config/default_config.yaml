@@ -80,8 +80,8 @@ pre_nearest_merge_candidates: 50
 # ---------------------------------------------------------------------------
 
 # Data Files
-# See options in data/demand_profiles/
-demand_file: "sales_2024_avg_day_demand.csv"
+# See options in src/fleetmix/benchmarking/datasets/case/
+demand_file: "sales_2024-07-02_demand.csv"
 
 # Output format
 format: 'json'  # Output format (excel or json)

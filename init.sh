@@ -34,9 +34,7 @@ fi
 echo "Installing fleetmix package in editable mode..."
 pip install -e ".[test,dev]" --index-url https://pypi.org/simple/
 
-# Create database and import sales data
-echo "Creating database and importing sales data..."
-python data/import_data.py
-
 # All done!
 echo "Project setup complete!"
+
+# TODO: use uv

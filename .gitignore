@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *.class
 
-# Data files
-data/case_study.db
-
 # Python virtual environments
 venv/
 fleetmix-env/

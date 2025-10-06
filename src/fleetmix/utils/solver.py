@@ -1,11 +1,18 @@
 """Solver utilities for FleetMix."""
 
+# Silence solver backends’ import-time banners
+import contextlib
 import importlib.util
+import io
 import os
 from typing import Any
 
-import pulp
-import pulp.apis
+_silent_import_buf = io.StringIO()
+with (
+    contextlib.redirect_stdout(_silent_import_buf),
+    contextlib.redirect_stderr(_silent_import_buf),
+):
+    import pulp
 
 from fleetmix.config.params import RuntimeParams
 from fleetmix.registry import SOLVER_ADAPTER_REGISTRY, register_solver_adapter

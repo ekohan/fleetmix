@@ -90,7 +90,7 @@ format: 'json'  # Output format (excel or json)
 # RUNTIME params
 # ---------------------------------------------------------------------------
 
-verbose: true       # Enable verbose output
+verbose: false       # Enable verbose output
 debug: false        # Enable debug mode for solver and model
 # TODO: check debug-milp mode
 solver: gurobi      # auto | gurobi | cbc

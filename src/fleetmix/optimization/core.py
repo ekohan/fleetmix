@@ -41,14 +41,22 @@ Typical usage
 >>> print(solution.total_cost)
 """
 
+# Silence solver backends’ import-time banners
+import contextlib
+import io
 import os
-import sys
 import time
 from decimal import Decimal, getcontext
 from typing import Any
 
 import pandas as pd
-import pulp
+
+_silent_import_buf = io.StringIO()
+with (
+    contextlib.redirect_stdout(_silent_import_buf),
+    contextlib.redirect_stderr(_silent_import_buf),
+):
+    import pulp
 
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (

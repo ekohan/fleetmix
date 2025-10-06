@@ -6,7 +6,13 @@ import contextlib
 import io
 from pathlib import Path
 
-import pulp
+# Silence solver backends’ import-time banners
+_silent_import_buf = io.StringIO()
+with (
+    contextlib.redirect_stdout(_silent_import_buf),
+    contextlib.redirect_stderr(_silent_import_buf),
+):
+    import pulp
 
 from fleetmix.utils.logging import FleetmixLogger
 

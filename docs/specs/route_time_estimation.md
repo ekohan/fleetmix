@@ -7,12 +7,11 @@
 
 Estimates route duration for serving a cluster. Used for feasibility checking (Phase 2) and cost computation (Phase 3).
 
-**Methods**: BHH (fast approximation), TSP (exact via PyVRP)
+**Methods**: BHH (fast continuous approximation), TSP (exact via PyVRP)
 
 ## Paper Connection
 
-- **Primary Reference**: Paper §4.2 "Computation of vehicle route durations"
-- **Formula**: $t_{vk} \approx \alpha_{vk} + 2 \cdot \delta_{vk} + \beta \cdot \sqrt{n \cdot A} + \gamma \cdot n$
+- **Primary Reference**: Paper §4.2.1 "Load Capacity and Route Duration Feasibility Checks"
 
 ## Methods
 
@@ -27,7 +26,7 @@ Estimates route duration for serving a cluster. Used for feasibility checking (P
 ### TSP (PyVRP Solver)
 
 Solves exact TSP and converts distance to time. 
-- Slower
+- Much slower than BHH
 - Provides optimal customer sequence
 
 

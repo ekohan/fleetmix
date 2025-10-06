@@ -214,34 +214,6 @@ def split_cluster_recursively(cluster, depth, max_depth, context):
 - $\eta$: Small cluster size threshold (default: 5)
 - $n_{neighbors}$: Number of nearest candidates to consider (default: 50)
 
-### Composite Distance Computation
-
-**Purpose**: Combine geographic and demand similarity into single metric
-
-**Steps**:
-
-1. **Compute geographic distance matrix**:
-```python
-D_geo[i,j] = euclidean_distance(lat_i, lon_i, lat_j, lon_j)
-```
-
-2. **Compute demand composition profiles**:
-```python
-profile_i = normalize([w_p * demand_ip for p in products])
-```
-
-3. **Compute cosine distance**:
-```python
-D_prod[i,j] = 1 - cosine_similarity(profile_i, profile_j)
-```
-
-4. **Combine with weight**:
-```python
-D[i,j] = λ * D_geo[i,j] + (1-λ) * D_prod[i,j]
-```
-
-**Complexity**: $O(n^2)$ for $n$ customers
-
 ## Implementation Notes
 
 ### Code Organization

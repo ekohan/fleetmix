@@ -358,7 +358,7 @@ def _create_model(
                 penalty_amount = (
                     Decimal(str(parameters.problem.light_load_penalty))
                     if load_percentage < parameters.problem.light_load_threshold
-                    else Decimal('0')
+                    else Decimal("0")
                 )
                 base_cost = _calculate_cluster_cost(
                     cluster=cluster, config=config, parameters=parameters
@@ -366,7 +366,7 @@ def _create_model(
 
                 c_vk[v, k] = base_cost + penalty_amount  # Keep as Decimal
             else:
-                c_vk[v, k] = Decimal('0')  # Cost is zero for placeholder
+                c_vk[v, k] = Decimal("0")  # Cost is zero for placeholder
 
     # Objective Function
     model += (
@@ -625,11 +625,13 @@ def _calculate_solution_statistics(
     }
 
     # Calculate compartment penalties
-    total_compartment_penalties = Decimal('0')
+    total_compartment_penalties = Decimal("0")
     for _, row in selected_clusters.iterrows():
         num_compartments = sum(1 for g in parameters.problem.goods if row[g] == 1)
         if num_compartments > 1:
-            total_compartment_penalties += Decimal(str(parameters.problem.compartment_setup_cost)) * (num_compartments - 1)
+            total_compartment_penalties += Decimal(
+                str(parameters.problem.compartment_setup_cost)
+            ) * (num_compartments - 1)
 
     # Get vehicle statistics and fixed costs
     # Drop potentially clashing columns from selected_clusters before merging
@@ -653,12 +655,14 @@ def _calculate_solution_statistics(
     )
 
     # Calculate base costs (without penalties)
-    total_fixed_cost = Decimal('0')
-    total_variable_cost = Decimal('0')
-    
+    total_fixed_cost = Decimal("0")
+    total_variable_cost = Decimal("0")
+
     for idx, row in selected_clusters.iterrows():
         total_fixed_cost += Decimal(str(row["Fixed_Cost"]))
-        total_variable_cost += Decimal(str(row["Route_Time"])) * Decimal(str(parameters.problem.variable_cost_per_hour))
+        total_variable_cost += Decimal(str(row["Route_Time"])) * Decimal(
+            str(parameters.problem.variable_cost_per_hour)
+        )
 
     # Total cost from optimization (sum of Decimals)
     total_cost = sum(selected_assignments.values())
@@ -666,7 +670,7 @@ def _calculate_solution_statistics(
     # Light load penalties are the remaining difference
     # Use max to avoid negative values due to rounding
     base_costs = total_fixed_cost + total_variable_cost + total_compartment_penalties
-    total_light_load_penalties = max(Decimal('0'), total_cost - base_costs)
+    total_light_load_penalties = max(Decimal("0"), total_cost - base_costs)
 
     # Total penalties
     total_penalties = total_light_load_penalties + total_compartment_penalties
@@ -716,7 +720,7 @@ def _calculate_cluster_cost(
 
     # Compartment setup cost
     num_compartments = sum(1 for g in parameters.problem.goods if config[g])
-    compartment_cost = Decimal('0')
+    compartment_cost = Decimal("0")
     if num_compartments > 1:
         compartment_cost = Decimal(str(parameters.problem.compartment_setup_cost)) * (
             num_compartments - 1

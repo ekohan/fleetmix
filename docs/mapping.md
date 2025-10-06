@@ -251,23 +251,6 @@ fleetmix benchmark mcvrp
 
 **Spec**: [specs/benchmarking.md](specs/benchmarking.md)
 
-#### CVRP Adaptations
-
-**Paper**: Four transformation strategies (split, scaled, combined, spatial)
-
-**Implementation**:
-```python
-# src/fleetmix/benchmarking/converters/cvrp.py
-def convert_cvrp_to_fsm(
-    instance_names: str | list[str],
-    benchmark_type: CVRPBenchmarkType,
-    num_goods: int = 3,
-    custom_instance_paths: dict[str, Path] | None = None,
-) -> tuple[pd.DataFrame, InstanceSpec]:
-```
-
-**Spec**: [specs/benchmarking.md](specs/benchmarking.md)
-
 ---
 
 ### §7 Case Study
@@ -322,7 +305,7 @@ fleetmix benchmark case
 ---
 
 ## Figures → Code
-
+**TODO: check on final version of paper.**
 | Figure | Description | Code Implementation |
 |--------|-------------|---------------------|
 | Figure 1 | Matheuristic pipeline | `pipeline/vrp_interface.py` |

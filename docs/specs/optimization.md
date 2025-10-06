@@ -140,11 +140,6 @@ See [data_model.md](data_model.md) for complete `FleetmixSolution` structure.
 5. Add cluster usage constraints (Eq. 3)
 6. Link variables: $x_{vk} \leq y_k$
 
-**Complexity**: 
-- Variables: $O(|V| \times |K|)$, typically 1000-5000
-- Constraints: $O(|N| + |K|)$, typically 500-2000
-- Solve time: 1-5s (Gurobi), 5-20s (CBC)
-
 ### Solution Extraction
 
 **Implementation**: `_extract_solution()` in `optimization/core.py`

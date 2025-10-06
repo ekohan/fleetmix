@@ -17,7 +17,7 @@ The improvement phase iteratively merges small selected clusters and re-optimize
 For each iteration until convergence:
 
 1. Extract small clusters from current solution ($\leq$ `small_cluster_size` customers)
-2. Find nearest feasible merge pairs (capacity + route time constraints)
+2. Find nearest feasible merge pairs (`nearest_merge_candidates` clusters)
 3. Add merged clusters to pool and re-optimize
 4. If cost improves, continue; else terminate
 
@@ -36,8 +36,9 @@ def improve_solution(
 
 **Key parameters**:
 - `params.algorithm.post_optimization`: Enable/disable (default: True)
-- `params.algorithm.max_improvement_iterations`: Max iterations (default: 20)
-- `params.algorithm.small_cluster_size`: Small cluster threshold (default: 1000)
+- `params.algorithm.max_improvement_iterations`: Max iterations
+- `params.algorithm.small_cluster_size`: "Small" cluster threshold
+- `params.algorithm.nearest_merge_candidates`: Number of near neighbours (by cluster centroid) to consider
 
 ## Implementation
 

@@ -9,12 +9,10 @@
 <!-- TODO: publish PyPI -->
 
 
-*A spec-driven, production-grade implementation for transparent research.*
+*Written for transparent research, hardened for production use.*
 
 Fast, reproducible tooling for **multi‑compartment vehicle fleet design** in urban food distribution.
-This repository supports our paper *Designing Multi‑Compartment Last‑Mile Vehicle Fleets: An Open‑Source Matheuristic* (submitted to *Computers and Industrial Engineering*) and provides a production-ready library for practitioners.
-
-**🎯 Gold Standard**: Every module has comprehensive specifications bridging academic methodology and practical implementation.
+This repository supports our paper *Designing Multi‑Compartment Last‑Mile Vehicle Fleets: An Open‑Source Matheuristic* and provides a production-ready library for practitioners.
 
 ---
 
@@ -33,7 +31,7 @@ This repository supports our paper *Designing Multi‑Compartment Last‑Mile Ve
 * 🧩 **Extensible** — pluggable clustering engines, route‑time estimators, and solver back‑ends  
 * 🔄 **Reproducible** — every experiment in the journal article re‑runs with one script
 * 🖥️ **User‑friendly** — clean CLI, idiomatic Python API, and a lightweight web GUI
-* 📐 **Spec-driven** — comprehensive module specifications connecting paper mathematics to code
+* 📐 **Spec-driven** — comprehensive module specifications connecting paper to code
 
 ---
 
@@ -371,7 +369,7 @@ docs/                   # code↔paper map • design notes
 FleetMix maintains complete traceability between the paper and code:
 
 - **[docs/mapping.md](docs/mapping.md)**: Comprehensive cross-reference between paper sections, equations, algorithms, and code
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: How modules connect to the matheuristic pipeline (Figure 1)
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: How modules connect to the matheuristic pipeline
 - **Module specs**: Each links directly to relevant paper sections with mathematical formulations
 
 **Example**: Paper §4.2 describes the BHH formula for route time estimation → see [docs/specs/route_time_estimation.md](docs/specs/route_time_estimation.md) for full specification → implemented in `src/fleetmix/utils/route_time.py`

@@ -134,17 +134,6 @@
 
 [If this module supports plugins, explain the registration mechanism]
 
-## Testing
-
-### Unit Tests
-
-- Location: `tests/[test_path]`
-- Coverage: [Key scenarios tested]
-
-### Integration Tests
-
-[If applicable, describe integration test strategy]
-
 ## References
 
 ### Related Modules

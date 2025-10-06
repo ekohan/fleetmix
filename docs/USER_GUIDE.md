@@ -20,8 +20,9 @@ cd fleetmix
 pip install -e .
 ```
 
-### Your First Optimization
+### Your First Fleet Size & Mix (FSM) Optimization
 
+**TODO**: be more clear here on data layout. after Pydantic improvements.
 **Step 1**: Prepare your customer demand data (CSV format)
 
 ```csv
@@ -88,12 +89,8 @@ Results saved to `results/fleet_solution_TIMESTAMP.xlsx` with sheets:
 **Total Cost**: Sum of fixed (daily vehicle) and variable (distance/time) costs
 
 **Fleet Composition**: Number and type of vehicles recommended
-- Example: "3 SmallTruck, 2 LargeTruck with Dry+Chilled compartments"
 
 **Utilization**: How full vehicles are on average
-- Target: 70-85% is good
-- Too low (<60%): Consider smaller/fewer vehicles
-- Too high (>90%): May need more vehicles or capacity
 
 **Route Times**: Average and maximum route duration
 - Compare against `max_route_time` to see constraint tightness
@@ -113,6 +110,7 @@ Example configurations for one truck:
 
 ## Common Scenarios
 
+**TODO** check scenario code is valid.
 ### Scenario 1: Cost Reduction Analysis
 
 **Question**: "Should I invest in multi-compartment vehicles?"
@@ -216,35 +214,18 @@ route_time:
 ```yaml
 optimization:
   time_limit: 60  # Acceptable for approximate solution
-  mip_gap: 0.05  # 5% gap OK for large problems
+  mip_gap: 0.005  # 0.5% gap OK for large problems
 ```
 
-### For Better Solution Quality
-
-1. **Use Gurobi solver**:
+5. **Tune merging aggressiveness**:
 ```yaml
-optimization:
-  solver: gurobi  # Much better than CBC
-```
+# Conservative (faster): merge only very small clusters
+small_cluster_size: 3
+nearest_merge_candidates: 5
 
-2. **Enable improvement phase**:
-```yaml
-optimization:
-  improvement_enabled: true
-  max_improvement_iterations: 5
-```
-
-3. **Use more clustering methods**:
-```yaml
-clustering:
-  methods: [minibatch_kmeans, kmedoids, gaussian_mixture, agglomerative]
-```
-
-4. **Try demand-aware clustering**:
-```yaml
-clustering:
-  geo_weight: [1.0, 0.8, 0.6]
-  demand_weight: [0.0, 0.2, 0.4]
+# Aggressive (slower, better quality): merge more clusters  
+small_cluster_size: 15
+nearest_merge_candidates: 20
 ```
 
 ---
@@ -264,76 +245,11 @@ clustering:
 - Add more vehicle types
 - Check demand units (kg vs tons?)
 
-### "Solution uses many vehicles"
-
-**Causes**:
-- Fixed costs too low relative to variable costs
-- Capacity or time constraints binding
-- Demand very dispersed geographically
-
-**Solutions**:
-- Increase fixed costs to penalize vehicle usage
-- Relax `max_route_time` if possible
-- Consider larger vehicles
-- Check if `avg_speed` is realistic
-
-### "Optimization takes too long"
-
-**Solutions**:
-- Use CBC solver initially (free), switch to Gurobi for production
-- Reduce clustering variants (see "For Faster Results" above)
-- Set `optimization.time_limit` to acceptable level
-- For 1000+ customers, expect 30-120s (CBC) or 10-30s (Gurobi)
-
-### "Results seem unrealistic"
-
-**Check**:
+**Checklist**:
 - Units consistency (all in kg? all in km/h?)
 - Cost parameters (fixed vs variable balance)
 - Geographic coordinates (latitude/longitude correct?)
 - Demand values (not accidentally scaled?)
-
----
-
-## Best Practices
-
-### Data Preparation
-
-✅ **Do**:
-- Clean data: remove duplicates, invalid coordinates
-- Validate: all demand values non-negative
-- Test small: start with subset (100 customers) before full run
-
-❌ **Don't**:
-- Mix units (some km, some miles)
-- Include depot as customer
-- Use address strings (must convert to lat/lon)
-
-### Configuration
-
-✅ **Do**:
-- Start with realistic baseline parameters
-- Document assumptions in config file comments
-- Version control configs (track parameter changes)
-
-❌ **Don't**:
-- Set `max_route_time` impossibly low
-- Use same costs for very different vehicle types
-- Forget to specify `goods` list
-
-### Interpretation
-
-✅ **Do**:
-- Compare multiple scenarios
-- Validate against operational experience
-- Consider qualitative factors (driver availability, contracts)
-
-❌ **Don't**:
-- Trust single run without sensitivity check
-- Ignore utilization metrics
-- Deploy without operational validation
-
----
 
 ## Getting Help
 
@@ -349,7 +265,7 @@ clustering:
 - **Experiment**: Try parameter variations
 - **Customize**: Add custom clustering (see [specs/protocols.md](specs/protocols.md))
 - **Integrate**: Use Python API in your workflows
-- **Validate**: Compare with current operations
+- **Validate**: Compare with your current operations
 
 ---
 

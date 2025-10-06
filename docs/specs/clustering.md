@@ -16,11 +16,7 @@ Clusters may overlap (a customer can appear in multiple clusters), allowing the 
 ## Paper Connection
 
 - **Primary Reference**: Paper §4.2 "Generate Feasible Customer Clusters"
-- **Related Sections**: 
-  - Appendix A: Clustering techniques comparison
-  - §4.2: Split-and-merge procedure (Algorithm 1)
-  - §4.2: Composite distance metric
-- **Key Equations**: Distance metric, BHH formula
+- **Key Equations**: Continuous Approximation formula (BHH)
 - **Algorithms**: Algorithm 1 (Recursive Cluster Splitting)
 
 ## Mathematical Formulation
@@ -59,39 +55,23 @@ $$D_{ij} = \lambda \cdot D^{\text{geo}}_{ij} + (1-\lambda) \cdot D^{\text{prod}}
 
 where:
 - $\lambda \in [0,1]$ is the geo-weight parameter
-- $D^{\text{geo}}_{ij}$ is the geographical distance (Haversine formula)
+- $D^{\text{geo}}_{ij}$ is the geographical distance (Euclidean on lat/lon coordinates)
 - $D^{\text{prod}}_{ij}$ is the cosine distance between demand composition profiles
 
 **Demand Composition Profile** for customer $i$:
 
 $$\text{profile}_i = \frac{1}{\sum_p d_{ip}} \cdot [w_p \cdot d_{ip}]_{p \in P}$$
 
-where $w_p$ are product-specific weights (capturing temperature sensitivity).
+where $w_p$ are product-specific weights. In the default implementation, all weights are equal ($w_p = 1/3$ for Dry, Chilled, Frozen).
 
 ## Design Decisions
 
 ### Why Multiple Clustering Algorithms?
 
-**Algorithms used**:
-1. K-means (MiniBatch variant for speed)
-2. K-medoids
-3. Gaussian Mixture Model
-4. Agglomerative clustering
-
-**Rationale**:
 - Different algorithms find different cluster shapes
 - No single algorithm dominates across all demand patterns
 - "Ensemble" approach: Generate diverse candidates, let optimizer choose
 - Computational cost is acceptable when parallelized
-
-**Evidence from experiments** (Paper Appendix A):
-- K-means: 38% selection frequency
-- K-medoids: 21%
-- GMM: 18%
-- Agglomerative: 8%
-- Merged: 15%
-
-No clear winner → justify using all methods
 
 ### Split-and-Merge Strategy
 
@@ -108,11 +88,6 @@ No clear winner → justify using all methods
 - Merge small clusters ($|k| < \eta$) with nearby neighbors
 - Check feasibility of merged cluster
 - Enriches cluster set with consolidated options
-
-**Alternative rejected**: Capacitated clustering during initial phase
-- Would require custom implementations
-- Less flexible for experimentation
-- Post-hoc splitting is simpler and more modular
 
 ### Overlapping vs. Partitioning
 
@@ -141,13 +116,17 @@ params: FleetmixParams  # Clustering parameters
 list[Cluster]
 # Where each Cluster has:
 Cluster(
-    cluster_id="cfg_001_kmeans_k5_0",
+    cluster_id=42,
     config_id="cfg_001",
-    method="kmeans",
-    customer_ids=["c1", "c2", "c3"],
+    vehicle_type="A",
+    customers=["c1", "c2", "c3"],
     total_demand={"Dry": 100, "Chilled": 50, "Frozen": 30},
+    centroid_latitude=4.6,
+    centroid_longitude=-74.0,
+    goods_in_config=["Dry", "Chilled", "Frozen"],
     route_time=4.5,  # hours
-    total_cost=350.0,  # fixed + variable
+    method="kmeans",
+    tsp_sequence=[],  # Optional, only if TSP used
 )
 ```
 
@@ -223,17 +202,17 @@ def split_cluster_recursively(cluster, depth, max_depth, context):
 **Steps**:
 1. Identify small clusters: $|k| < \eta$
 2. For each small cluster $k_i$:
-   - Find neighbors within distance $\Delta$
+   - Find nearest neighbor clusters (limited to $n_{neighbors}$ candidates)
    - For each neighbor $k_j$:
      - Check if $k_i \cup k_j$ is feasible
      - If yes, add to cluster set
 3. Keep both original and merged clusters (optimizer decides)
 
-**Complexity**: $O(m^2)$ where $m$ = number of small clusters
+**Complexity**: $O(m \cdot n_{neighbors})$ where $m$ = number of small clusters
 
 **Parameters**:
-- $\eta$: Minimum cluster size (default: 3)
-- $\Delta$: Maximum merge distance (default: 10 km)
+- $\eta$: Small cluster size threshold (default: 5)
+- $n_{neighbors}$: Number of nearest candidates to consider (default: 50)
 
 ### Composite Distance Computation
 
@@ -243,7 +222,7 @@ def split_cluster_recursively(cluster, depth, max_depth, context):
 
 1. **Compute geographic distance matrix**:
 ```python
-D_geo[i,j] = haversine(lat_i, lon_i, lat_j, lon_j)
+D_geo[i,j] = euclidean_distance(lat_i, lon_i, lat_j, lon_j)
 ```
 
 2. **Compute demand composition profiles**:
@@ -268,9 +247,9 @@ D[i,j] = λ * D_geo[i,j] + (1-λ) * D_prod[i,j]
 ### Code Organization
 
 - **Primary Modules**:
-  - `src/fleetmix/clustering/generator.py`: Main orchestration (445 lines)
-  - `src/fleetmix/clustering/heuristics.py`: Algorithm implementations (767 lines)
-  - `src/fleetmix/merging/core.py`: Merge operations (178 lines)
+  - `src/fleetmix/clustering/generator.py`: Main orchestration
+  - `src/fleetmix/clustering/heuristics.py`: Algorithm implementations
+  - `src/fleetmix/merging/core.py`: Merge operations
 
 - **Key Functions**:
   - `generate_feasible_clusters()`: Entry point
@@ -293,16 +272,9 @@ D[i,j] = λ * D_geo[i,j] + (1-λ) * D_prod[i,j]
 
 ### Performance Considerations
 
-**Typical runtime** (1000 customers, 21 configurations):
-- Initial clustering: 5-10s
-- Feasibility checking: 1-2s (BHH), 30-60s (TSP)
-- Splitting & merging: 2-5s
-- **Total**: 10-20s (BHH), 40-80s (TSP)
-
 **Parallelization**:
 - Cluster generation per configuration is independent
 - Uses `joblib.Parallel` with `n_jobs=-1` (all cores)
-- Speedup: ~4x on 8-core machine
 
 **Memory**:
 - Distance matrices: $O(n^2)$ per configuration
@@ -358,33 +330,23 @@ for cfg_id, cfg_clusters in by_config.items():
 ```yaml
 # config.yaml
 clustering:
-  methods:
-    - minibatch_kmeans
-    - kmedoids
-    - gaussian_mixture
-    - agglomerative
-  
-  geo_weight: [1.0, 0.8, 0.6]  # Geographic vs demand trade-off
-  demand_weight: [0.0, 0.2, 0.4]
-  
-  n_clusters_range:
-    - auto  # Automatic based on customer/capacity ratio
-    - 5
-    - 10
-  
-  recursive_split:
-    max_depth: 5
-  
-  merge:
-    min_cluster_size: 3
-    max_distance: 10.0  # km
+  max_depth: 20
+  method: combine  # Options: minibatch_kmeans, kmedoids, agglomerative, gaussian_mixture, combine
+  distance: euclidean  # Options: euclidean, composite (only for agglomerative)
+  geo_weight: 0.7  # Weight for geographical distance (composite-only)
+  demand_weight: 0.3  # Weight for demand distance (composite-only)
+  route_time_estimation: 'BHH'  # Options: TSP, BHH
+
+# Merge phase (pre-MILP)
+pre_small_cluster_size: 5
+pre_nearest_merge_candidates: 50
 ```
 
 ### Filtering Clusters
 
 ```python
 # Get only large clusters (good vehicle utilization)
-large_clusters = [c for c in clusters if len(c.customer_ids) >= 10]
+large_clusters = [c for c in clusters if len(c.customers) >= 10]
 
 # Get clusters for specific configuration
 config_clusters = [c for c in clusters if c.config_id == "cfg_005"]
@@ -456,103 +418,6 @@ clustering:
   demand_weight: [0.0]
 ```
 
-### Adding Capacitated Clustering
-
-To integrate constraint-aware clustering from the start:
-
-```python
-@register_clusterer("capacitated_kmeans")
-class CapacitatedKMeansClusterer:
-    def fit(self, customers, *, context, n_clusters):
-        # Use capacity-constrained K-means
-        # E.g., COP-KMeans or similar
-        capacity = context.vehicle_config.capacity
-        ...
-```
-
-**Literature**: Ferreira et al. (2013) - Capacitated K-means
-
-### Fixed Compartment Variant
-
-To implement Henke et al. (2015) fixed compartments:
-
-1. **Modify feasibility check** to verify each compartment's capacity:
-```python
-def check_compartment_capacity(cluster, vehicle_config):
-    for product in goods:
-        if cluster.demand[product] > vehicle_config.compartment_capacity[product]:
-            return False
-    return True
-```
-
-2. **Update configuration generation** to include fixed capacities (see [vehicle_configurations.md](vehicle_configurations.md))
-
-## Testing
-
-### Unit Tests
-
-- **Location**: `tests/unit/test_clustering.py`, `tests/unit/test_heuristics.py`
-- **Coverage**:
-  - Each clustering algorithm produces valid labels
-  - Split recursion terminates correctly
-  - Merge logic doesn't create infeasible clusters
-  - Distance metric is symmetric and non-negative
-
-### Integration Tests
-
-- **Location**: `tests/integration/test_clustering_pipeline.py`
-- **Scenarios**:
-  - End-to-end cluster generation
-  - Feasibility verification
-  - Cluster overlap handling
-
-## Comparison with Literature
-
-### Henke et al. (2015, 2019)
-
-**Their approach**: Integrated into VNS/Branch-and-cut metaheuristic
-
-**FleetMix**: Separate cluster-first phase
-
-**Trade-off**: 
-- They: Better solution quality (routing integrated)
-- We: Better scalability (clustering + MILP is faster)
-
-### Ostermeier & Hübner (2018)
-
-**Their approach**: ALNS with destroy-repair operators
-
-**FleetMix**: Pre-generate clusters, optimize assignment
-
-**Commonality**: Both use multiple clustering methods
-
-## References
-
-### Related Modules
-
-- **[vehicle_configurations.md](vehicle_configurations.md)**: Provides vehicle configs input
-- **[route_time_estimation.md](route_time_estimation.md)**: Computes $t_{vk}$ for feasibility
-- **[optimization.md](optimization.md)**: Consumes clusters for MILP
-- **[protocols.md](protocols.md)**: `Clusterer` protocol definition
-
-### Literature
-
-1. **Beardwood, Halton, Hammersley (1959)** - Shortest path through random points: BHH formula
-2. **Henke et al. (2015)** - Multi-compartment VRP problem: VNS approach
-3. **Ostermeier & Hübner (2018)** - Vehicle selection: ALNS metaheuristic
-4. **Ferreira et al. (2013)** - Capacitated K-means: Constraint-aware clustering
-
-### External Documentation
-
-- [scikit-learn clustering](https://scikit-learn.org/stable/modules/clustering.html)
-- [kmedoids package](https://github.com/kno10/python-kmedoids)
-
-## See Also
-
-- [← Vehicle Configurations](vehicle_configurations.md)
-- [Next: Route Time Estimation →](route_time_estimation.md)
-- [↑ Architecture](../ARCHITECTURE.md)
-- [Docs Home](../README.md)
 
 ---
 

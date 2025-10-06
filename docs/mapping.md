@@ -13,24 +13,25 @@ This document enables readers of *Designing Multi-Compartment Last-Mile Vehicle 
 | §4.1 Generate Vehicle Configurations | `src/fleetmix/utils/vehicle_configurations.py` | [specs/vehicle_configurations.md](specs/vehicle_configurations.md) |
 | §4.2 Generate Feasible Clusters | `src/fleetmix/clustering/` | [specs/clustering.md](specs/clustering.md) |
 | §4.2 Route Time Computation | `src/fleetmix/utils/route_time.py` | [specs/route_time_estimation.md](specs/route_time_estimation.md) |
-| §4.3 Fleet Size & Mix MILP | `src/fleetmix/optimization/core.py` | [specs/optimization.md](specs/optimization.md) |
+| §4.3 Optimize Fleet Size and Mix with Heterogeneous MCVs| `src/fleetmix/optimization/core.py` | [specs/optimization.md](specs/optimization.md) |
 | §4.4 Improvement Phase | `src/fleetmix/post_optimization/merge_phase.py` | [specs/post_optimization.md](specs/post_optimization.md) |
-| §5 Benchmark Experiments | `src/fleetmix/benchmarking/` | [specs/benchmarking.md](specs/benchmarking.md) |
-| §6 Case Study | `src/fleetmix/benchmarking/datasets/case/` | [specs/benchmarking.md](specs/benchmarking.md) |
+| §6 Effectiveness of the Matheuristic Approach | `src/fleetmix/benchmarking/` | [specs/benchmarking.md](specs/benchmarking.md) |
+| §7 Case Study | `src/fleetmix/benchmarking/datasets/case/` | [specs/benchmarking.md](specs/benchmarking.md) |
 
 ---
 
 ## Paper Section → Code
 
 ### §3 Problem Definition
+**TODO** check the code here.
 
 | Concept | Notation | Implementation |
 |---------|----------|----------------|
-| Set of customers | $N = \\{1, ..., n\\}$ | `customers: pd.DataFrame` |
-| Set of product types | $P$ | `config['goods']` |
-| Customer demand | $d_{ip}$ | `customers[f'demand_{product}']` |
-| Vehicle configurations | $V$ | `List[VehicleConfig]` from `vehicle_configurations.py` |
-| Clusters | $K$ | `List[ClusterInfo]` from `clustering/generator.py` |
+| Set of customers | $N = \\{1, ..., n\\}$ | `customers: list[CustomerBase]` |
+| Set of product types | $P$ | `params.problem.goods` |
+| Customer demand | $d_{ip}$ | `Customer.demands[good]` |
+| Vehicle configurations | $V$ | `list[VehicleConfiguration]` from `utils/vehicle_configurations.py` |
+| Clusters | $K$ | `list[Cluster]` from `clustering/generator.py` |
 | Max capacity | $Q_v$ | `vehicle_config.capacity` |
 | Max route time | $T_v$ | `vehicle_config.max_route_time` |
 
@@ -47,9 +48,9 @@ This document enables readers of *Designing Multi-Compartment Last-Mile Vehicle 
 ```python
 # src/fleetmix/utils/vehicle_configurations.py
 def generate_vehicle_configurations(
-    vehicles: dict,
+    vehicle_types: dict[str, VehicleSpec],
     goods: list[str],
-) -> list[VehicleConfig]:
+) -> list[VehicleConfiguration]:
     """
     For each vehicle type, generates all 2^|M| - 1 feasible 
     compartment combinations.
@@ -58,8 +59,6 @@ def generate_vehicle_configurations(
 
 **Key Functions**:
 - `generate_vehicle_configurations()`: Main entry point
-- `_get_feasible_compartment_subsets()`: Respects `allowed_goods` constraints
-- `_generate_single_vehicle_configs()`: Per-vehicle generation
 
 **Spec**: [specs/vehicle_configurations.md](specs/vehicle_configurations.md)
 
@@ -82,7 +81,6 @@ class MiniBatchKMeansClusterer:
     def fit(self, customers: pd.DataFrame, *, 
             context: CapacitatedClusteringContext,
             n_clusters: int) -> list[int]:
-        # Computes composite distance matrix
         # Returns cluster labels
 ```
 
@@ -101,23 +99,22 @@ class MiniBatchKMeansClusterer:
 **Implementation**:
 ```python
 # src/fleetmix/clustering/heuristics.py
-def process_clusters_recursively(
-    cluster: ClusterInfo,
-    depth: int,
-    max_depth: int,
-    context: CapacitatedClusteringContext,
-) -> list[ClusterInfo]:
+def process_clusters_recursively(... ) -> list[Cluster]:
     """Implements Algorithm 1 from paper"""
 ```
 
 **Merging**:
 ```python
 # src/fleetmix/merging/core.py
-def merge_small_clusters(
-    clusters: list[ClusterInfo],
-    min_size: int,
-    max_distance: float,
-) -> list[ClusterInfo]:
+def generate_merge_phase_clusters(
+    selected_clusters: pd.DataFrame,
+    configurations: list[VehicleConfiguration],
+    customers_df: pd.DataFrame,
+    params: FleetmixParams,
+    *,
+    small_cluster_size: int | None = None,
+    nearest_merge_candidates: int | None = None,
+) -> pd.DataFrame:
 ```
 
 **Spec**: [specs/clustering.md](specs/clustering.md)
@@ -138,7 +135,7 @@ where:
 **Implementation**:
 ```python
 # src/fleetmix/utils/route_time.py
-class BHHRouteTimeEstimator:
+class BHHEstimator:
     def estimate_route_time(
         self,
         cluster_customers: pd.DataFrame,
@@ -149,7 +146,7 @@ class BHHRouteTimeEstimator:
 
 **Alternative** (TSP-based):
 ```python
-class TSPRouteTimeEstimator:
+class TSPEstimator:
     def estimate_route_time(self, ...) -> tuple[float, list[str]]:
         """Uses PyVRP for exact TSP solution"""
 ```
@@ -189,11 +186,7 @@ def optimize_fleet(
 - `_solve_internal()`: Internal DataFrame-based implementation
 - `_create_model()`: Builds PuLP model with variables and constraints
 
-**Multi-Stop Policy** (alternative constraints):
-```python
-def _add_product_coverage_constraints_multistop(model, x_vars, ...):
-    """Implements multi-stop variant from §4.3"""
-```
+**Multi-Stop Policy**: handled inside `_create_model()` when `params.problem.allow_split_stops` is `True`.
 
 **Spec**: [specs/optimization.md](specs/optimization.md)
 
@@ -230,7 +223,7 @@ def improve_solution(
 
 ---
 
-### §5 Effectiveness of the Matheuristic Approach
+### §6 Effectiveness of the Matheuristic Approach
 
 #### Benchmark Instances
 
@@ -239,14 +232,14 @@ def improve_solution(
 **Implementation**:
 ```python
 # src/fleetmix/benchmarking/parsers/mcvrp.py
-def parse_mcvrp_instance(filepath: Path) -> MCVRPInstance:
+def parse_mcvrp(path: str | Path) -> MCVRPInstance:
     """Parses Henke's .dat format"""
 
 # src/fleetmix/benchmarking/converters/mcvrp.py
 def convert_mcvrp_to_fsm(
-    instance: MCVRPInstance,
-    config_template: dict,
-) -> tuple[pd.DataFrame, dict]:
+    instance_name: str,
+    custom_instance_path: Path | None = None,
+) -> tuple[pd.DataFrame, InstanceSpec]:
     """Converts to FleetMix format"""
 ```
 
@@ -266,17 +259,18 @@ fleetmix benchmark mcvrp
 ```python
 # src/fleetmix/benchmarking/converters/cvrp.py
 def convert_cvrp_to_fsm(
-    instance: CVRPInstance,
-    benchmark_type: Literal["split", "scaled", "combined", "spatial"],
-    config_template: dict,
-) -> tuple[pd.DataFrame, dict]:
+    instance_names: str | list[str],
+    benchmark_type: CVRPBenchmarkType,
+    num_goods: int = 3,
+    custom_instance_paths: dict[str, Path] | None = None,
+) -> tuple[pd.DataFrame, InstanceSpec]:
 ```
 
 **Spec**: [specs/benchmarking.md](specs/benchmarking.md)
 
 ---
 
-### §6 Case Study
+### §7 Case Study
 
 **Paper**: Real-world data from Bogotá, Colombia food distributor
 
@@ -346,7 +340,7 @@ fleetmix benchmark case
 | (2) | Customer coverage | `optimization/core.py:_create_model()` |
 | (3) | Cluster usage | `optimization/core.py:_create_model()` |
 | (4) | Variable domain | `optimization/core.py:_create_model()` |
-| §4.2 (BHH) | Route time estimation | `utils/route_time.py:BHHRouteTimeEstimator` |
+| §4.2 (BHH) | Route time estimation | `utils/route_time.py:BHHEstimator` |
 | §4.2 (distance) | Composite distance | `clustering/heuristics.py:compute_composite_distance()` |
 
 ---
@@ -380,14 +374,14 @@ fleetmix benchmark case
 
 | Paper Notation | Code Identifier | Type |
 |----------------|-----------------|------|
-| $N$ | `customers` | `pd.DataFrame` |
+| $N$ | `customers` | `list[CustomerBase]` |
 | $P$ | `goods` | `list[str]` |
-| $d_{ip}$ | `customers[f'demand_{p}']` | `float` |
-| $V$ | `vehicle_configs` | `list[VehicleConfig]` |
-| $K$ | `clusters` | `list[ClusterInfo]` |
+| $d_{ip}$ | `Customer.demands[p]` | `float` |
+| $V$ | `vehicle_configs` | `list[VehicleConfiguration]` |
+| $K$ | `clusters` | `list[Cluster]` |
 | $Q_v$ | `vehicle_config.capacity` | `float` |
 | $T_v$ | `vehicle_config.max_route_time` | `float` |
-| $c_{vk}$ | `cluster.total_cost` | `float` |
+| $c_{vk}$ | `c_vk[(v,k)]` in `optimization/core.py:_create_model()` | `float` |
 | $x_{vk}$ | `x_vars[v, k]` | `pulp.LpVariable` |
 | $t_{vk}$ | `cluster.route_time` | `float` |
 
@@ -398,7 +392,6 @@ fleetmix benchmark case
 - **[ARCHITECTURE.md](ARCHITECTURE.md)**: High-level system design
 - **[specs/](specs/)**: Detailed module specifications  
 - **[REPRODUCIBILITY.md](REPRODUCIBILITY.md)**: Reproduce paper experiments
-- **EXTENDING.md**: (TODO) Guide for implementing problem variants
 
 ---
 

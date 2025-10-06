@@ -32,14 +32,6 @@ Choose your starting point based on your goal:
 | [**specs/configuration.md**](specs/configuration.md) | All configuration parameters explained |
 | [**specs/protocols.md**](specs/protocols.md) | How to plug in custom components |
 
-### For Both Audiences
-
-| Document | Purpose |
-|----------|---------|
-| [**experimental_design.md**](experimental_design.md) | Experimental methodology and parameter sensitivity |
-| [**debugging.md**](debugging.md) | Troubleshooting and diagnostic tools |
-| [**parallelism.md**](parallelism.md) | Performance optimization strategies |
-
 ---
 
 ## 📐 Module Specifications
@@ -91,28 +83,6 @@ FleetMix Documentation Structure
 
 ---
 
-## 🎯 Quick Access by Task
-
-### "I want to understand how the matheuristic works"
-→ Start with [ARCHITECTURE.md](ARCHITECTURE.md), then explore [specs/](specs/)
-
-### "I want to reproduce the paper experiments"
-→ Read [REPRODUCIBILITY.md](REPRODUCIBILITY.md)
-
-### "I want to solve my own fleet design problem"
-→ Follow [quickstart.md](quickstart.md) then [USER_GUIDE.md](USER_GUIDE.md)
-
-### "I want to implement a variant"
-→ Study [specs/protocols.md](specs/protocols.md) for extension points
-
-### "I want to add a custom clustering algorithm"
-→ See [specs/protocols.md](specs/protocols.md) and [specs/clustering.md](specs/clustering.md)
-
-### "I want to understand what a specific paper equation does in code"
-→ Check [mapping.md](mapping.md) to find the implementation
-
----
-
 ## 📖 Documentation Philosophy
 
 FleetMix is **spec-driven**: each module has a detailed specification that:
@@ -121,7 +91,6 @@ FleetMix is **spec-driven**: each module has a detailed specification that:
 2. **Explains design decisions**: Why this approach, what trade-offs were made
 3. **Provides interfaces**: Clear input/output contracts
 4. **Enables extension**: Shows how to customize or replace components
-5. **Serves both audiences**: Academic rigor + practical usability
 
 All specifications follow a [consistent template](templates/MODULE_SPEC_TEMPLATE.md).
 

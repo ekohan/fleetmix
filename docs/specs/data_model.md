@@ -18,33 +18,52 @@ Defines the core data structures used throughout FleetMix. These types ensure ty
 
 ```python
 @dataclass
-class CustomerBase:
-    """Individual customer with location and demand."""
+class CustomerBase(ABC):
+    """Base class for all customer types."""
     customer_id: str
-    latitude: float
-    longitude: float
     demands: dict[str, float]  # product_type -> quantity
+    location: tuple[float, float]  # (latitude, longitude)
+    service_time: float  # minutes
 
 @dataclass
 class Customer(CustomerBase):
-    """Extended customer with origin tracking."""
-    origin_id: str  # For multi-stop tracking
+    """Regular customer (not split)."""
+    # Inherits all fields from CustomerBase
+    # Returns self.customer_id for get_origin_id()
+
+@dataclass
+class PseudoCustomer(CustomerBase):
+    """Pseudo-customer for split-stop capability."""
+    origin_id: str  # Original physical customer ID
+    subset: tuple[str, ...]  # Goods this pseudo-customer represents
 ```
 
-### Vehicle Configuration
+### Vehicle Types
 
 ```python
 @dataclass
-class VehicleConfiguration:
-    """A vehicle type with specific compartment setup."""
-    config_id: str
-    vehicle_type: str
-    capacity: float  # Total capacity (kg)
+class VehicleSpec:
+    """Specification for a vehicle type (from config)."""
+    capacity: int
     fixed_cost: float
-    compartments: dict[str, bool]  # product_type -> active
-    avg_speed: float  # km/h
-    service_time: float  # minutes per stop
-    max_route_time: float  # hours
+    compartments: dict[str, bool] = field(default_factory=dict)
+    avg_speed: float = 30.0  # km/h
+    service_time: float = 25.0  # minutes per customer
+    max_route_time: float = 10.0  # hours
+    allowed_goods: list[str] | None = None  # Optional restriction
+    extra: dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class VehicleConfiguration:
+    """A vehicle type with specific compartment setup (generated)."""
+    config_id: str  # Unique identifier
+    vehicle_type: str  # e.g., "A", "B", "C"
+    capacity: int  # Total capacity (kg)
+    fixed_cost: float
+    compartments: dict[str, bool]  # product_type -> is_active
+    avg_speed: float = 30.0  # km/h
+    service_time: float = 25.0  # minutes per customer
+    max_route_time: float = 10.0  # hours
 ```
 
 ### Cluster
@@ -53,15 +72,17 @@ class VehicleConfiguration:
 @dataclass
 class Cluster:
     """Feasible customer cluster."""
-    cluster_id: str
-    config_id: str  # Which vehicle config this is for
-    method: str  # Clustering method used
-    customer_ids: list[str]
+    cluster_id: int
+    config_id: str | int  # Which vehicle config this is for
+    vehicle_type: str  # Vehicle type that serves this cluster
+    customers: list[str]  # Customer IDs in this cluster
     total_demand: dict[str, float]  # Per product type
+    centroid_latitude: float
+    centroid_longitude: float
+    goods_in_config: list[str]  # Goods this configuration can carry
     route_time: float  # Estimated hours
-    total_cost: float  # Fixed + variable
-    centroid_lat: float
-    centroid_lon: float
+    method: str = ""  # Clustering method used
+    tsp_sequence: list[str] = field(default_factory=list)  # Optional TSP sequence
 ```
 
 ### Solution
@@ -70,37 +91,60 @@ class Cluster:
 @dataclass
 class FleetmixSolution:
     """Optimization solution."""
-    total_cost: float
-    total_fixed_cost: float
-    total_variable_cost: float
-    selected_clusters: pd.DataFrame
-    vehicles_used: dict[str, int]  # config_id -> count
-    solver_status: str
-    solve_time_seconds: float
-    optimality_gap: float
+    configurations: list[VehicleConfiguration] = field(default_factory=list)
+    selected_clusters: list[Cluster] = field(default_factory=list)
+    total_fixed_cost: float = 0.0
+    total_variable_cost: float = 0.0
+    total_penalties: float = 0.0
+    total_light_load_penalties: float = 0.0
+    total_compartment_penalties: float = 0.0
+    total_cost: float = 0.0
+    vehicles_used: dict[str, int] = field(default_factory=dict)  # config_id -> count
+    total_vehicles: int = 0
+    missing_customers: set[str] = field(default_factory=set)
+    solver_status: str = "Unknown"
+    solver_name: str = "Unknown"
+    solver_runtime_sec: float = 0.0
+    time_measurements: list[TimeMeasurement] | None = None
+    optimality_gap: float | None = None  # Relative gap (%) or None
+```
+
+### Location
+
+```python
+@dataclass
+class DepotLocation:
+    """Depot location."""
+    latitude: float
+    longitude: float
 ```
 
 ### Context Objects
 
 ```python
 @dataclass
-class CapacitatedClusteringContext:
-    """Context for clustering algorithms."""
-    vehicle_config: VehicleConfiguration
+class VehicleOperationContext:
+    """Base context for vehicle operations."""
     depot: DepotLocation
-    goods: list[str]
-    geo_weight: float  # λ in distance metric
-    demand_weight: float  # 1-λ
-    route_time_estimation: str  # "bhh" or "tsp"
 
 @dataclass
-class RouteTimeContext:
+class CapacitatedClusteringContext(VehicleOperationContext):
+    """Context for clustering algorithms."""
+    # Inherits: depot: DepotLocation
+    goods: list[str]
+    max_depth: int
+    route_time_estimation: str  # "BHH" or "TSP"
+    geo_weight: float  # λ in distance metric
+    demand_weight: float  # 1-λ
+
+@dataclass
+class RouteTimeContext(VehicleOperationContext):
     """Context for route time estimation."""
-    depot: DepotLocation
-    avg_speed: float
-    service_time: float
-    max_route_time: float
-    prune_tsp: bool
+    # Inherits: depot: DepotLocation
+    avg_speed: float  # km/h
+    service_time: float  # minutes per customer
+    max_route_time: float  # hours
+    prune_tsp: bool = False
 ```
 
 ## Type System Philosophy
@@ -108,8 +152,9 @@ class RouteTimeContext:
 FleetMix uses:
 1. **Dataclasses**: For data containers with clear structure
 2. **Protocols**: For behavior contracts (see [protocols.md](protocols.md))
-3. **Type hints**: Throughout for clarity and MyPy checking
-4. **Immutability**: Where practical (using `frozen=True`)
+3. **Type hints**: Throughout for clarity and static type checking
+4. **Immutability**: Configuration parameters use `frozen=True` (ProblemParams, AlgorithmParams, etc.)
+5. **ABC**: Abstract base classes where inheritance is needed (CustomerBase)
 
 ## See Also
 

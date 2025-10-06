@@ -37,43 +37,36 @@ Output: Fleet Design Solution
 
 ### Main Entry Point
 
-```python
-def optimize_fleet_pipeline(
-    customers: list[CustomerBase],
-    params: FleetmixParams,
-) -> FleetmixSolution:
-    """
-    Complete fleet design pipeline.
-    
-    Returns:
-        FleetmixSolution with optimal fleet composition
-    """
-```
+**Public API**: `fleetmix.api.optimize()` - High-level interface for users
 
-### Phase Orchestration
+**Internal Pipeline**: `fleetmix.pipeline.vrp_interface.run_optimization()` - Core orchestration
 
-Each phase is called sequentially with appropriate data transformations between phases.
+### Phase Execution
+
+1. Generate vehicle configurations
+2. Apply split-stop preprocessing (if enabled)
+3. Generate feasible clusters
+4. Solve optimization (MILP)
+5. Apply post-optimization improvement (if enabled)
 
 ## Implementation Notes
 
 - **Primary Module**: `src/fleetmix/pipeline/vrp_interface.py`
-- **Entry Points**: 
-  - Python API: `fleetmix.api.optimize()`
-  - CLI: `fleetmix optimize`
-  - GUI: `fleetmix gui`
+- **API Entry**: `src/fleetmix/api.py` 
+- **CLI Entry**: `src/fleetmix/app.py`
 
-## Error Handling
+### Entry Points
 
-- Validates input data
-- Checks intermediate results (e.g., empty cluster set)
-- Logs warnings and errors
-- Returns informative error messages
+- **Python API**: `import fleetmix; fleetmix.optimize()`
+- **CLI**: `fleetmix optimize` 
+- **GUI**: `fleetmix gui`
 
-## Performance Monitoring
+### Features
 
-- Times each phase
-- Logs progress at key milestones
-- Reports bottlenecks
+- Validates input data at each stage
+- Times each phase (via `TimeRecorder`)
+- Logs progress and warnings
+- Returns self-contained `FleetmixSolution` with configurations and time measurements
 
 ## References
 

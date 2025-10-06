@@ -12,7 +12,7 @@ FleetMix implements a **cluster-first, fleet design-second matheuristic** for he
 
 ## Matheuristic Pipeline
 
-The system implements the four-phase pipeline described in Paper Figure 1:
+The system implements the four-phase pipeline described in the paper:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -133,7 +133,7 @@ Located in `src/fleetmix/benchmarking/`:
 | `parsers/` | CVRP/MCVRP instance parsers | §5 |
 | `converters/` | VRP → FSM format conversion | §5 |
 | `solvers/vrp_solver.py` | PyVRP integration for bounds | §5 |
-| `datasets/` | Benchmark instances (Henke, Uchoa, Case) | §5, §6 |
+| `datasets/` | Benchmark instances (Henke, Uchoa, Case study) | §5, §6 |
 
 See [specs/benchmarking.md](specs/benchmarking.md) for details.
 
@@ -251,14 +251,6 @@ Each component can be:
 - **Replaced via registry**: `@register_clusterer("my_method")`
 - **Configured via YAML**: No code changes needed for parameter tuning
 
-### 4. Testability
-
-- **Unit tests**: Each algorithm tested in isolation
-- **Integration tests**: Full pipeline validation
-- **Benchmark tests**: Reproducibility checks against paper results
-
-(Note: Test suite quality improvement is planned post-spec-driven transformation)
-
 ---
 
 ## Extension Points
@@ -275,22 +267,6 @@ FleetMix is designed for research extensibility:
 
 ---
 
-## Performance Characteristics
-
-| Phase | Complexity | Typical Time (1000 customers) |
-|-------|------------|-------------------------------|
-| Configuration generation | O(\|types\| × 2^{\|M\|}) | < 0.1s |
-| Clustering | O(n × k × iterations) | 5-10s |
-| Route time (BHH) | O(n) per cluster | < 1s |
-| Route time (TSP) | O(n² log n) per cluster | 30-60s |
-| MILP solve | Depends on clusters | 1-5s (Gurobi) |
-| Improvement phase | Iterative (typically 2-3 rounds) | 2-10s |
-| **Total (BHH)** | | **10-20s** |
-
-See [parallelism.md](parallelism.md) for optimization strategies.
-
----
-
 ## Dependencies
 
 ### External Libraries
@@ -302,27 +278,6 @@ See [parallelism.md](parallelism.md) for optimization strategies.
 - **Config**: PyYAML, pydantic
 - **CLI**: Typer, rich
 - **GUI**: Streamlit
-
-### Dependency Graph
-
-```
-api.py
-  │
-  ├─→ pipeline/vrp_interface.py
-  │     │
-  │     ├─→ utils/vehicle_configurations.py
-  │     ├─→ clustering/generator.py
-  │     │     └─→ clustering/heuristics.py
-  │     │           └─→ interfaces.Clusterer
-  │     ├─→ optimization/core.py
-  │     │     └─→ interfaces.SolverAdapter
-  │     └─→ post_optimization/merge_phase.py
-  │
-  ├─→ config/loader.py
-  │     └─→ config/params.py
-  │
-  └─→ preprocess/demand.py
-```
 
 ---
 
@@ -347,20 +302,6 @@ route_time:        # Route estimation method
 ```
 
 See [specs/configuration.md](specs/configuration.md) for complete schema.
-
----
-
-## Comparison with Literature
-
-| Feature | FleetMix | Ostermeier & Hübner (2018) | Henke et al. (2015) |
-|---------|----------|----------------------------|---------------------|
-| Heterogeneous vehicles | ✓ | ✗ (2 types: SCV/MCV) | ✗ |
-| Flexible compartments | ✓ | ✓ | ✓ |
-| Fleet sizing | ✓ | ✓ | ✗ (fixed fleet) |
-| Route duration constraints | ✓ | ✗ | ✗ |
-| Large-scale (>1000 customers) | ✓ | ✗ | ✗ (≤50) |
-| Solution approach | Cluster-first + MILP | ALNS | VNS / Branch-and-cut |
-| Typical solve time | Seconds | Minutes | Minutes (10 cust) |
 
 ---
 

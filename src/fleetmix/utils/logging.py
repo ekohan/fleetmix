@@ -220,7 +220,9 @@ def setup_logging(level: LogLevel | None = None):
         )  # Or logging.DEBUG if VERBOSE means more than INFO
     elif level == LogLevel.DEBUG:
         console.setLevel(logging.DEBUG)
-        logger.addHandler(console)
+
+    # Add handler for all levels
+    logger.addHandler(console)
 
     # Suppress third-party noise
     suppress_third_party_logs()

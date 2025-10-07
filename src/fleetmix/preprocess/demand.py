@@ -261,15 +261,15 @@ def maybe_explode(
         DataFrame with either original customers or pseudo-customers
     """
     if not allow_split_stops:
-        logger.info("Split-stops disabled, returning original customer data")
+        FleetmixLogger.detail("Split-stops disabled, returning original customer data")
         return customers_df.copy()
 
-    logger.info(
+    FleetmixLogger.detail(
         f"Split-stops enabled, exploding {len(customers_df)} customers into pseudo-customers"
     )
 
     if configurations is not None and len(configurations) > 0:
-        logger.info(
+        FleetmixLogger.detail(
             f"Using smart explosion with {len(configurations)} vehicle configurations"
         )
 
@@ -282,7 +282,7 @@ def maybe_explode(
     # Convert back to DataFrame
     result_df = Customer.to_dataframe(exploded_customers)
 
-    logger.info(
+    FleetmixLogger.detail(
         f"Created {len(result_df)} pseudo-customers from {len(customers_df)} original customers"
     )
 
@@ -299,7 +299,7 @@ def maybe_explode(
                 multi_vehicle_customers[customer.customer_id] = pseudo_count
 
         if multi_vehicle_customers:
-            logger.info(
+            FleetmixLogger.detail(
                 f"Customers requiring multiple vehicles: {len(multi_vehicle_customers)}"
             )
             for cid, count in list(multi_vehicle_customers.items())[:5]:

@@ -1,9 +1,18 @@
 """Protocol definitions for pluggable components in FleetMix."""
 
+# Silence solver backends’ import-time banners
+import contextlib
+import io
 from typing import Protocol
 
 import pandas as pd
-import pulp
+
+_silent_import_buf = io.StringIO()
+with (
+    contextlib.redirect_stdout(_silent_import_buf),
+    contextlib.redirect_stderr(_silent_import_buf),
+):
+    import pulp
 
 from fleetmix.config.params import RuntimeParams
 from fleetmix.core_types import CapacitatedClusteringContext, RouteTimeContext

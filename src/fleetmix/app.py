@@ -837,24 +837,26 @@ def optimize(
                 task = progress.add_task("Running optimization...", total=None)
 
                 # Call the API
+                # Only pass verbose if explicitly set via CLI flag, otherwise let config decide
                 solution = api_optimize(
                     demand=str(demand),
                     config=str(config) if config else None,
                     output_dir=str(output),
                     format=format,
-                    verbose=verbose,
+                    verbose=verbose if verbose else None,
                     allow_split_stops=allow_split_stops,
                 )
 
                 progress.update(task, completed=True)
         else:
             # Run without progress spinner in quiet mode
+            # Only pass verbose if explicitly set via CLI flag, otherwise let config decide
             solution = api_optimize(
                 demand=str(demand),
                 config=str(config) if config else None,
                 output_dir=str(output),
                 format=format,
-                verbose=verbose,
+                verbose=verbose if verbose else None,
                 allow_split_stops=allow_split_stops,
             )
 
@@ -1231,18 +1233,14 @@ def _setup_logging_from_flags(
     verbose: bool = False, quiet: bool = False, debug: bool = False
 ):
     """Setup logging based on CLI flags or environment variable."""
-    level_from_flags: LogLevel | None = None
     if debug:
-        level_from_flags = LogLevel.DEBUG
+        setup_logging(LogLevel.DEBUG)
     elif verbose:
-        level_from_flags = LogLevel.VERBOSE
+        setup_logging(LogLevel.VERBOSE)
     elif quiet:
-        level_from_flags = LogLevel.QUIET
-
-    if level_from_flags is not None:
-        setup_logging(level_from_flags)
+        setup_logging(LogLevel.QUIET)
     else:
-        # No flags set, let setup_logging handle it (will check env var)
+        # Always call setup_logging to ensure logging is initialized
         setup_logging()
 
 

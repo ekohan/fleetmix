@@ -18,9 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List
 
 import matplotlib
 
@@ -29,11 +27,9 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy.stats  # type: ignore
 import seaborn as sns
-import statsmodels.formula.api as smf  # type: ignore
-from scipy.interpolate import griddata, interp1d  # type: ignore
-from scipy.spatial import ConvexHull, KDTree  # type: ignore
+import statsmodels.formula.api as smf
+from scipy.spatial import ConvexHull, KDTree
 
 from fleetmix.config import load_fleetmix_params
 
@@ -358,7 +354,9 @@ def run_dataset_characterization():
         if len(df_day) > 1:
             coords_rad = np.radians(df_day[["Lat", "Lon"]].to_numpy())
             tree = KDTree(coords_rad)
-            distances, _ = tree.query(coords_rad, k=2)
+            distances_result, _ = tree.query(coords_rad, k=2)
+            # distances_result is always ndarray when coords_rad is 2D
+            distances = np.asarray(distances_result)
             avg_dist_km = float(np.mean(distances[:, 1])) * R_EARTH_KM
         else:
             avg_dist_km = 0

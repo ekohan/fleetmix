@@ -48,7 +48,7 @@ light_load_threshold: 0  # Threshold for light load (e.g., 0.2 for 20%) -- when 
 compartment_setup_cost: 0  # Cost per additional compartment beyond the first one
 
 # Split-stop capability
-allow_split_stops: true  # Allow customers to be served by multiple vehicles
+allow_split_stops: false  # Allow customers to be served by multiple vehicles
 
 # ---------------------------------------------------------------------------
 # ALGORITHM params
@@ -90,7 +90,7 @@ format: 'json'  # Output format (excel or json)
 # RUNTIME params
 # ---------------------------------------------------------------------------
 
-verbose: true       # Enable verbose output
+verbose: false       # Enable verbose output
 debug: false        # Enable debug mode for solver and model
 # TODO: check debug-milp mode
 solver: gurobi      # auto | gurobi | cbc

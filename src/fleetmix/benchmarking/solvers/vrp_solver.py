@@ -311,18 +311,18 @@ class VRPSolver:
                 utilization <= 100 and route_time <= vehicle_spec.max_route_time
             )
 
-            # Log route status
+            # Log route status (at DEBUG level for detailed per-route info)
             if not is_feasible:
                 if utilization > 100:
-                    logger.warning(
+                    logger.debug(
                         f"{Colors.RED}Route {route_idx} exceeds capacity (Utilization: {utilization:.1f}%){Colors.RESET}"
                     )
                 if route_time > vehicle_spec.max_route_time:
-                    logger.warning(
+                    logger.debug(
                         f"{Colors.RED}Route {route_idx} exceeds max time ({route_time:.2f} > {vehicle_spec.max_route_time}){Colors.RESET}"
                     )
             elif verbose:
-                logger.info(
+                logger.debug(
                     f"{Colors.GREEN}Route {route_idx} feasible: Utilization={utilization:.1f}%, Time={route_time:.2f}h{Colors.RESET}"
                 )
 
@@ -462,27 +462,30 @@ class VRPSolver:
                         product = "unknown"
                     vehicles_by_product[product] += 1
 
-            # Print vehicle breakdown
-            log_detail("Vehicles by Product Type:")
-            for product, count in vehicles_by_product.items():
-                log_detail(f"→ {product}: {count}")
+            # Print vehicle breakdown in one line
+            vehicle_summary = ", ".join(
+                f"{product}: {count}"
+                for product, count in vehicles_by_product.items()
+                if count > 0
+            )
+            log_detail(f"Vehicles by product: {vehicle_summary}")
 
-        # Print compartment configurations if available
+        # Print compartment configurations if available (at DEBUG level for per-route details)
         if compartment_configs:
-            log_detail("Compartment Configurations:")
+            log_debug("Compartment Configurations:")
             for i, config in enumerate(compartment_configs, 1):
                 # Calculate total used capacity
                 total_used_capacity = sum(config.values())
                 # Calculate empty capacity
                 empty_capacity = 1.0 - total_used_capacity
 
-                log_detail(f"Route {i}:")
+                log_debug(f"Route {i}:")
                 for product, percentage in config.items():
                     if percentage >= 0.01:  # Only show if >= 1%
-                        log_detail(f"  {product}: {percentage * 100:.1f}%")
+                        log_debug(f"  {product}: {percentage * 100:.1f}%")
 
                 # Always print empty capacity
-                log_detail(f"  Empty: {empty_capacity * 100:.1f}%")
+                log_debug(f"  Empty: {empty_capacity * 100:.1f}%")
 
     def _prepare_multi_compartment_data(self) -> pd.DataFrame:
         """
@@ -623,7 +626,7 @@ class VRPSolver:
 
     def _print_diagnostic_information(self, customers: pd.DataFrame) -> None:
         """Print diagnostic information about the input data."""
-        log_debug(f"{Symbols.INFO} VRP Solver Diagnostic Information:")
+        log_debug(f"{Symbols.INFO} VRP Solver Diagnostic Information")
 
         # Count customers by product type
         customers_by_product = {}
@@ -633,10 +636,11 @@ class VRPSolver:
                 count = customers[customers[demand_col] > 0].shape[0]
                 customers_by_product[good] = count
 
-        # Print customer counts
-        log_debug("Customers by Product Type:")
-        for product, count in customers_by_product.items():
-            log_debug(f"→ {product}: {count}")
+        # Print customer counts in one line
+        customer_summary = ", ".join(
+            f"{product}: {count}" for product, count in customers_by_product.items()
+        )
+        log_debug(f"Customers by product: {customer_summary}")
 
         # Calculate total demand by product type
         demand_by_product = {}
@@ -646,10 +650,11 @@ class VRPSolver:
                 total_demand = customers[demand_col].sum()
                 demand_by_product[good] = total_demand
 
-        # Print demand information
-        log_debug("Total Demand by Product Type:")
-        for product, demand in demand_by_product.items():
-            log_debug(f"→ {product}: {demand:.1f}")
+        # Print demand information in one line
+        demand_summary = ", ".join(
+            f"{product}: {demand:.1f}" for product, demand in demand_by_product.items()
+        )
+        log_debug(f"Total demand: {demand_summary}")
 
         # Calculate minimum vehicles needed (assuming single compartment)
         min_vehicles_by_product = {}
@@ -671,18 +676,19 @@ class VRPSolver:
                 min_vehicles = np.ceil(demand / capacity)
                 min_vehicles_by_product[good] = min_vehicles
 
-        # Print minimum vehicles needed
-        log_debug("Minimum Vehicles Needed (Single Compartment):")
-        for product, count in min_vehicles_by_product.items():
-            log_debug(f"→ {product}: {count:.0f}")
-
-        # Print total for all products
+        # Print minimum vehicles needed in one line
+        min_vehicles_summary = ", ".join(
+            f"{product}: {count:.0f}"
+            for product, count in min_vehicles_by_product.items()
+        )
         total_vehicles = sum(min_vehicles_by_product.values())
-        log_debug(f"→ Total: {total_vehicles:.0f}")
+        log_debug(
+            f"Min vehicles (single-comp): {min_vehicles_summary}, total: {total_vehicles:.0f}"
+        )
 
         # Print expected vehicle count
         if hasattr(self.params.problem, "expected_vehicles"):
-            log_debug(f"Expected Vehicles: {self.params.problem.expected_vehicles}")
+            log_debug(f"Expected vehicles: {self.params.problem.expected_vehicles}")
 
     def solve(self, verbose: bool = False) -> dict[str, VRPSolution]:
         """Solve VRP using appropriate strategy based on benchmark type."""

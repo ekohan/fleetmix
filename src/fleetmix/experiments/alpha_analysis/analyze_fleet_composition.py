@@ -451,7 +451,7 @@ def chart3_mcv_adoption_probability_surface(metrics):
     # Colorbar
     cbar = plt.colorbar(contourf, ax=ax)
     cbar.set_label("Adoption Probability", fontsize=11)
-    cbar.set_ticks(np.linspace(0, 1, 11))
+    cbar.set_ticks(np.linspace(0, 1, 11).tolist())
     cbar.set_ticklabels([f"{int(p * 100)}%" for p in np.linspace(0, 1, 11)])
 
     plt.tight_layout()
@@ -828,9 +828,10 @@ def chart6b_multigood_by_cost_level(df_full):
         )
 
     # Add difference annotations
-    for i, row in results_df.iterrows():
+    for i in range(len(results_df)):
+        row = results_df.iloc[i]
         sig = "***" if row["p_val"] < 0.001 else "**" if row["p_val"] < 0.01 else "*"
-        y_pos = max(row["low_mean"], row["high_mean"]) + 0.12
+        y_pos = float(max(row["low_mean"], row["high_mean"])) + 0.12
         ax.text(
             i,
             y_pos,
@@ -846,7 +847,7 @@ def chart6b_multigood_by_cost_level(df_full):
         ax.text(
             i,
             -0.08,
-            f"n={row['n_low']}/{row['n_high']}",
+            f"n={int(row['n_low'])}/{int(row['n_high'])}",
             ha="center",
             va="top",
             fontsize=9,

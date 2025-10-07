@@ -84,6 +84,8 @@ module = [
     "vrplib.*", 
     "haversine.*",
     "sklearn.*",
+    "scipy.*",
+    "statsmodels.*",
     "kmedoids.*",
     "joblib.*",
     "folium.*",

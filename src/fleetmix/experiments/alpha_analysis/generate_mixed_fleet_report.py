@@ -614,7 +614,7 @@ def create_tipping_point_analysis(mixed_results):
         Xi, Yi = np.meshgrid(xi, yi)
 
         # Interpolate Z values
-        from scipy.interpolate import griddata  # type: ignore
+        from scipy.interpolate import griddata
 
         Zi = griddata((X.flatten(), Y.flatten()), Z, (Xi, Yi), method="linear")
 

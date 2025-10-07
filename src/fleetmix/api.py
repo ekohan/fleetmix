@@ -34,7 +34,7 @@ def _two_phase_solve(
 ) -> FleetmixSolution:
     """Run two-phase optimization for split-stop mode."""
     # Phase 1: Baseline (no split stops)
-    logger.info("Phase 1: Solving baseline problem without split stops")
+    FleetmixLogger.detail("Phase 1: Solving baseline problem without split stops")
     # Build a copy of params with allow_split_stops disabled
     baseline_problem = dataclasses.replace(params.problem, allow_split_stops=False)
     baseline_params = dataclasses.replace(params, problem=baseline_problem)
@@ -67,7 +67,7 @@ def _two_phase_solve(
             )
 
     baseline_vehicles = sum(baseline_solution.vehicles_used.values())
-    logger.info(
+    FleetmixLogger.detail(
         f"Phase 1 complete: {baseline_vehicles} vehicles, ${baseline_solution.total_cost:,.2f}"
     )
 
@@ -75,7 +75,7 @@ def _two_phase_solve(
     baseline_valid = baseline_is_valid(baseline_solution)
 
     # Phase 2: Split-stop optimization with warm start
-    logger.info("Phase 2: Solving split-stop problem with warm start")
+    FleetmixLogger.detail("Phase 2: Solving split-stop problem with warm start")
 
     # Create a copy of parameters for phase 2
     phase2_problem = dataclasses.replace(params.problem, allow_split_stops=True)
@@ -111,7 +111,7 @@ def _two_phase_solve(
                 )
 
         phase2_vehicles = sum(phase2_solution.vehicles_used.values())
-        logger.info(
+        FleetmixLogger.detail(
             f"Phase 2 complete: {phase2_vehicles} vehicles, ${phase2_solution.total_cost:,.2f}"
         )
 
@@ -119,7 +119,7 @@ def _two_phase_solve(
         if len(phase2_solution.missing_customers) == 0 and phase2_vehicles > 0:
             # Phase 2 feasible
             if not baseline_valid:
-                logger.info("Baseline infeasible – using Phase 2 solution")
+                FleetmixLogger.detail("Baseline infeasible – using Phase 2 solution")
                 return phase2_solution
 
             if (
@@ -127,10 +127,14 @@ def _two_phase_solve(
                 # TODO: saco esto por comparacion con scv baseline
                 # and phase2_vehicles <= baseline_vehicles
             ):
-                logger.info("Using Phase 2 solution (better cost and no more vehicles)")
+                FleetmixLogger.detail(
+                    "Using Phase 2 solution (better cost and no more vehicles)"
+                )
                 return phase2_solution
 
-        logger.info("Using Phase 1 solution (Phase 2 not better or infeasible)")
+        FleetmixLogger.detail(
+            "Using Phase 1 solution (Phase 2 not better or infeasible)"
+        )
         return baseline_solution
 
     except (ValueError, RuntimeError) as e:
@@ -145,7 +149,7 @@ def optimize(
     config: str | Path | FleetmixParams | None = None,
     output_dir: str = "results",
     format: str = "json",
-    verbose: bool = False,
+    verbose: Optional[bool] = None,
     allow_split_stops: Optional[bool] = None,
 ) -> FleetmixSolution:
     """
@@ -183,7 +187,6 @@ def optimize(
         >>> params = load_fleetmix_params("config.yaml")
         >>> solution = optimize(demand_df, params, verbose=True)
     """
-
     # Initialize TimeRecorder
     time_recorder = TimeRecorder()
 
@@ -191,7 +194,7 @@ def optimize(
         # Step 1: Load demand data
         if isinstance(demand, pd.DataFrame):
             customers_df = demand.copy()
-            logger.info("Using provided DataFrame for customer demand data")
+            FleetmixLogger.detail("Using provided DataFrame for customer demand data")
         else:
             demand_path = Path(demand)
             if not demand_path.exists():
@@ -211,7 +214,9 @@ def optimize(
                     else:
                         # It's in long format, process it
                         customers_df = load_customer_demand(str(demand_path))
-                logger.info(f"Loaded {len(customers_df)} customers from {demand_path}")
+                FleetmixLogger.detail(
+                    f"Loaded {len(customers_df)} customers from {demand_path}"
+                )
             except Exception as e:
                 raise ValueError(
                     f"Error loading demand data from {demand_path}:\n{e!s}\n"
@@ -256,6 +261,22 @@ def optimize(
                     f"Error loading configuration from {config_path}:\n{e!s}\n"
                     f"Please check the YAML syntax and required fields."
                 )
+
+        # Override runtime params based on function parameters
+        if verbose is not None:
+            params = dataclasses.replace(
+                params, runtime=dataclasses.replace(params.runtime, verbose=verbose)
+            )
+
+        # Setup logging based on final verbose/debug settings
+        from fleetmix.utils.logging import LogLevel, setup_logging
+
+        if params.runtime.debug:
+            setup_logging(LogLevel.DEBUG)
+        elif params.runtime.verbose:
+            setup_logging(LogLevel.VERBOSE)
+        else:
+            setup_logging(LogLevel.NORMAL)
 
         # Override allow_split_stops if provided via API
         if allow_split_stops is not None:
@@ -387,7 +408,7 @@ def optimize(
                 parameters=params,
                 format=format,
             )
-            logger.info(f"Results saved to {output_dir}")
+            FleetmixLogger.progress(f"Results saved to {output_dir}")
         except Exception as e:
             log_warning(f"Failed to save results: {e!s}")
 

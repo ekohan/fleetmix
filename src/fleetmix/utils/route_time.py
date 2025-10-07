@@ -103,7 +103,7 @@ def build_distance_duration_matrices(
         logger.debug(f"Matrices for avg_speed={avg_speed} km/h already cached.")
         return
 
-    logger.info(
+    logger.debug(
         f"Building distance/duration matrices for {len(customers_df)} customers at {avg_speed} km/h..."
     )
     # Create mapping from Customer_ID to matrix index (Depot is 0)
@@ -162,7 +162,7 @@ def build_distance_duration_matrices(
         "customer_id_to_idx": customer_id_to_idx,
         "depot_idx": 0,  # Depot is always at index 0
     }
-    logger.info(
+    logger.debug(
         f"Successfully built and cached matrices ({n_locations}x{n_locations}) for avg_speed={avg_speed} km/h."
     )
 

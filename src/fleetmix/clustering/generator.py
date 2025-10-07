@@ -61,7 +61,7 @@ def generate_feasible_clusters(
         List of Cluster objects containing all generated clusters
     """
 
-    logger.info("--- Starting Cluster Generation Process ---")
+    FleetmixLogger.detail("--- Starting Cluster Generation Process ---")
     if not customers or not configurations:
         logger.warning(
             "Input customers or configurations are empty. Returning empty list."
@@ -72,10 +72,12 @@ def generate_feasible_clusters(
         shared_demand_cache = manager.dict()
         shared_route_time_cache = manager.dict()
 
-        logger.info("Initializing shared caches for demand and route time calculations")
+        logger.debug(
+            "Initializing shared caches for demand and route time calculations"
+        )
 
         # 1. Generate feasibility mapping
-        logger.info("Generating feasibility mapping...")
+        FleetmixLogger.detail("Generating feasibility mapping...")
         feasible_customers = _generate_feasibility_mapping(
             customers, configurations, params.problem.goods
         )
@@ -84,7 +86,7 @@ def generate_feasible_clusters(
                 "No customers are feasible for any configuration. Returning empty list."
             )
             return []
-        logger.info(
+        FleetmixLogger.detail(
             f"Feasibility mapping generated for {len(feasible_customers)} customers."
         )
 
@@ -97,7 +99,7 @@ def generate_feasible_clusters(
             for clustering_context, _ in context_and_methods
         )
         if tsp_needed:
-            logger.info(
+            logger.debug(
                 "TSP route estimation detected. Building distance/duration matrices per vehicle configuration..."
             )
             # Build matrices for each unique avg_speed value across configurations
@@ -112,9 +114,9 @@ def generate_feasible_clusters(
                 # Convert customers to DataFrame for matrix building (temporary)
                 customers_df = Customer.to_dataframe(customers)
                 build_distance_duration_matrices(customers_df, depot_dict, speed)
-                logger.debug(f"Built matrices for avg_speed={speed} km/h")
+            logger.debug(f"Built matrices for speeds: {sorted(unique_speeds)} km/h")
         else:
-            logger.info(
+            logger.debug(
                 "TSP route estimation not used. Skipping matrix precomputation."
             )
 
@@ -123,8 +125,8 @@ def generate_feasible_clusters(
         # 4. Process configurations in parallel for each context configuration
         all_clusters = []
         for clustering_context, method_name in context_and_methods:
-            logger.info(
-                f"--- Running Configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f}) ---"
+            logger.debug(
+                f"Running configuration: {method_name} (GeoW: {clustering_context.geo_weight:.2f}, DemW: {clustering_context.demand_weight:.2f})"
             )
 
             # Determine level of parallelism: obey FLEETMIX_N_JOBS env var if set
@@ -156,11 +158,11 @@ def generate_feasible_clusters(
                     # Assign unique Cluster_ID
                     cluster.cluster_id = next(cluster_id_generator)
                     all_clusters.append(cluster)
-            logger.info(
-                f"--- Configuration {method_name} completed, generated {len([c for config_clusters in clusters_by_config for c in config_clusters])} raw clusters ---"
+            logger.debug(
+                f"Configuration {method_name} completed: {len([c for config_clusters in clusters_by_config for c in config_clusters])} raw clusters"
             )
 
-        logger.info(
+        logger.debug(
             f"Cache statistics: {len(shared_demand_cache)} demand entries, {len(shared_route_time_cache)} route time entries"
         )
 
@@ -169,7 +171,7 @@ def generate_feasible_clusters(
         return []
 
     # Remove duplicate clusters based on customer sets
-    logger.info(
+    FleetmixLogger.detail(
         f"Combining and deduplicating {len(all_clusters)} raw clusters from all configurations..."
     )
     unique_clusters = _deduplicate_clusters(all_clusters)
@@ -215,8 +217,8 @@ def generate_feasible_clusters(
             next_id += 1
             unique_clusters.append(cluster)
 
-        logger.info(
-            f"➕ Added {len(merged_clusters)} merged neighbour clusters (pre-MILP)"
+        FleetmixLogger.detail(
+            f"Added {len(merged_clusters)} merged neighbour clusters (pre-MILP)"
         )
 
     # Final deduplication
@@ -225,9 +227,9 @@ def generate_feasible_clusters(
     # Validate cluster coverage
     validate_cluster_coverage(unique_clusters, customers)
 
-    logger.info("--- Cluster Generation Complete ---")
-    logger.info(
-        f"{Symbols.CHECKMARK} Generated a total of {len(unique_clusters)} unique clusters across all configurations."
+    FleetmixLogger.detail("--- Cluster Generation Complete ---")
+    FleetmixLogger.detail(
+        f"Generated {len(unique_clusters)} unique clusters across all configurations"
     )
 
     return unique_clusters
@@ -292,8 +294,8 @@ def validate_cluster_coverage(clusters: list[Cluster], customers: list[CustomerB
             f"Found {len(uncovered)} customers not covered by any cluster: {uncovered[:5]}..."
         )
     else:
-        logger.info(
-            f"{Symbols.CHECKMARK} All {len(customer_coverage)} customers are covered by at least one cluster."
+        FleetmixLogger.detail(
+            f"✓ All {len(customer_coverage)} customers are covered by at least one cluster."
         )
 
 
@@ -404,7 +406,7 @@ def _get_clustering_context_list(
 
     method = params.algorithm.clustering_method
     if method == "combine":
-        logger.info("🔄 Generating context variations for 'combine' method")
+        logger.debug("Generating context variations for 'combine' method")
 
         # Check if sub_methods are specified in the clustering params
         # TODO: offer this as a parameter
@@ -435,10 +437,10 @@ def _get_clustering_context_list(
 
     else:
         # Single method specified: Use the base_context as configured initially
-        logger.info(f"📍 Using single method configuration: {method}")
+        logger.debug(f"Using single method configuration: {method}")
         context_list.append((base_context, method))
 
-    logger.info(
-        f"Generated {len(context_list)} distinct clustering context configurations."
+    logger.debug(
+        f"Generated {len(context_list)} distinct clustering context configurations"
     )
     return context_list

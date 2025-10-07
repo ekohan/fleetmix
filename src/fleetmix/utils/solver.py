@@ -109,8 +109,9 @@ class GurobiAdapter:
         Args:
             params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
         """
-        msg = 1 if params.verbose else 0
+        msg = 1 if params.debug else 0
         kwargs: dict[str, Any] = {"msg": msg, "keepFiles": True}
+        # TODO: check if keepFiles is still needed
         # Only pass gapRel when an explicit tolerance is requested – omitting
         # it forces the solver to strive for optimality with gap = 0.
         if params.gap_rel is not None:
@@ -151,7 +152,7 @@ class CbcAdapter:
         Args:
             params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
         """
-        msg = 1 if params.verbose else 0
+        msg = 1 if params.debug else 0
         kwargs: dict[str, Any] = {"msg": msg}
         if params.gap_rel is not None:
             kwargs["gapRel"] = params.gap_rel

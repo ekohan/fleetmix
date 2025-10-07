@@ -204,9 +204,20 @@ def _solve_internal(
         )
         return empty_solution
 
+    # Log model statistics (verbose only)
+    from fleetmix.utils.logging import FleetmixLogger
+
+    if parameters.runtime.verbose:
+        num_vars = len(model.variables())
+        num_constraints = len(model.constraints)
+        num_binary = sum(1 for v in model.variables() if v.cat == pulp.LpBinary)
+        FleetmixLogger.detail(
+            f"MILP model: rows={num_constraints}, cols={num_vars}, bin={num_binary}"
+        )
+
     # Select solver: use provided or pick based on runtime.solver
     solver = solver or pick_solver(parameters.runtime)
-    logger.info(f"Using solver: {solver.name}")
+    FleetmixLogger.detail(f"Using solver: {solver.name}")
     start_time = time.time()
     model.solve(solver)
     end_time = time.time()
@@ -216,7 +227,12 @@ def _solve_internal(
     optimality_gap = extract_optimality_gap(model, solver)
 
     if parameters.runtime.verbose:
-        print(f"Optimization completed in {solver_time:.2f} seconds.")
+        gap_str = f", gap={optimality_gap:.2f}%" if optimality_gap is not None else ""
+        obj_value = pulp.value(model.objective) if model.objective else None
+        obj_str = f"obj={obj_value:.2f}" if obj_value is not None else "obj=N/A"
+        FleetmixLogger.detail(
+            f"MILP done: time={solver_time:.1f}s, {obj_str}{gap_str}, status={pulp.LpStatus[model.status]}"
+        )
 
     # Dump model artifacts if debugging is enabled
     ModelDebugger.dump(model, "fsm_model")
@@ -435,7 +451,7 @@ def _create_model(
                     f"Cover_{physical_customer}_{good}",
                 )
 
-        logger.info(
+        FleetmixLogger.detail(
             f"Added split-stop exclusivity constraints for {len(physical_customers)} physical customers"
         )
     else:
@@ -479,7 +495,7 @@ def _create_model(
 
         if warm_start_solution and os.getenv("FLEETMIX_WARMSTART", "1") == "1":
             # Phase 2: Use Phase 1 solution as warm start by mapping to baseline clusters
-            logger.info(
+            FleetmixLogger.detail(
                 f"Using Phase 1 solution as warm start with {len(baseline_cluster_ids)} baseline clusters"
             )
 
@@ -522,13 +538,13 @@ def _create_model(
                 y_vars[k].setInitialValue(1)
                 x_vars[v, k].setInitialValue(1)
 
-            logger.info(
+            FleetmixLogger.detail(
                 f"Applied warm start to {len(warm_start_assignments)} baseline clusters"
             )
 
         elif baseline_cluster_ids and os.getenv("FLEETMIX_WARMSTART", "1") == "1":
             # Fallback: Use existing baseline warm start logic
-            logger.info(
+            FleetmixLogger.detail(
                 f"Warm-starting with {len(baseline_cluster_ids)} baseline clusters"
             )
 

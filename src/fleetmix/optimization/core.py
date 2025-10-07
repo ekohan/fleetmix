@@ -294,7 +294,7 @@ def _create_model(
     pulp.LpProblem,
     dict[Any, pulp.LpVariable],
     dict[tuple[Any, Any], pulp.LpVariable],
-    dict[tuple[Any, Any], float],
+    dict[tuple[Any, Any], Decimal],
 ]:
     """
     Create the optimization model M aligning with the mathematical formulation.
@@ -308,16 +308,19 @@ def _create_model(
     if clusters_df.empty:
         logger.warning("No clusters provided to optimization - creating empty model")
         # Return empty model with no variables
-        return model, {}, {}, {}
+        empty_y: dict[Any, pulp.LpVariable] = {}
+        empty_x: dict[tuple[Any, Any], pulp.LpVariable] = {}
+        empty_c: dict[tuple[Any, Any], Decimal] = {}
+        return model, empty_y, empty_x, empty_c
 
     # Sets
     N = set(clusters_df["Customers"].explode().unique())  # Customers
     K = set(clusters_df["Cluster_ID"])  # Clusters
 
     # Initialize decision variables dictionaries
-    x_vars = {}
-    y_vars = {}
-    c_vk = {}
+    x_vars: dict[tuple[Any, Any], pulp.LpVariable] = {}
+    y_vars: dict[Any, pulp.LpVariable] = {}
+    c_vk: dict[tuple[Any, Any], Decimal] = {}
 
     # K_i: clusters containing customer i
     K_i = {
@@ -356,7 +359,7 @@ def _create_model(
             V_k[k].add("NoVehicle")  # Placeholder
             x_vars["NoVehicle", k] = pulp.LpVariable(f"x_NoVehicle_{k}", cat="Binary")
             model += x_vars["NoVehicle", k] == 0
-            c_vk["NoVehicle", k] = 0.0  # Cost is zero as it's not selected
+            c_vk["NoVehicle", k] = Decimal("0")  # Cost is zero as it's not selected
 
     # Create remaining decision variables
     for k in K:
@@ -521,11 +524,11 @@ def _create_model(
                 if best_match_k and best_overlap > 0:
                     # Find best vehicle config for this cluster
                     best_v = None
-                    best_cost = float("inf")
+                    best_cost = Decimal("inf")
                     for v in V_k[best_match_k]:
                         if (
                             v != "NoVehicle"
-                            and c_vk.get((v, best_match_k), float("inf")) < best_cost
+                            and c_vk.get((v, best_match_k), Decimal("inf")) < best_cost
                         ):
                             best_cost = c_vk[v, best_match_k]
                             best_v = v
@@ -551,9 +554,12 @@ def _create_model(
             for k in baseline_cluster_ids:
                 y_vars[k].setInitialValue(1)
                 best_v = None
-                best_cost = float("inf")
+                best_cost = Decimal("inf")
                 for v in V_k[k]:
-                    if v != "NoVehicle" and c_vk.get((v, k), float("inf")) < best_cost:
+                    if (
+                        v != "NoVehicle"
+                        and c_vk.get((v, k), Decimal("inf")) < best_cost
+                    ):
                         best_cost = c_vk[v, k]
                         best_v = v
                 if best_v:
@@ -636,7 +642,7 @@ def _calculate_solution_statistics(
     parameters: FleetmixParams,
     model: pulp.LpProblem,
     x_vars: dict,
-    c_vk: dict,
+    c_vk: dict[tuple[Any, Any], Decimal],
 ) -> FleetmixSolution:
     """Calculate solution statistics using the optimization results."""
 

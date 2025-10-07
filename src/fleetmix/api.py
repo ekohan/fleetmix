@@ -339,7 +339,7 @@ def optimize(
                 configs=configs,
                 params=params,
                 time_recorder=time_recorder,
-                verbose=verbose,
+                verbose=params.runtime.verbose,
             )
         else:
             # Standard single-phase optimization

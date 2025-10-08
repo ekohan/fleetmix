@@ -23,7 +23,7 @@ jobs:
 
       - name: Install toolchain
         run: |
-          uv sync --group lint --all-extras
+          uv sync --extra dev
 
       - name: Run ruff linter
         run: uv run ruff check --output-format=github .

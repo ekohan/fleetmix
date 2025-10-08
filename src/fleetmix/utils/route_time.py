@@ -1,6 +1,6 @@
 """Route time estimation methods for vehicle routing."""
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import numpy as np
 import pandas as pd
@@ -31,7 +31,9 @@ logger = FleetmixLogger.get_logger(__name__)
 # public ``NDArray`` alias.  Use NDArray[np.int_] for type checking, but fall back
 # to the runtime alias otherwise.
 if TYPE_CHECKING:
-    IntMatrix = NDArray[np.int_]
+    from numpy.typing import NDArray as _NDArray
+
+    IntMatrix: TypeAlias = _NDArray[np.int_]
 else:
     from numpy import ndarray as IntMatrix  # type: ignore[attr-defined]
 MAX_DURATION_SECONDS = 2_147_000_000  # ~24,835 days, safely within int32 limits

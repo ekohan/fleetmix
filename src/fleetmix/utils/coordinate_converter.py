@@ -68,11 +68,19 @@ class CoordinateConverter:
         self.min_y = coords[:, 1].min()
         self.max_y = coords[:, 1].max()
 
+        # Guard against degenerate coordinate ranges (e.g., single-point instances)
+        range_x = self.max_x - self.min_x
+        range_y = self.max_y - self.min_y
+        if np.isclose(range_x, 0.0):
+            range_x = 1.0
+        if np.isclose(range_y, 0.0):
+            range_y = 1.0
+
         # Calculate scaling factors
         # Use cosine correction for longitude distances at the center latitude
         cos_lat = np.cos(np.radians(geo_bounds.center[0]))
-        self.x_scale = geo_bounds.lon_span * cos_lat / (self.max_x - self.min_x)
-        self.y_scale = geo_bounds.lat_span / (self.max_y - self.min_y)
+        self.x_scale = geo_bounds.lon_span * cos_lat / range_x
+        self.y_scale = geo_bounds.lat_span / range_y
 
         # Use the smaller scale to maintain aspect ratio
         self.scale = min(self.x_scale, self.y_scale)

@@ -51,13 +51,6 @@ from typing import Any
 
 import pandas as pd
 
-_silent_import_buf = io.StringIO()
-with (
-    contextlib.redirect_stdout(_silent_import_buf),
-    contextlib.redirect_stderr(_silent_import_buf),
-):
-    import pulp
-
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
     Cluster,
@@ -71,6 +64,13 @@ from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
 from fleetmix.utils.solver import extract_optimality_gap, pick_solver
+
+_silent_import_buf = io.StringIO()
+with (
+    contextlib.redirect_stdout(_silent_import_buf),
+    contextlib.redirect_stderr(_silent_import_buf),
+):
+    import pulp
 
 logger = FleetmixLogger.get_logger(__name__)
 

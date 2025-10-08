@@ -27,12 +27,13 @@ from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
 
+# NOTE: PyVRP's stubs expect np.ndarray[int], which mypy understands only with the
+# public ``NDArray`` alias.  Use NDArray[np.int_] for type checking, but fall back
+# to the runtime alias otherwise.
 if TYPE_CHECKING:
-    from numpy import ndarray as _NDArray
-
-    IntMatrix = _NDArray[tuple[int, ...], np.dtype[np.int_]]
-else:
     IntMatrix = NDArray[np.int_]
+else:
+    from numpy import ndarray as IntMatrix  # type: ignore[attr-defined]
 MAX_DURATION_SECONDS = 2_147_000_000  # ~24,835 days, safely within int32 limits
 
 

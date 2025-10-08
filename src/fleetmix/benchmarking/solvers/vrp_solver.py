@@ -39,9 +39,6 @@ from fleetmix.utils.route_time import (
     estimate_route_time,
 )
 
-if TYPE_CHECKING:
-    from numpy import ndarray as _NDArray
-
 logger = FleetmixLogger.get_logger(__name__)
 
 

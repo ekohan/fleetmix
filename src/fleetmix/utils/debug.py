@@ -7,14 +7,14 @@ import io
 from pathlib import Path
 
 # Silence solver backends’ import-time banners
+from fleetmix.utils.logging import FleetmixLogger
+
 _silent_import_buf = io.StringIO()
 with (
     contextlib.redirect_stdout(_silent_import_buf),
     contextlib.redirect_stderr(_silent_import_buf),
 ):
     import pulp
-
-from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
 

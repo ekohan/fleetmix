@@ -349,13 +349,7 @@ EOF"""
     def test_small_real_dataset(self):
         """Test with real small dataset if available."""
         # Check for small MCVRP instance
-        dataset_path = (
-            Path(__file__).parent.parent.parent
-            / "src/fleetmix/benchmarking/datasets/mcvrp/10_3_3_1_(01).dat"
-        )
-
-        if not dataset_path.exists():
-            pytest.skip("Real dataset not found")
+        dataset_path = Path(__file__).parent.parent / "_assets/mcvrp/sample.dat"
 
         # Parse real instance
         instance = parse_mcvrp(str(dataset_path))
@@ -367,7 +361,9 @@ EOF"""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
 
-            customers_df, instance_spec = convert_mcvrp_to_fsm(instance_name="10_3_3_1_(01)")
+            customers_df, instance_spec = convert_mcvrp_to_fsm(
+                instance_name="10_3_3_1_(01)", custom_instance_path=dataset_path
+            )
 
             # Should have 10 customers
             assert len(customers_df) == 10

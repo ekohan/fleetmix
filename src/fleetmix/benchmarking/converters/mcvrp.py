@@ -57,8 +57,15 @@ def convert_mcvrp_to_fsm(
     instance = parse_mcvrp(file_path)
 
     # Convert coordinates to geospatial coordinates
-    converter = CoordinateConverter(instance.coords)
-    geo_coords = converter.convert_all_coordinates(instance.coords)
+    try:
+        converter = CoordinateConverter(instance.coords)
+        geo_coords = converter.convert_all_coordinates(instance.coords)
+    except Exception as exc:  # noqa: BLE001
+        msg = (
+            "Failed to project coordinates for MCVRP instance '"
+            f"{instance.name}'. Ensure numpy >= 2.0 is installed."
+        )
+        raise RuntimeError(msg) from exc
 
     # Build customer records
     customers = []

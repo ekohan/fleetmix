@@ -1,6 +1,6 @@
 """Route time estimation methods for vehicle routing."""
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,12 @@ from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
 
-IntMatrix = NDArray[np.int_]
+if TYPE_CHECKING:
+    from numpy import ndarray as _NDArray
+
+    IntMatrix = _NDArray[tuple[int, ...], np.dtype[np.int_]]
+else:
+    IntMatrix = NDArray[np.int_]
 MAX_DURATION_SECONDS = 2_147_000_000  # ~24,835 days, safely within int32 limits
 
 
@@ -512,15 +517,14 @@ class TSPEstimator:
                 if cache_ready:
                     # Create the index-to-ID map for this specific cluster based on global indices
                     idx_to_id_map[0] = "Depot"  # Relative index 0 is always the Depot
+                    inverse_map = {
+                        g_idx: cid for cid, g_idx in customer_id_to_idx.items()
+                    }
                     for i, global_idx in enumerate(
                         cluster_indices[1:], start=1
                     ):  # Start from relative index 1
-                        # Find the customer ID corresponding to this global index
-                        # This requires iterating through the global map or having an inverse map
-                        for cid, g_idx in customer_id_to_idx.items():
-                            if g_idx == global_idx:
-                                idx_to_id_map[i] = cid
-                                break
+                        if (cid := inverse_map.get(global_idx)) is not None:
+                            idx_to_id_map[i] = cid
 
         # Fallback: Compute matrices on-the-fly if cache wasn't ready or slicing failed
         if not cache_ready:

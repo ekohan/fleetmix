@@ -3,7 +3,7 @@ Single-compartment VRP solver module using PyVRP.
 Provides baseline comparison for multi-compartment vehicle solutions.
 """
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
@@ -38,6 +38,9 @@ from fleetmix.utils.route_time import (
     IntMatrix,
     estimate_route_time,
 )
+
+if TYPE_CHECKING:
+    from numpy import ndarray as _NDArray
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -113,9 +116,8 @@ class VRPSolver:
 
         # Calculate base distance matrix (in kilometres)
         base_distance_matrix_km = self._calculate_distance_matrix(len(expanded_clients))
-        distance_matrix_int = cast(
-            IntMatrix,
-            np.rint(base_distance_matrix_km * 1000).astype(np.int_, copy=False),
+        distance_matrix_int: IntMatrix = np.rint(base_distance_matrix_km * 1000).astype(
+            np.int_, copy=False
         )
 
         # Create duration matrices for each vehicle type based on their specific avg_speed

@@ -59,7 +59,7 @@ This repository supports our paper *Designing Multi‑Compartment Last‑Mile Ve
 ### From PyPI *(coming soon)*
 
 ```bash
-pip install fleetmix
+uv pip install fleetmix
 ```
 
 ### From Source *(development)*
@@ -67,11 +67,18 @@ pip install fleetmix
 ```bash
 # Clone and set up environment
 git clone https://github.com/ekohan/fleetmix.git && cd fleetmix
-./init.sh
 
-# Install in editable mode
-pip install -e .
+# Install uv (if needed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source "$HOME/.local/bin/env"
+
+# Create virtual environment and install all extras
+uv venv fleetmix-env
+source fleetmix-env/bin/activate
+uv sync --all-extras
 ```
+
+Prefer `uv run <command>` for tooling, for example `uv run pytest -q`.
 
 ---
 

@@ -8,7 +8,7 @@ Welcome to **FleetMix**! This 5-minute tutorial will walk you through running yo
 
 ## 1. Installation
 
-If you cloned the repository already, activate the environment created by `./init.sh`:
+If you cloned the repository already, activate the environment created by `uv`:
 
 ```bash
 source fleetmix-env/bin/activate  # macOS / Linux
@@ -18,7 +18,11 @@ Otherwise, install from source:
 
 ```bash
 git clone https://github.com/ekohan/fleetmix.git && cd fleetmix
-./init.sh && pip install -e .
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source "$HOME/.local/bin/env"
+uv venv fleetmix-env
+source fleetmix-env/bin/activate
+uv sync --all-extras
 ```
 
 ---

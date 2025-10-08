@@ -219,8 +219,9 @@ def test_cbc_adapter_available():
     assert adapter.available is True
 
 
-def test_pick_solver_gurobi_explicit(tmp_path):
+def test_pick_solver_gurobi_explicit(tmp_path, monkeypatch):
     """Test pick_solver with explicit gurobi choice."""
+    monkeypatch.delenv("FSM_SOLVER", raising=False)
     config_file = tmp_path / "config.yaml"
     config_file.write_text("# minimal config")
     

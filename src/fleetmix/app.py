@@ -1217,7 +1217,7 @@ def gui(
 
     except ImportError:
         console.print("[red]Error: GUI dependencies not installed[/red]")
-        console.print("Install with: pip install fleetmix")
+        console.print("Install with: uv pip install fleetmix")
         raise typer.Exit(1)
 
 

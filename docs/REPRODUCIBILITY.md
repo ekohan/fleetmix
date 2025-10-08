@@ -17,7 +17,11 @@ This guide will enable complete reproduction of results from *Designing Multi-Co
 # Install FleetMix
 git clone https://github.com/ekohan/fleetmix.git
 cd fleetmix
-./init.sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source "$HOME/.local/bin/env"
+uv venv fleetmix-env
+source fleetmix-env/bin/activate
+uv sync --all-extras
 
 # Run benchmarks (commands TBD upon paper finalization)
 fleetmix benchmark mcvrp

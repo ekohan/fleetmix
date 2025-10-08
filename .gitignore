@@ -4,6 +4,7 @@ __pycache__/
 *.class
 
 # Python virtual environments
+.venv/
 venv/
 fleetmix-env/
 

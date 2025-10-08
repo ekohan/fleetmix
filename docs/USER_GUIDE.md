@@ -9,15 +9,18 @@
 ### Installation
 
 ```bash
-pip install fleetmix
+uv pip install fleetmix
 ```
 
 Or from source:
 ```bash
 git clone https://github.com/ekohan/fleetmix.git
 cd fleetmix
-./init.sh
-pip install -e .
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source "$HOME/.local/bin/env"
+uv venv fleetmix-env
+source fleetmix-env/bin/activate
+uv sync --all-extras
 ```
 
 ### Your First Fleet Size & Mix (FSM) Optimization

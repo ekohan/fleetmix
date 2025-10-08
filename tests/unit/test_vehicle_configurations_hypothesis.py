@@ -21,8 +21,11 @@ from fleetmix.utils.vehicle_configurations import generate_vehicle_configuration
     goods=st.lists(
         st.text(min_size=1, max_size=3), min_size=1, max_size=3, unique=True
     ),
+    include_time_metrics=st.booleans(),
 )
-def test_generate_vehicle_configurations_hypothesis(vehicle_types_raw, goods):
+def test_generate_vehicle_configurations_hypothesis(
+    vehicle_types_raw, goods, include_time_metrics
+):
     """Test vehicle configuration generation with varied inputs using Hypothesis."""
     # Convert raw dicts to VehicleSpec objects
     vehicle_types = {
@@ -50,3 +53,10 @@ def test_generate_vehicle_configurations_hypothesis(vehicle_types_raw, goods):
         vt = config.vehicle_type
         assert config.capacity == vehicle_types[vt]["capacity"]
         assert config.fixed_cost == vehicle_types[vt]["fixed_cost"]
+
+    # Spot-check __getitem__ access for generated configs for coverage
+    for config in configs:
+        assert config["Config_ID"] == config.config_id
+        assert config["Vehicle_Type"] == config.vehicle_type
+        for good in goods:
+            _ = config.compartments.get(good, False)

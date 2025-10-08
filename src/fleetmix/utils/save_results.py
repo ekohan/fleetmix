@@ -199,7 +199,13 @@ def save_optimization_results(
             def _deduplicate_customer_ids(customers):
                 """Return a list with at most one entry per *origin* customer."""
                 if not isinstance(customers, (list, tuple)):
-                    return customers
+                    customer_str = str(customers)
+                    origin = (
+                        customer_str.split("::")[0]
+                        if "::" in customer_str
+                        else customer_str
+                    )
+                    return [origin]
                 unique: list[str] = []
                 seen: set[str] = set()
                 for cid in customers:

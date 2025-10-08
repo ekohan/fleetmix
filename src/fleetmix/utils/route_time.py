@@ -443,8 +443,8 @@ class TSPEstimator:
         )
 
         # --- Use sliced matrices from global cache if available, otherwise compute on-the-fly ---
-        distance_matrix = None
-        duration_matrix = None
+        distance_matrix: IntMatrix | None = None
+        duration_matrix: IntMatrix | None = None
 
         # Check if cache is populated for this specific speed
         cache_ready = context.avg_speed in _matrix_cache
@@ -572,12 +572,18 @@ class TSPEstimator:
             # Return a large value indicating failure/infeasibility and empty sequence
             return context.max_route_time * 1.1, []
 
+        assert distance_matrix is not None
+        assert duration_matrix is not None
+
+        distance_matrices: list[IntMatrix] = [distance_matrix]
+        duration_matrices: list[IntMatrix] = [duration_matrix]
+
         problem_data = ProblemData(
             clients=pyvrp_clients,
             depots=[pyvrp_depot],
             vehicle_types=[vehicle_type],
-            distance_matrices=[distance_matrix],
-            duration_matrices=[duration_matrix],
+            distance_matrices=distance_matrices,
+            duration_matrices=duration_matrices,
         )
         model = Model.from_data(problem_data)
 

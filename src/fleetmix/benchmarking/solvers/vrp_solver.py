@@ -3,6 +3,8 @@ Single-compartment VRP solver module using PyVRP.
 Provides baseline comparison for multi-compartment vehicle solutions.
 """
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 from haversine import haversine
@@ -111,17 +113,22 @@ class VRPSolver:
 
         # Calculate base distance matrix (in kilometres)
         base_distance_matrix_km = self._calculate_distance_matrix(len(expanded_clients))
-        distance_matrix_int = np.rint(base_distance_matrix_km * 1000).astype(
-            np.int_, copy=False
+        distance_matrix_int = cast(
+            IntMatrix,
+            np.rint(base_distance_matrix_km * 1000).astype(np.int_, copy=False),
         )
 
         # Create duration matrices for each vehicle type based on their specific avg_speed
+        distance_matrices: list[IntMatrix] = [distance_matrix_int] * len(vehicle_types)
+
         duration_matrices: list[IntMatrix] = []
         for vt_spec in self.params.problem.vehicles.values():
             speed = max(float(vt_spec.avg_speed), 1e-6)
             raw_duration = (base_distance_matrix_km / speed) * 3600
             clipped_duration = np.clip(raw_duration, 0, MAX_DURATION_SECONDS)
-            duration_matrices.append(clipped_duration.astype(np.int_, copy=False))
+            duration_matrices.append(
+                cast(IntMatrix, clipped_duration.astype(np.int_, copy=False))
+            )
 
         # Create problem data
         self.data = ProblemData(
@@ -133,8 +140,7 @@ class VRPSolver:
                 )
             ],
             vehicle_types=vehicle_types,
-            distance_matrices=[distance_matrix_int]
-            * len(vehicle_types),  # Same distance matrix for all
+            distance_matrices=distance_matrices,
             duration_matrices=duration_matrices,  # Vehicle-specific duration matrices
         )
 

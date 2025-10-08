@@ -4,7 +4,7 @@ import pytest
 import yaml
 from pathlib import Path
 from fleetmix.config.loader import load_yaml as load_fleetmix_params
-from fleetmix.core_types import VehicleSpec
+from fleetmix.core_types import FleetmixSolution, VehicleSpec
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
 
@@ -135,6 +135,15 @@ variable_cost_per_hour: 50
         
         with pytest.raises(ValueError, match="allowed_goods contains goods not in global list"):
             load_fleetmix_params(config_file)
+
+    def test_fleetmix_solution_total_cost_post_init(self):
+        solution = FleetmixSolution(
+            total_fixed_cost=100.0,
+            total_variable_cost=50.0,
+            total_penalties=25.0,
+        )
+
+        assert solution.total_cost == 175.0
     
     def test_parameters_validation_empty_allowed_goods(self, tmp_path):
         """Test Parameters validation with empty allowed_goods list."""

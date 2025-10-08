@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-from typing import Any, Dict, cast
+from typing import Any, Dict, SupportsFloat, cast
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -250,11 +250,16 @@ def plot_economic_sweet_spot_enhanced(df: pd.DataFrame) -> None:
     for a in pivot_pct.index:
         for c in pivot_pct.columns:
             val = pivot_pct.loc[a, c]
-            if pd.isna(val):
+            win_rate_candidate = (
+                pivot_wr.loc[a, c]
+                if (a in pivot_wr.index and c in pivot_wr.columns)
+                else np.nan
+            )
+            if pd.isna(val) or pd.isna(win_rate_candidate):
                 annot.loc[a, c] = ""
             else:
-                win_rate_val = float(pivot_wr.loc[a, c])  # type: ignore[arg-type]
-                wins = int(round(win_rate_val * days))
+                win_rate_val = cast(SupportsFloat, win_rate_candidate)
+                wins = int(round(float(win_rate_val) * days))
                 annot.loc[a, c] = f"{val:.0f}%\n{wins}/{days}"
 
     plt.figure(figsize=(14, 10))

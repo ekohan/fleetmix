@@ -3,10 +3,13 @@ Single-compartment VRP solver module using PyVRP.
 Provides baseline comparison for multi-compartment vehicle solutions.
 """
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 from haversine import haversine
 from joblib import Parallel, delayed
+from numpy.typing import NDArray
 from pyvrp import (
     Client,
     Depot,
@@ -30,7 +33,11 @@ from fleetmix.utils.logging import (
     log_error,
     log_progress,
 )
-from fleetmix.utils.route_time import estimate_route_time
+from fleetmix.utils.route_time import (
+    MAX_DURATION_SECONDS,
+    IntMatrix,
+    estimate_route_time,
+)
 
 logger = FleetmixLogger.get_logger(__name__)
 
@@ -104,14 +111,24 @@ class VRPSolver:
                 )
             )
 
-        # Calculate base distance matrix
-        base_distance_matrix = self._calculate_distance_matrix(len(expanded_clients))
+        # Calculate base distance matrix (in kilometres)
+        base_distance_matrix_km = self._calculate_distance_matrix(len(expanded_clients))
+        distance_matrix_int = cast(
+            IntMatrix,
+            np.rint(base_distance_matrix_km * 1000).astype(np.int_, copy=False),
+        )
 
         # Create duration matrices for each vehicle type based on their specific avg_speed
-        duration_matrices = []
+        distance_matrices: list[IntMatrix] = [distance_matrix_int] * len(vehicle_types)
+
+        duration_matrices: list[IntMatrix] = []
         for vt_spec in self.params.problem.vehicles.values():
-            duration_matrix = (base_distance_matrix / vt_spec.avg_speed) * 3600
-            duration_matrices.append(duration_matrix)
+            speed = max(float(vt_spec.avg_speed), 1e-6)
+            raw_duration = (base_distance_matrix_km / speed) * 3600
+            clipped_duration = np.clip(raw_duration, 0, MAX_DURATION_SECONDS)
+            duration_matrices.append(
+                cast(IntMatrix, clipped_duration.astype(np.int_, copy=False))
+            )
 
         # Create problem data
         self.data = ProblemData(
@@ -123,16 +140,15 @@ class VRPSolver:
                 )
             ],
             vehicle_types=vehicle_types,
-            distance_matrices=[base_distance_matrix]
-            * len(vehicle_types),  # Same distance matrix for all
+            distance_matrices=distance_matrices,
             duration_matrices=duration_matrices,  # Vehicle-specific duration matrices
         )
 
         return Model.from_data(self.data)
 
-    def _calculate_distance_matrix(self, n_clients: int) -> np.ndarray:
+    def _calculate_distance_matrix(self, n_clients: int) -> NDArray[np.float64]:
         """Calculate distance matrix for expanded client list."""
-        distance_matrix = np.zeros((n_clients + 1, n_clients + 1))  # +1 for depot
+        distance_matrix: NDArray[np.float64] = np.zeros((n_clients + 1, n_clients + 1))
         client_coords_list = [(0.0, 0.0)] * (
             n_clients + 1
         )  # Store coords (lat, lon) for depot + clients
@@ -203,9 +219,7 @@ class VRPSolver:
 
         return {
             product: solution
-            for (product, _), solution in zip(
-                product_instances, solutions, strict=False
-            )
+            for (product, _), solution in zip(product_instances, solutions)
         }
 
     def _solve_single_product(

@@ -1,6 +1,7 @@
 """Test the API module."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -219,3 +220,190 @@ def test_optimize_verbose_mode(simple_demand_df, base_config_path, capsys):
     # Verify optimization succeeded in verbose mode
     assert result is not None
     assert result.total_cost > 0
+
+
+def test_optimize_with_invalid_csv(tmp_path, base_config_path):
+    """Test optimization with invalid CSV format (lines 220-221)."""
+    # Create invalid CSV
+    invalid_csv = tmp_path / "invalid.csv"
+    invalid_csv.write_text("this is not valid CSV data\n;;;;;;;")
+    
+    with pytest.raises(ValueError, match="Error loading demand data"):
+        optimize(
+            demand=str(invalid_csv),
+            config=str(base_config_path),
+            output_dir=None,
+        )
+
+
+def test_optimize_with_empty_demand(tmp_path, base_config_path):
+    """Test optimization with empty demand DataFrame (line 228)."""
+    # Create empty CSV
+    empty_csv = tmp_path / "empty.csv"
+    empty_csv.write_text("Customer_ID,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand\n")
+    
+    with pytest.raises(ValueError, match="Demand data is empty"):
+        optimize(
+            demand=str(empty_csv),
+            config=str(base_config_path),
+            output_dir=None,
+        )
+
+
+def test_optimize_with_invalid_config_yaml(simple_demand_df, tmp_path):
+    """Test optimization with invalid YAML configuration (lines 259-260)."""
+    # Create invalid YAML
+    invalid_config = tmp_path / "invalid.yaml"
+    invalid_config.write_text("this is not: valid: yaml::: [[[")
+    
+    with pytest.raises(ValueError, match="Error loading configuration"):
+        optimize(
+            demand=simple_demand_df,
+            config=str(invalid_config),
+            output_dir=None,
+        )
+
+
+def test_optimize_with_long_format_demand(tmp_path, base_config_path):
+    """Test optimization with long-format CSV (line 216)."""
+    # Create long-format CSV with all three product types
+    long_csv = tmp_path / "long_format.csv"
+    long_csv.write_text("""ClientID,Lat,Lon,ProductType,Kg
+C1,0.0,0.0,Dry,10
+C1,0.0,0.0,Chilled,5
+C1,0.0,0.0,Frozen,0
+C2,0.1,0.1,Dry,15
+C2,0.1,0.1,Chilled,0
+C2,0.1,0.1,Frozen,0
+""")
+    
+    result = optimize(
+        demand=str(long_csv),
+        config=str(base_config_path),
+        output_dir=None,
+        verbose=False,
+    )
+    
+    # Should successfully process long format
+    assert result is not None
+
+
+def test_optimize_with_allow_split_stops_api(simple_demand_df, base_config_path):
+    """Test optimization with allow_split_stops parameter."""
+    result = optimize(
+        demand=simple_demand_df,
+        config=str(base_config_path),
+        output_dir=None,
+        allow_split_stops=True,
+        verbose=False,
+    )
+    
+    # Should successfully optimize with split stops
+    assert result is not None
+
+
+def test_optimize_save_results_error(simple_demand_df, base_config_path, tmp_path, monkeypatch):
+    """Test optimization with save results error (lines 412-413)."""
+    # Create output directory
+    output_dir = tmp_path / "results"
+    
+    # Mock save_optimization_results to raise an exception
+    from unittest.mock import Mock
+    with patch("fleetmix.api.save_optimization_results") as mock_save:
+        mock_save.side_effect = Exception("Save failed")
+        
+        # Should not raise, just log warning
+        result = optimize(
+            demand=simple_demand_df,
+            config=str(base_config_path),
+            output_dir=str(output_dir),
+            verbose=False,
+        )
+        
+        # Optimization should still succeed
+        assert result is not None
+
+
+def test_optimize_with_csv_format(simple_demand_df, tmp_path, base_config_path):
+    """Test optimization with CSV output format."""
+    output_dir = tmp_path / "results"
+    
+    result = optimize(
+        demand=simple_demand_df,
+        config=str(base_config_path),
+        output_dir=str(output_dir),
+        format="csv",
+        verbose=False,
+    )
+    
+    # Check that CSV results were created
+    assert output_dir.exists()
+    assert result is not None
+
+
+def test_optimize_with_allow_split_stops_parameter(simple_demand_df, base_config_path):
+    """Test allow_split_stops parameter override."""
+    result = optimize(
+        demand=simple_demand_df,
+        config=str(base_config_path),
+        output_dir=None,
+        allow_split_stops=False,
+        verbose=False,
+    )
+    
+    assert result is not None
+    assert result.solver_status is not None
+
+
+def test_optimize_phase2_fallback(minimal_config_path):
+    """Test Phase 2 optimization fallback to Phase 1 (lines 140-142)."""
+    # Create demand that works for phase 1 but may fail phase 2
+    demand_df = pd.DataFrame(
+        {
+            "Customer_ID": ["C1", "C2"],
+            "Customer_Name": ["Customer 1", "Customer 2"],
+            "Latitude": [0.0, 0.1],
+            "Longitude": [0.0, 0.1],
+            "Dry_Demand": [10, 10],
+            "Chilled_Demand": [0, 0],
+            "Frozen_Demand": [0, 0],
+        }
+    )
+    
+    # This should succeed and potentially use phase 1 solution
+    result = optimize(
+        demand=demand_df,
+        config=str(minimal_config_path),
+        output_dir=None,
+        allow_split_stops=True,  # Enable two-phase
+        verbose=False,
+    )
+    
+    assert result is not None
+
+
+def test_optimize_with_dataframe_copy():
+    """Test that optimize makes a copy of the input DataFrame."""
+    demand_df = pd.DataFrame(
+        {
+            "Customer_ID": ["C1"],
+            "Latitude": [0.0],
+            "Longitude": [0.0],
+            "Dry_Demand": [10],
+            "Chilled_Demand": [0],
+            "Frozen_Demand": [0],
+        }
+    )
+    
+    original_df = demand_df.copy()
+    
+    # Use default config
+    result = optimize(
+        demand=demand_df,
+        config=None,  # Use default
+        output_dir=None,
+        verbose=False,
+    )
+    
+    # Original DataFrame should be unchanged
+    assert demand_df.equals(original_df)

@@ -1,10 +1,11 @@
 """Route time estimation methods for vehicle routing."""
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from haversine import haversine
+from numpy.typing import NDArray
 from pyvrp import (
     Client,
     Depot,
@@ -25,6 +26,9 @@ from fleetmix.registry import (
 from fleetmix.utils.logging import FleetmixLogger
 
 logger = FleetmixLogger.get_logger(__name__)
+
+IntMatrix = NDArray[np.int_]
+MAX_DURATION_SECONDS = 2_147_000_000  # ~24,835 days, safely within int32 limits
 
 
 def make_rt_context(
@@ -128,14 +132,16 @@ def build_distance_duration_matrices(
         logger.error("Missing 'Latitude' or 'Longitude' columns in customer data.")
         raise ValueError("Missing coordinate columns in customer data.")
 
-    customer_coords = list(
-        zip(customers_df["Latitude"], customers_df["Longitude"], strict=False)
-    )
+    customer_coords = list(zip(customers_df["Latitude"], customers_df["Longitude"]))
     all_coords = [depot_coord] + customer_coords
 
     # Initialize matrices
-    distance_matrix = np.zeros((n_locations, n_locations), dtype=int)
-    duration_matrix = np.zeros((n_locations, n_locations), dtype=int)
+    distance_matrix = cast(
+        IntMatrix, np.zeros((n_locations, n_locations), dtype=np.int_)
+    )
+    duration_matrix = cast(
+        IntMatrix, np.zeros((n_locations, n_locations), dtype=np.int_)
+    )
 
     # Speed in km/s for duration calculation
     avg_speed_kps = avg_speed / 3600 if avg_speed > 0 else 0
@@ -150,10 +156,12 @@ def build_distance_duration_matrices(
             distance_matrix[i, j] = distance_matrix[j, i] = int(dist_km * 1000)
 
             # Duration in seconds
-            duration_seconds = (
-                (dist_km / avg_speed_kps) if avg_speed_kps > 0 else np.inf
-            )  # Use infinity if speed is 0
-            duration_matrix[i, j] = duration_matrix[j, i] = int(duration_seconds)
+            if avg_speed_kps > 0:
+                raw_duration = dist_km / avg_speed_kps
+            else:
+                raw_duration = MAX_DURATION_SECONDS
+            duration_int = int(min(max(raw_duration, 0), MAX_DURATION_SECONDS))
+            duration_matrix[i, j] = duration_matrix[j, i] = duration_int
 
     # Update cache with speed-specific entry
     _matrix_cache[avg_speed] = {
@@ -324,9 +332,7 @@ class BHHEstimator:
         # Intra-cluster component β·√(n·A)
         cluster_radius = max(
             haversine((centroid_lat, centroid_lon), (lat, lon))
-            for lat, lon in zip(
-                customers["Latitude"], customers["Longitude"], strict=False
-            )
+            for lat, lon in zip(customers["Latitude"], customers["Longitude"])
         )
         cluster_area = np.pi * (cluster_radius**2)
         intra_dist = self.BETA * np.sqrt(n_phys) * np.sqrt(cluster_area)
@@ -449,8 +455,8 @@ class TSPEstimator:
             )
             # Get the speed-specific distance and duration matrices and mapping
             speed_cache = _matrix_cache[context.avg_speed]
-            global_distance_matrix: np.ndarray = speed_cache["distance_matrix"]
-            global_duration_matrix: np.ndarray = speed_cache["duration_matrix"]
+            global_distance_matrix = cast(IntMatrix, speed_cache["distance_matrix"])
+            global_duration_matrix = cast(IntMatrix, speed_cache["duration_matrix"])
             customer_id_to_idx: dict[str, int] = speed_cache["customer_id_to_idx"]
             depot_idx: int = speed_cache["depot_idx"]  # Should be 0
 
@@ -480,12 +486,18 @@ class TSPEstimator:
                 # Slice the global matrices efficiently using numpy indexing
                 n_locations = len(cluster_indices)
                 # Use ix_ to select rows and columns based on index list
-                distance_matrix = global_distance_matrix[
-                    np.ix_(cluster_indices, cluster_indices)
-                ]
-                duration_matrix = global_duration_matrix[
-                    np.ix_(cluster_indices, cluster_indices)
-                ]
+                distance_matrix = cast(
+                    IntMatrix,
+                    np.asarray(
+                        global_distance_matrix[np.ix_(cluster_indices, cluster_indices)]
+                    ),
+                )
+                duration_matrix = cast(
+                    IntMatrix,
+                    np.asarray(
+                        global_duration_matrix[np.ix_(cluster_indices, cluster_indices)]
+                    ),
+                )
 
                 # Validate dimensions
                 if distance_matrix.shape != (
@@ -518,16 +530,14 @@ class TSPEstimator:
             n_locations = num_customers + 1  # Customers + Depot
             locations_coords = [
                 (context.depot.latitude, context.depot.longitude)
-            ] + list(
-                zip(
-                    cluster_customers["Latitude"],
-                    cluster_customers["Longitude"],
-                    strict=False,
-                )
-            )
+            ] + list(zip(cluster_customers["Latitude"], cluster_customers["Longitude"]))
 
-            distance_matrix = np.zeros((n_locations, n_locations), dtype=int)
-            duration_matrix = np.zeros((n_locations, n_locations), dtype=int)
+            distance_matrix = cast(
+                IntMatrix, np.zeros((n_locations, n_locations), dtype=np.int_)
+            )
+            duration_matrix = cast(
+                IntMatrix, np.zeros((n_locations, n_locations), dtype=np.int_)
+            )
 
             # Speed in km/s for duration calculation
             avg_speed_kps = context.avg_speed / 3600 if context.avg_speed > 0 else 0
@@ -541,12 +551,12 @@ class TSPEstimator:
                     distance_matrix[i, j] = distance_matrix[j, i] = int(dist_km * 1000)
 
                     # Duration in seconds
-                    duration_seconds = (
-                        (dist_km / avg_speed_kps) if avg_speed_kps > 0 else np.inf
-                    )
-                    duration_matrix[i, j] = duration_matrix[j, i] = int(
-                        duration_seconds
-                    )
+                    if avg_speed_kps > 0:
+                        raw_duration = dist_km / avg_speed_kps
+                    else:
+                        raw_duration = MAX_DURATION_SECONDS
+                    duration_int = int(min(max(raw_duration, 0), MAX_DURATION_SECONDS))
+                    duration_matrix[i, j] = duration_matrix[j, i] = duration_int
 
             # Create the index-to-ID map for this specific cluster
             idx_to_id_map[0] = "Depot"  # Index 0 is the Depot

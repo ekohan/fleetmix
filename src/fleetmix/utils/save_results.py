@@ -228,40 +228,53 @@ def save_optimization_results(
             else str(x)
         )
     if "Total_Demand" in cluster_details.columns:
-        cluster_details["Total_Demand"] = cluster_details["Total_Demand"].apply(str)
-
-        # Add demand and load percentages by product type
-        for cluster_idx, cluster in cluster_details.iterrows():
-            config = config_lookup[str(cluster["Config_ID"])]
-
-            total_demand = (
-                ast.literal_eval(cluster["Total_Demand"])
-                if isinstance(cluster["Total_Demand"], str)
-                else cluster["Total_Demand"]
+        if cluster_details.empty:
+            cluster_details["Total_Demand"] = cluster_details["Total_Demand"].apply(str)
+        else:
+            temp_column = "_total_demand_dict"
+            cluster_details[temp_column] = cluster_details["Total_Demand"].apply(
+                lambda value: ast.literal_eval(value)
+                if isinstance(value, str)
+                else value
             )
-            total_demand_sum = sum(total_demand.values())
 
-            # Calculate demand percentage for each product type first
-            for good in parameters.problem.goods:
-                demand_column_name = f"Demand_{good}_pct"
-                cluster_details.at[cluster_idx, demand_column_name] = (
-                    total_demand[good] / total_demand_sum if total_demand_sum > 0 else 0
+            def _calculate_demand_and_load_percentages(cluster: pd.Series) -> pd.Series:
+                config = config_lookup[str(cluster["Config_ID"])]
+                demand_dict = cluster[temp_column]
+
+                # Safeguard against unexpected data types
+                if not isinstance(demand_dict, dict):
+                    demand_dict = {}
+
+                total_demand_sum = (
+                    float(sum(demand_dict.values())) if demand_dict else 0.0
                 )
+                config_capacity = float(getattr(config, "capacity", 0))
 
-            # Then calculate load percentage for each product type
-            for good in parameters.problem.goods:
-                load_column_name = f"Load_{good}_pct"
-                cluster_details.at[cluster_idx, load_column_name] = (
-                    total_demand[good] / config.capacity
+                percentages: dict[str, float] = {}
+                for good in parameters.problem.goods:
+                    good_demand = float(demand_dict.get(good, 0.0))
+                    percentages[f"Demand_{good}_pct"] = (
+                        good_demand / total_demand_sum if total_demand_sum > 0 else 0.0
+                    )
+                    percentages[f"Load_{good}_pct"] = (
+                        good_demand / config_capacity if config_capacity > 0 else 0.0
+                    )
+
+                total_load_pct = (
+                    total_demand_sum / config_capacity if config_capacity > 0 else 0.0
                 )
+                percentages["Load_total_pct"] = total_load_pct
+                percentages["Load_empty_pct"] = 1.0 - total_load_pct
 
-            # Calculate TOTAL load percentage and empty percentage
-            config_capacity = config.capacity
-            total_load_pct = (
-                total_demand_sum / config_capacity if config_capacity > 0 else 0
+                return pd.Series(percentages)
+
+            demand_load_df = cluster_details.apply(
+                _calculate_demand_and_load_percentages, axis=1
             )
-            cluster_details.at[cluster_idx, "Load_total_pct"] = total_load_pct
-            cluster_details.at[cluster_idx, "Load_empty_pct"] = 1 - total_load_pct
+            cluster_details = pd.concat([cluster_details, demand_load_df], axis=1)
+            cluster_details["Total_Demand"] = cluster_details[temp_column].apply(str)
+            cluster_details = cluster_details.drop(columns=[temp_column])
 
     # Convert configurations to DataFrame for output compatibility
     configurations_df = pd.DataFrame(

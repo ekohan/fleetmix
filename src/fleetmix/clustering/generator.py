@@ -10,7 +10,7 @@ import itertools
 import os
 from dataclasses import replace
 from multiprocessing import Manager
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 from joblib import Parallel, delayed
 
@@ -277,7 +277,9 @@ def process_configuration(
     )
 
 
-def validate_cluster_coverage(clusters: list[Cluster], customers: list[CustomerBase]):
+def validate_cluster_coverage(
+    clusters: list[Cluster], customers: list[CustomerBase]
+) -> None:
     """Validate that all customers are covered by at least one cluster."""
     customer_coverage = dict.fromkeys(
         [customer.customer_id for customer in customers], False

@@ -1231,7 +1231,7 @@ def version() -> None:
 
 def _setup_logging_from_flags(
     verbose: bool = False, quiet: bool = False, debug: bool = False
-):
+) -> None:
     """Setup logging based on CLI flags or environment variable."""
     if debug:
         setup_logging(LogLevel.DEBUG)
@@ -1249,7 +1249,7 @@ def experiments(
     action: Annotated[str, typer.Argument(help="list | run | analyze")],
     experiment: Annotated[str | None, typer.Option("-e", "--experiment")] = None,
     config_path: Annotated[pathlib.Path | None, typer.Option("-c", "--config")] = None,
-):
+) -> None:
     """
     Run experimental analyses.
 

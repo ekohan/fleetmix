@@ -6,6 +6,7 @@ __all__ = ["CVRPBenchmarkType", "convert_cvrp_to_fsm"]
 
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -77,7 +78,7 @@ def convert_cvrp_to_fsm(
         return _convert_combined(instances)
 
 
-def _convert_normal(instance) -> tuple[pd.DataFrame, InstanceSpec]:
+def _convert_normal(instance: Any) -> tuple[pd.DataFrame, InstanceSpec]:
     """Type 1: Normal conversion - single good (dry)"""
     # Print total demand for debugging
     total_demand = sum(instance.demands.values())
@@ -123,7 +124,7 @@ def _convert_normal(instance) -> tuple[pd.DataFrame, InstanceSpec]:
 
 
 def _convert_split(
-    instance, split_ratios: dict[str, float]
+    instance: Any, split_ratios: dict[str, float]
 ) -> tuple[pd.DataFrame, InstanceSpec]:
     """Type 2: Split demand across goods"""
     # Convert split_ratios keys to match DataFrame column names
@@ -158,7 +159,7 @@ def _convert_split(
     return pd.DataFrame(customers_data), instance_spec
 
 
-def _convert_scaled(instance, num_goods: int) -> tuple[pd.DataFrame, InstanceSpec]:
+def _convert_scaled(instance: Any, num_goods: int) -> tuple[pd.DataFrame, InstanceSpec]:
     """Type 3: Scale instance for multiple goods - only scale dry goods"""
     customers_data = _create_customer_data(
         instance,
@@ -236,7 +237,7 @@ def _convert_combined(instances: list) -> tuple[pd.DataFrame, InstanceSpec]:
     return pd.DataFrame(customers_data), instance_spec
 
 
-def _create_customer_data(instance, demand_func) -> list[dict]:
+def _create_customer_data(instance: Any, demand_func: Any) -> list[dict[str, Any]]:
     """Helper to create customer data with given demand function"""
     converter = CoordinateConverter(instance.coordinates)
     geo_coords = converter.convert_all_coordinates(instance.coordinates)
@@ -260,7 +261,7 @@ def _create_customer_data(instance, demand_func) -> list[dict]:
 
 
 def _create_base_instance_spec(
-    instance, vehicles: dict[str, VehicleSpec], expected_vehicles: int
+    instance: Any, vehicles: dict[str, VehicleSpec], expected_vehicles: int
 ) -> InstanceSpec:
     """Helper to create base InstanceSpec from CVRP instance"""
     converter = CoordinateConverter(instance.coordinates)

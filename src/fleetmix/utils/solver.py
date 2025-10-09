@@ -18,7 +18,7 @@ with (
     import pulp
 
 
-def extract_optimality_gap(model, solver) -> float | None:
+def extract_optimality_gap(model: Any, solver: Any) -> float | None:
     """
     Try to fetch the *relative* optimality gap from a PuLP model and solver instance.
 
@@ -174,7 +174,7 @@ class CbcAdapter:
         return True
 
 
-def pick_solver(params: RuntimeParams):
+def pick_solver(params: RuntimeParams) -> Any:
     """
     Return a PuLP solver instance based on RuntimeParams.
 

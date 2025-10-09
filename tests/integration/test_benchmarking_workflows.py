@@ -202,7 +202,7 @@ EOF
                 results_dir=temp_results_dir,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         solution = run_optimization(customers_df=customers_df, params=params)
@@ -239,7 +239,7 @@ EOF
                 results_dir=temp_results_dir,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         solution = run_optimization(customers_df=customers_df, params=params)
@@ -368,7 +368,7 @@ EOF
                 results_dir=temp_results_dir,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         start_optimization = time.time()

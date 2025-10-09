@@ -230,17 +230,17 @@ class Customer(CustomerBase):
         return pd.DataFrame(data)
 
 
-def empty_dict_factory():
+def empty_dict_factory() -> dict[Any, Any]:
     """Ensures a new empty dict is created for default."""
     return {}
 
 
-def empty_set_factory():
+def empty_set_factory() -> set[Any]:
     """Ensures a new empty set is created for default."""
     return set()
 
 
-def empty_list_factory():
+def empty_list_factory() -> list[Any]:
     """Ensures a new empty list is created for default."""
     return []
 
@@ -272,7 +272,7 @@ class RouteTimeContext(VehicleOperationContext):
     max_route_time: float  # hours
     prune_tsp: bool = False
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Allow max_route_time to be optional for route time estimation."""
         # For route time estimation, max_route_time might be None during estimation
         pass
@@ -424,7 +424,7 @@ class FleetmixSolution:
     )
     # TODO: add list of vehicleconfigs; make run_opt return fleetmixsolution only
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Calculate total cost after initialization."""
         self.total_cost = (
             self.total_fixed_cost + self.total_variable_cost + self.total_penalties

@@ -42,7 +42,6 @@ def main():
     print("-" * 40)
 
     # with default config
-    # TODO: if change, make sure to check vehicles have infinite route time
     cvrp_cmd = "fleetmix benchmark cvrp"
     mcvrp_cmd = "fleetmix benchmark mcvrp"
 

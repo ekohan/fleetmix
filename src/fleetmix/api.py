@@ -146,7 +146,7 @@ def _two_phase_solve(
 # handling de config
 def optimize(
     demand: str | Path | pd.DataFrame,
-    config: str | Path | FleetmixParams | None = None,
+    config: str | FleetmixParams | None = None,
     output_dir: str = "results",
     format: str = "json",
     verbose: Optional[bool] = None,
@@ -160,7 +160,7 @@ def optimize(
             - Path to CSV/Excel file containing customer demand data
             - Pandas DataFrame with demand data
         config: Configuration parameters - can be:
-            - Path to YAML configuration file
+            - String path to YAML configuration file
             - Parameters object
             - None (uses default configuration)
         output_dir: Directory to save results (default: "results")

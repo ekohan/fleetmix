@@ -21,7 +21,7 @@ clustering:
   distance: euclidean
   geo_weight: 1.0
   demand_weight: 0.0
-  route_time_estimation: Legacy
+  route_time_estimation: BHH
 
 demand_file: mini_demand.csv
 light_load_penalty: 0

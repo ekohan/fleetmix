@@ -106,8 +106,8 @@ def optimize_fleet(
     configurations: list[VehicleConfiguration],
     customers: list[CustomerBase],
     parameters: FleetmixParams,
-    solver=None,
-    time_recorder=None,
+    solver: Any = None,
+    time_recorder: Any = None,
     warm_start_solution: FleetmixSolution | None = None,
 ) -> FleetmixSolution:
     """Solve the Fleet Size-and-Mix MILP.
@@ -169,8 +169,8 @@ def _solve_internal(
     configurations: list[VehicleConfiguration],
     customers_df: pd.DataFrame,
     parameters: FleetmixParams,
-    solver=None,
-    time_recorder=None,
+    solver: Any = None,
+    time_recorder: Any = None,
     warm_start_solution: FleetmixSolution | None = None,
 ) -> FleetmixSolution:
     """Internal implementation that processes DataFrames."""

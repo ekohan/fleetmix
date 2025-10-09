@@ -13,11 +13,6 @@ def test_estimate_route_time_empty_dataframe():
     df = pd.DataFrame(columns=["Customer_ID", "Latitude", "Longitude"])
     depot = {"latitude": 0, "longitude": 0}
 
-    # Legacy method with empty customers
-    time, seq = estimate_route_time(df, depot, 30, 60, method="Legacy")
-    assert time == 1.0  # Just the constant 1 hour
-    assert seq == []
-
     # BHH method with empty customers
     time, seq = estimate_route_time(df, depot, 30, 60, method="BHH")
     assert time == 0.0  # No customers, no time
@@ -28,11 +23,6 @@ def test_estimate_route_time_single_customer():
     """Test with single customer."""
     df = pd.DataFrame({"Customer_ID": ["C1"], "Latitude": [0.1], "Longitude": [0.1]})
     depot = {"latitude": 0, "longitude": 0}
-
-    # Legacy method
-    time, seq = estimate_route_time(df, depot, 30, 60, method="Legacy")
-    assert time == 1.5  # 1 hour + 30 min service
-    assert seq == []
 
     # BHH method
     time, seq = estimate_route_time(df, depot, 30, 60, method="BHH")

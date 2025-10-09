@@ -1,7 +1,7 @@
 """
 Utility helpers for Fleetmix (dependency-free).
 
-• Route-time estimation (`route_time.py`) – wraps BHH, legacy heuristics and a PyVRP TSP fallback.
+• Route-time estimation (`route_time.py`) – wraps BHH and a TSP using PyVRP.
 • Command-line interface helpers (`cli.py`).
 • File I/O (`save_results.py`, `data_processing.py`).
 • Logging colour codes and progress bars (`logging.py`).

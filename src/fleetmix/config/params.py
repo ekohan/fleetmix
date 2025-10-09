@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:  # pragma: no cover – for static typing only
     from fleetmix.benchmarking.models import InstanceSpec
@@ -46,7 +46,7 @@ class ProblemParams:
     )  # Only relevant for benchmarking with CVRP and MCVRP instances
 
     # Basic validation to surface common configuration errors early.
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.vehicles:
             raise ValueError("ProblemParams.vehicles cannot be empty.")
 
@@ -92,7 +92,7 @@ class AlgorithmParams:
     pre_nearest_merge_candidates: int = 3
     post_optimization: bool = True
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Ensure clustering weights sum to 1.
         if abs(self.geo_weight + self.demand_weight - 1.0) > 1e-6:
             raise ValueError(
@@ -127,7 +127,7 @@ class IOParams:
     results_dir: Path
     format: str = "json"  # One of: xlsx, json, csv
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.format not in {"xlsx", "json", "csv"}:
             raise ValueError("IOParams.format must be 'xlsx', 'json' or 'csv'.")
 
@@ -170,7 +170,7 @@ class FleetmixParams:
     runtime: RuntimeParams
 
     # Make the object picklable when using joblib (loky backend)
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         return {
             "problem": self.problem,
             "algorithm": self.algorithm,
@@ -178,7 +178,7 @@ class FleetmixParams:
             "runtime": self.runtime,
         }
 
-    def __setstate__(self, state):  # noqa: D401  (simple setter)
+    def __setstate__(self, state: dict[str, Any]) -> None:  # noqa: D401  (simple setter)
         object.__setattr__(self, "problem", state["problem"])
         object.__setattr__(self, "algorithm", state["algorithm"])
         object.__setattr__(self, "io", state["io"])

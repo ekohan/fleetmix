@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import pandas as pd
 
@@ -11,7 +12,6 @@ from fleetmix.core_types import (
 )
 from fleetmix.config.params import FleetmixParams, ProblemParams, AlgorithmParams, IOParams, RuntimeParams
 from fleetmix.optimization.core import optimize_fleet
-from pathlib import Path
 
 
 def _make_params(variable_cost_per_hour: float = 0.0) -> FleetmixParams:
@@ -54,7 +54,7 @@ def _make_params(variable_cost_per_hour: float = 0.0) -> FleetmixParams:
     )
     
     runtime = RuntimeParams(
-        config=Path("test_config.yaml"),
+        config="test_config.yaml",
         verbose=False,
         debug=False,
     )

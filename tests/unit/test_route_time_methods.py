@@ -1,4 +1,4 @@
-"""Test route_time methods (BHH, TSP, Legacy) with flexible value ranges."""
+"""Test route_time methods (BHH, TSP) with flexible value ranges."""
 
 import numpy as np
 import pandas as pd
@@ -51,36 +51,6 @@ class TestRouteTimeMethods:
     def depot(self):
         """NYC depot location."""
         return {"latitude": 40.7128, "longitude": -74.0060}
-
-    def test_legacy_method_small_cluster(self, small_cluster, depot):
-        """Test Legacy method with small cluster."""
-        time, sequence = estimate_route_time(
-            small_cluster,
-            depot,
-            service_time=15,  # 15 minutes per customer
-            avg_speed=25,  # 25 km/h in city
-            method="Legacy",
-        )
-
-        # Legacy: 1 hour + service time
-        # Expected: 1 + (3 * 15/60) = 1.75 hours
-        assert 1.0 <= time <= 3.0  # Flexible range
-        assert sequence == []  # Legacy doesn't provide sequence
-
-    def test_legacy_method_large_cluster(self, large_cluster, depot):
-        """Test Legacy method with large cluster."""
-        time, sequence = estimate_route_time(
-            large_cluster,
-            depot,
-            service_time=10,  # 10 minutes per customer
-            avg_speed=30,
-            method="Legacy",
-        )
-
-        # Legacy: 1 hour + service time
-        # Expected: 1 + (25 * 10/60) ≈ 5.17 hours
-        assert 3.0 <= time <= 8.0  # Flexible range
-        assert sequence == []
 
     def test_bhh_method_small_cluster(self, small_cluster, depot):
         """Test BHH method with small cluster."""
@@ -184,11 +154,6 @@ class TestRouteTimeMethods:
         """Compare all three methods on same cluster."""
         params = {"service_time": 10, "avg_speed": 30}
 
-        # Legacy
-        legacy_time, _ = estimate_route_time(
-            medium_cluster, depot, method="Legacy", **params
-        )
-
         # BHH
         bhh_time, _ = estimate_route_time(medium_cluster, depot, method="BHH", **params)
 
@@ -198,16 +163,14 @@ class TestRouteTimeMethods:
         )
 
         # All should be positive
-        assert legacy_time > 0
         assert bhh_time > 0
         assert tsp_time > 0
 
         # TSP should have sequence
         assert len(tsp_seq) == 12
 
-        # Generally: TSP <= BHH <= Legacy (but not always)
+        # Generally: TSP <= BHH
         # Just check they're in reasonable ranges
-        assert 1.0 <= legacy_time <= 5.0
         assert 1.0 <= bhh_time <= 6.0
         assert 1.0 <= tsp_time <= 6.0
 
@@ -217,7 +180,7 @@ class TestRouteTimeMethods:
             {"Customer_ID": ["C1"], "Latitude": [40.7589], "Longitude": [-73.9851]}
         )
 
-        for method in ["Legacy", "BHH", "TSP"]:
+        for method in ["BHH", "TSP"]:
             time, sequence = estimate_route_time(
                 single_customer,
                 depot,
@@ -237,7 +200,7 @@ class TestRouteTimeMethods:
 
     def test_edge_case_zero_service_time(self, small_cluster, depot):
         """Test all methods with zero service time."""
-        for method in ["Legacy", "BHH", "TSP"]:
+        for method in ["BHH", "TSP"]:
             time, sequence = estimate_route_time(
                 small_cluster,
                 depot,
@@ -248,16 +211,13 @@ class TestRouteTimeMethods:
             )
 
             # Should still have travel time
-            if method == "Legacy":
-                assert time == 1.0  # Legacy always adds 1 hour
-            else:
-                assert 0.1 <= time <= 3.0
+            assert 0.1 <= time <= 3.0
 
     def test_different_speeds(self, medium_cluster, depot):
         """Test impact of different speeds on all methods."""
         speeds = [20, 40, 60]  # Slow, medium, fast
 
-        for method in ["Legacy", "BHH", "TSP"]:
+        for method in ["BHH", "TSP"]:
             times = []
             for speed in speeds:
                 time, _ = estimate_route_time(
@@ -271,10 +231,8 @@ class TestRouteTimeMethods:
                 times.append(time)
 
             # Faster speed should generally mean less time
-            # (except Legacy which ignores speed)
-            if method != "Legacy":
-                # Allow some tolerance for optimization variance
-                assert times[0] >= times[2] * 0.8  # Slow >= Fast * 0.8
+            # Allow some tolerance for optimization variance
+            assert times[0] >= times[2] * 0.8  # Slow >= Fast * 0.8
 
     def test_very_spread_cluster(self, depot):
         """Test methods with geographically spread cluster."""
@@ -287,7 +245,7 @@ class TestRouteTimeMethods:
             }
         )
 
-        for method in ["Legacy", "BHH", "TSP"]:
+        for method in ["BHH", "TSP"]:
             time, _ = estimate_route_time(
                 spread_cluster,
                 depot,
@@ -297,8 +255,4 @@ class TestRouteTimeMethods:
                 max_route_time=12.0 if method == "TSP" else None,
             )
 
-            # Should take longer due to distances
-            if method == "Legacy":
-                assert 1.5 <= time <= 3.0
-            else:
-                assert 2.0 <= time <= 8.0
+            assert 2.0 <= time <= 8.0

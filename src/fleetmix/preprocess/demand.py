@@ -18,7 +18,6 @@ from fleetmix.utils.logging import FleetmixLogger
 
 if TYPE_CHECKING:
     from fleetmix.core_types import VehicleConfiguration
-# TODO fix nasty import.
 
 logger = FleetmixLogger.get_logger(__name__)
 

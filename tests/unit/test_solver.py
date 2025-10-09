@@ -1,7 +1,6 @@
 """Test the solver module."""
 
 import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from fleetmix.config.params import RuntimeParams
@@ -14,7 +13,7 @@ def test_pick_solver_default(monkeypatch):
     # Temporarily remove FSM_SOLVER just for this test
     monkeypatch.delenv("FSM_SOLVER", raising=False)
 
-    params = RuntimeParams(config=Path("test_config.yaml"), verbose=False)
+    params = RuntimeParams(config="test_config.yaml", verbose=False)
     solver = pick_solver(params)
     # Should return a solver (either CBC or Gurobi)
     assert solver is not None
@@ -23,7 +22,7 @@ def test_pick_solver_default(monkeypatch):
 @patch.dict(os.environ, {"FSM_SOLVER": "cbc"})
 def test_pick_solver_cbc():
     """Test pick_solver with CBC explicitly selected."""
-    params = RuntimeParams(config=Path("test_config.yaml"), verbose=False)
+    params = RuntimeParams(config="test_config.yaml", verbose=False)
     solver = pick_solver(params)
     # Should return CBC solver
     assert "CBC" in str(type(solver))
@@ -36,7 +35,7 @@ def test_pick_solver_gurobi(mock_gurobi):
     mock_solver = MagicMock()
     mock_gurobi.return_value = mock_solver
 
-    params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+    params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
     solver = pick_solver(params)
 
     # Should call GUROBI_CMD
@@ -63,7 +62,7 @@ def test_pick_solver_auto_fallback(mock_cbc, mock_gurobi, mock_find_spec):
     mock_cbc.return_value = mock_cbc_solver
 
     params = RuntimeParams(
-        config=Path("test_config.yaml"),
+        config="test_config.yaml",
         verbose=True,
         gap_rel=0.0,
         time_limit=180,
@@ -86,6 +85,6 @@ def test_pick_solver_verbose(monkeypatch):
     monkeypatch.delenv("FSM_SOLVER", raising=False)
 
     # Just check it doesn't crash with verbose=True
-    params = RuntimeParams(config=Path("test_config.yaml"), verbose=True)
+    params = RuntimeParams(config="test_config.yaml", verbose=True)
     solver = pick_solver(params)
     assert solver is not None

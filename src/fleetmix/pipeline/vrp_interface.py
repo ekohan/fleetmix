@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -23,7 +24,9 @@ class VRPType(Enum):
     MCVRP = "mcvrp"
 
 
-def convert_to_fsm(vrp_type: VRPType, **kwargs) -> tuple[pd.DataFrame, InstanceSpec]:
+def convert_to_fsm(
+    vrp_type: VRPType, **kwargs: Any
+) -> tuple[pd.DataFrame, InstanceSpec]:
     """
     Library facade to convert VRP instances to FSM format.
     """

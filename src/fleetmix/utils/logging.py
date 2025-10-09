@@ -48,7 +48,7 @@ class Symbols:
 class SimpleFormatter(logging.Formatter):
     """Clean formatter with colors for better readability."""
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         color = {
             "DEBUG": Colors.GRAY,
             "INFO": Colors.CYAN,
@@ -69,7 +69,7 @@ class FleetmixLogger:
     _loggers: dict[str, logging.Logger] = {}
 
     @classmethod
-    def set_level(cls, level: LogLevel):
+    def set_level(cls, level: LogLevel) -> None:
         """Set the global logging level for all Fleetmix loggers."""
         cls._current_level = level
 
@@ -83,7 +83,9 @@ class FleetmixLogger:
         return cls._current_level
 
     @classmethod
-    def _configure_logger_level(cls, logger: logging.Logger, level_param: LogLevel):
+    def _configure_logger_level(
+        cls, logger: logging.Logger, level_param: LogLevel
+    ) -> None:
         """Configure logger level based on FleetmixLogger level_param."""
 
         effective_loglevel = level_param
@@ -123,48 +125,48 @@ class FleetmixLogger:
         return cls._loggers[name]
 
     @classmethod
-    def progress(cls, message: str, symbol: str = Symbols.GEAR):
+    def progress(cls, message: str, symbol: str = Symbols.GEAR) -> None:
         """Log a progress message (shown in NORMAL and above)."""
         if cls._current_level.value >= LogLevel.NORMAL.value:
             logger = cls.get_logger("fleetmix.progress")
             logger.info(f"{symbol} {message}")
 
     @classmethod
-    def success(cls, message: str, symbol: str = Symbols.CHECK):
+    def success(cls, message: str, symbol: str = Symbols.CHECK) -> None:
         """Log a success message (shown in NORMAL and above)."""
         if cls._current_level.value >= LogLevel.NORMAL.value:
             logger = cls.get_logger("fleetmix.progress")
             logger.info(f"{Colors.GREEN}{symbol} {message}{Colors.RESET}")
 
     @classmethod
-    def detail(cls, message: str, symbol: str = "  "):
+    def detail(cls, message: str, symbol: str = "  ") -> None:
         """Log a detailed message (shown in VERBOSE and above)."""
         if cls._current_level.value >= LogLevel.VERBOSE.value:
             logger = cls.get_logger("fleetmix.detail")
             logger.info(f"{symbol} {message}")
 
     @classmethod
-    def debug(cls, message: str, logger_name: str = "fleetmix.debug"):
+    def debug(cls, message: str, logger_name: str = "fleetmix.debug") -> None:
         """Log a debug message (shown in DEBUG only)."""
         if cls._current_level.value >= LogLevel.DEBUG.value:
             logger = cls.get_logger(logger_name)
             logger.debug(message)
 
     @classmethod
-    def warning(cls, message: str, symbol: str = Symbols.WARNING):
+    def warning(cls, message: str, symbol: str = Symbols.WARNING) -> None:
         """Log a warning message (shown in all levels except QUIET)."""
         if cls._current_level.value >= LogLevel.NORMAL.value:
             logger = cls.get_logger("fleetmix.warning")
             logger.warning(f"{symbol} {message}")
 
     @classmethod
-    def error(cls, message: str, symbol: str = Symbols.CROSS):
+    def error(cls, message: str, symbol: str = Symbols.CROSS) -> None:
         """Log an error message (shown in all levels)."""
         logger = cls.get_logger("fleetmix.error")
         logger.error(f"{symbol} {message}")
 
 
-def suppress_third_party_logs():
+def suppress_third_party_logs() -> None:
     """Suppress noisy third-party library logs."""
     # Suppress Numba debug output
     logging.getLogger("numba").setLevel(logging.WARNING)
@@ -177,7 +179,7 @@ def suppress_third_party_logs():
     logging.getLogger("requests").setLevel(logging.WARNING)
 
 
-def setup_logging(level: LogLevel | None = None):
+def setup_logging(level: LogLevel | None = None) -> None:
     """Configure clean and simple logging with optional level override."""
     # Determine log level from various sources
     if level is None:
@@ -231,7 +233,7 @@ def setup_logging(level: LogLevel | None = None):
 class ProgressTracker:
     """Simple progress tracking with tqdm."""
 
-    def __init__(self, steps):
+    def __init__(self, steps: list[str]) -> None:
         self.steps = steps
         self.show_progress = FleetmixLogger.get_level().value >= LogLevel.NORMAL.value
 
@@ -254,7 +256,7 @@ class ProgressTracker:
             "info": f"{Colors.CYAN}{Symbols.PACKAGE}",
         }
 
-    def advance(self, message=None, status="success"):
+    def advance(self, message: str | None = None, status: str = "success") -> None:
         """Advance progress bar and optionally log a message."""
         if self.show_progress and self.pbar:
             if message:
@@ -264,7 +266,7 @@ class ProgressTracker:
             self.current += 1
             self.pbar.update(1)
 
-    def close(self):
+    def close(self) -> None:
         """Clean up progress bar."""
         if self.show_progress and self.pbar:
             self.pbar.write(
@@ -274,36 +276,36 @@ class ProgressTracker:
 
 
 # Convenience functions for common logging patterns
-def log_progress(message: str, symbol: str = Symbols.GEAR):
+def log_progress(message: str, symbol: str = Symbols.GEAR) -> None:
     """Log a progress message."""
     FleetmixLogger.progress(message, symbol)
 
 
-def log_success(message: str, symbol: str = Symbols.CHECK):
+def log_success(message: str, symbol: str = Symbols.CHECK) -> None:
     """Log a success message."""
     FleetmixLogger.success(message, symbol)
 
 
-def log_detail(message: str, symbol: str = "  "):
+def log_detail(message: str, symbol: str = "  ") -> None:
     """Log a detailed message."""
     FleetmixLogger.detail(message, symbol)
 
 
-def log_warning(message: str, symbol: str = Symbols.WARNING):
+def log_warning(message: str, symbol: str = Symbols.WARNING) -> None:
     """Log a warning message."""
     FleetmixLogger.warning(message, symbol)
 
 
-def log_error(message: str, symbol: str = Symbols.CROSS):
+def log_error(message: str, symbol: str = Symbols.CROSS) -> None:
     """Log an error message."""
     FleetmixLogger.error(message, symbol)
 
 
-def log_debug(message: str, logger_name: str = "fleetmix.debug"):
+def log_debug(message: str, logger_name: str = "fleetmix.debug") -> None:
     """Log a debug message."""
     FleetmixLogger.debug(message, logger_name)
 
 
-def log_info(message: str, symbol: str = Symbols.INFO):
+def log_info(message: str, symbol: str = Symbols.INFO) -> None:
     """Log an informational message (alias for log_progress)."""
     FleetmixLogger.progress(message, symbol)

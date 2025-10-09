@@ -8,7 +8,7 @@ from fleetmix.config.params import FleetmixParams
 from fleetmix.utils.logging import Colors
 
 
-def print_parameter_help():
+def print_parameter_help() -> None:
     """Display detailed help information about parameters"""
     help_text = f"""
 {Colors.BOLD}Fleet Size and Mix Optimization Parameters{Colors.RESET}
@@ -18,7 +18,6 @@ def print_parameter_help():
   --route-time-estimation STR
                            Method to estimate route times
                            Options: 
-                             - Legacy (simple service time based)
                              - BHH (Beardwood-Halton-Hammersley)
                              - TSP (exact TSP solver)
                            Default: BHH
@@ -142,8 +141,8 @@ def parse_args() -> ArgumentParser:
     parser.add_argument(
         "--route-time-estimation",
         type=str,
-        choices=["BHH", "TSP", "Legacy"],
-        help="Method to estimate route times (BHH, TSP, Legacy)",
+        choices=["BHH", "TSP"],
+        help="Method to estimate route times (BHH, TSP)",
     )
     parser.add_argument(
         "--clustering-method",
@@ -174,7 +173,7 @@ def parse_args() -> ArgumentParser:
     return parser
 
 
-def get_parameter_overrides(args) -> dict[str, Any]:
+def get_parameter_overrides(args: Any) -> dict[str, Any]:
     """Extract parameter overrides from command line arguments"""
     # Convert args to dictionary, excluding None values
     overrides = {k: v for k, v in vars(args).items() if v is not None}
@@ -193,7 +192,7 @@ def get_parameter_overrides(args) -> dict[str, Any]:
     return overrides
 
 
-def load_parameters(args) -> FleetmixParams:
+def load_parameters(args: Any) -> FleetmixParams:
     """Load parameters with optional command line overrides"""
     # Load base parameters
     if args.config:

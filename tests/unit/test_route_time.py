@@ -27,28 +27,6 @@ class TestRouteTime(unittest.TestCase):
         result = calculate_total_service_time_hours(5, 0)
         self.assertEqual(result, 0.0)
 
-    def test_legacy_estimation(self):
-        """Test legacy estimation method through estimate_route_time."""
-        # Create dummy customer data
-        customers_df = pd.DataFrame(
-            {
-                "Customer_ID": ["C1", "C2"],
-                "Latitude": [0.1, 0.2],
-                "Longitude": [0.1, 0.2],
-            }
-        )
-        depot = {"latitude": 0.0, "longitude": 0.0}
-
-        # 2 customers, 30 min service time each
-        time, sequence = estimate_route_time(
-            customers_df, depot, 30, 30, method="Legacy"
-        )
-
-        # Legacy: 1 hour travel + 1 hour service (2 * 30 min)
-        expected = 1 + (2 * 30 / 60)
-        self.assertEqual(time, expected)
-        self.assertEqual(sequence, [])
-
     def test_bhh_estimation(self):
         """Test BHH estimation method through estimate_route_time."""
         # Create dummy customer data

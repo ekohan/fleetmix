@@ -1,12 +1,14 @@
 """Unit tests for the save_results module."""
 
+from __future__ import annotations
+
 import dataclasses
 import json
 import os
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 import pandas as pd
 
@@ -139,7 +141,7 @@ class TestSaveOptimizationResults(unittest.TestCase):
             format="xlsx",
         )
 
-        runtime_params = RuntimeParams(config=Path("test_config.yaml"))
+        runtime_params = RuntimeParams(config="test_config.yaml")
 
         self.parameters = FleetmixParams(
             problem=problem_params,
@@ -498,7 +500,7 @@ class TestSaveWithSplitStops(unittest.TestCase):
             format="xlsx",
         )
 
-        runtime_params = RuntimeParams(config=Path("test_config.yaml"))
+        runtime_params = RuntimeParams(config="test_config.yaml")
 
         self.parameters = FleetmixParams(
             problem=problem_params,
@@ -672,7 +674,7 @@ class TestSaveResultsJson(unittest.TestCase):
                 results_dir=Path(tempfile.gettempdir()),
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         self.solution = FleetmixSolution(

@@ -55,7 +55,7 @@ def write_minimal_yaml(path):
             "distance": "euclidean",
             "geo_weight": 0.5,
             "demand_weight": 0.5,
-            "route_time_estimation": "Legacy",
+            "route_time_estimation": "BHH",
             "max_depth": 1,
         },
         "demand_file": "file.csv",

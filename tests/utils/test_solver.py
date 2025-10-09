@@ -2,7 +2,6 @@
 
 import os
 import unittest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from fleetmix.config.params import RuntimeParams
@@ -32,7 +31,7 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_gurobi.return_value = mock_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(msg=0, keepFiles=True, gapRel=0.0, options=[("TimeLimit", 180)])
@@ -45,7 +44,7 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_cbc.return_value = mock_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_cbc.assert_called_once_with(msg=0, gapRel=0.0, timeLimit=180)
@@ -60,7 +59,7 @@ class TestPickSolver(unittest.TestCase):
         mock_gurobi_solver = MagicMock()
         mock_gurobi.return_value = mock_gurobi_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(
@@ -83,7 +82,7 @@ class TestPickSolver(unittest.TestCase):
         mock_cbc_solver = MagicMock()
         mock_cbc.return_value = mock_cbc_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(
@@ -104,7 +103,7 @@ class TestPickSolver(unittest.TestCase):
         mock_gurobi_solver = MagicMock()
         mock_gurobi.return_value = mock_gurobi_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(
@@ -123,7 +122,7 @@ class TestPickSolver(unittest.TestCase):
         mock_gurobi.return_value = mock_solver
 
         params = RuntimeParams(
-            config=Path("test_config.yaml"),
+            config="test_config.yaml",
             verbose=True,
             debug=True,
             gap_rel=0.0,
@@ -148,7 +147,7 @@ class TestPickSolver(unittest.TestCase):
         mock_solver = MagicMock()
         mock_gurobi.return_value = mock_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(
@@ -171,7 +170,7 @@ class TestPickSolver(unittest.TestCase):
         mock_cbc_solver = MagicMock()
         mock_cbc.return_value = mock_cbc_solver
 
-        params = RuntimeParams(config=Path("test_config.yaml"), verbose=False, gap_rel=0.0, time_limit=180)
+        params = RuntimeParams(config="test_config.yaml", verbose=False, gap_rel=0.0, time_limit=180)
         result = pick_solver(params)
 
         mock_gurobi.assert_called_once_with(

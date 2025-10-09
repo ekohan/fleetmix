@@ -188,7 +188,7 @@ def estimate_route_time(
     depot: dict[str, float],
     service_time: float,
     avg_speed: float,
-    method: str = "Legacy",
+    method: str = "BHH",
     max_route_time: float | None = None,
     prune_tsp: bool = False,
 ) -> tuple[float, list[str]]:
@@ -196,7 +196,6 @@ def estimate_route_time(
 
     Three alternative heuristics are implemented (select via *method*):
 
-    ``'Legacy'``  – constant 1 h travel + service time component.
     ``'BHH'``     – Beardwood–Halton–Hammersley continuous-space approximation.
     ``'TSP'``     – Solve an exact TSP with *PyVRP* using either cached distance
                     matrices or on-the-fly computation.
@@ -207,7 +206,7 @@ def estimate_route_time(
         depot: Mapping ``{'latitude': float, 'longitude': float}``.
         service_time: Per-customer service time in **minutes**.
         avg_speed: Vehicle speed in **km/h** used to convert distances to time.
-        method: One of ``'Legacy'``, ``'BHH'``, ``'TSP'``.
+        method: One of ``'BHH'``, ``'TSP'``.
         max_route_time: Optional hard limit (hours) to speed-prune expensive TSP
             evaluations; only relevant when ``method='TSP'``.
         prune_tsp: If *True* and ``method='TSP'`` the BHH estimate is used as a
@@ -269,32 +268,6 @@ def _unique_physical_stops(customers_df: pd.DataFrame) -> pd.DataFrame:
     return customers_df
 
 
-@register_route_time_estimator("Legacy")
-class LegacyEstimator:
-    """Original simple estimation method (1 h travel + service time)."""
-
-    def estimate_route_time(
-        self,
-        cluster_customers: pd.DataFrame,
-        context: RouteTimeContext,
-    ) -> tuple[float, list[str]]:
-        """Legacy estimation using unique physical stops."""
-        uniq = _unique_physical_stops(cluster_customers)
-        num_phys = len(uniq)
-
-        # Service time must reflect *all* pseudo-customers even if they share a
-        # location with another good.
-        service_time_total = calculate_total_service_time_hours(
-            num_phys, context.service_time
-        )
-
-        # Legacy model assumes a fixed 1 h travel component irrespective of the
-        # number of physical stops.
-        time = 1 + service_time_total
-        return time, []
-
-
-# TODO: check pseudo-customers logic
 @register_route_time_estimator("BHH")
 class BHHEstimator:
     """Beardwood–Halton–Hammersley estimation method."""
@@ -350,7 +323,6 @@ class BHHEstimator:
         return total, []
 
 
-# TODO: check pseudo-customers logic
 @register_route_time_estimator("TSP")
 class TSPEstimator:
     """TSP-based route time estimation using PyVRP."""
@@ -362,6 +334,7 @@ class TSPEstimator:
     ) -> tuple[float, list[str]]:
         customers = _unique_physical_stops(cluster_customers)
 
+        # TODO: tsp estimation, with & withoouth pseudo-customers logic
         # --- Optional pruning ------------------------------------------------
         if context.prune_tsp and context.max_route_time is not None:
             bhh_estimator = BHHEstimator()

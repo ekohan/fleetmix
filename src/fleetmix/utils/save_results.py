@@ -20,6 +20,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import folium
 import numpy as np
@@ -152,7 +153,12 @@ def save_optimization_results(
             ("Truck Load % (Median)", f"{load_percentages.median():.1f}"),
             ("---Parameters---", ""),
             ("Demand File", parameters.io.demand_file),
-            ("Config File", parameters.runtime.config.name),
+            (
+                "Config File",
+                parameters.runtime.config.name
+                if hasattr(parameters.runtime.config, "name")
+                else str(parameters.runtime.config),
+            ),
             ("Variable Cost per Hour", parameters.problem.variable_cost_per_hour),
             ("Max Split Depth", parameters.algorithm.clustering_max_depth),
             ("Clustering Method", parameters.algorithm.clustering_method),
@@ -196,7 +202,9 @@ def save_optimization_results(
         # Deduplicate customer IDs for clearer reporting when split-stops are enabled
         if parameters.problem.allow_split_stops:
 
-            def _deduplicate_customer_ids(customers):
+            def _deduplicate_customer_ids(
+                customers: list[str] | tuple[str, ...] | str,
+            ) -> list[str]:
                 """Return a list with at most one entry per *origin* customer."""
                 if not isinstance(customers, (list, tuple)):
                     customer_str = str(customers)
@@ -467,7 +475,7 @@ def _write_to_json(filename: str, data: dict) -> None:
     """Write optimization results to JSON file."""
 
     class NumpyEncoder(json.JSONEncoder):
-        def default(self, obj):
+        def default(self, obj: Any) -> Any:
             if isinstance(obj, (np.integer, np.int64)):
                 return int(obj)
             if isinstance(obj, (np.floating, np.float64)):

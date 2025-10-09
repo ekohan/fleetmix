@@ -19,6 +19,7 @@ import argparse
 import json
 import math
 from pathlib import Path
+from typing import Any
 
 import matplotlib
 
@@ -83,7 +84,7 @@ RNG = np.random.default_rng(42)
 # =============================================================================
 
 
-def load_results():
+def load_results() -> pd.DataFrame:
     """Load all existing JSON results with additional computations."""
     all_results = []
     if not RESULTS_RAW.exists():

@@ -22,6 +22,7 @@ import streamlit as st
 from fleetmix import api
 from fleetmix.config import load_fleetmix_params
 from fleetmix.config.params import FleetmixParams
+from fleetmix.core_types import FleetmixSolution
 
 # Page configuration
 st.set_page_config(
@@ -83,7 +84,7 @@ st.markdown(
 )
 
 
-def init_session_state():
+def init_session_state() -> None:
     """Initialize session state variables."""
     if "uploaded_data" not in st.session_state:
         st.session_state.uploaded_data = None
@@ -99,7 +100,7 @@ def init_session_state():
         st.session_state.error_info = None
 
 
-def convert_numpy_types(obj):
+def convert_numpy_types(obj: Any) -> Any:
     """Recursively convert numpy types to native Python types for JSON serialization."""
     if isinstance(obj, dict):
         return {k: convert_numpy_types(v) for k, v in obj.items()}
@@ -131,7 +132,7 @@ def run_optimization_in_process(
     ],  # FleetmixParams instance or YAML file path
     output_dir: str,
     status_file: str,
-):
+) -> FleetmixSolution | None:
     """Runs optimization in separate process to support multiprocessing."""
     try:
         # Update status
@@ -370,7 +371,7 @@ def collect_parameters_from_ui() -> FleetmixParams:
     return params
 
 
-def display_results(solution: dict[str, Any], output_dir: Path):
+def display_results(solution: dict[str, Any], output_dir: Path) -> None:
     """Display optimization results."""
     st.success("✅ Optimization completed successfully!")
 
@@ -481,7 +482,7 @@ def display_results(solution: dict[str, Any], output_dir: Path):
             st.components.v1.html(f.read(), height=600)
 
 
-def main():
+def main() -> None:
     """Main Streamlit app."""
     init_session_state()
 
@@ -681,8 +682,8 @@ def main():
             )
             st.selectbox(
                 "Route Time Estimation",
-                options=["BHH", "TSP", "Legacy"],
-                index=["BHH", "TSP", "Legacy"].index(
+                options=["BHH", "TSP"],
+                index=["BHH", "TSP"].index(
                     st.session_state.parameters.clustering.get(
                         "route_time_estimation", "BHH"
                     )

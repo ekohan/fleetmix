@@ -160,21 +160,6 @@ class TestRouteTimeEstimation(unittest.TestCase):
         self.service_time = 30  # minutes
         self.avg_speed = 30  # km/h
 
-    def test_estimate_route_time_legacy(self):
-        """Test legacy estimation method."""
-        time, sequence = estimate_route_time(
-            self.cluster_customers,
-            self.depot,
-            self.service_time,
-            self.avg_speed,
-            method="Legacy",
-        )
-
-        # Legacy: 1 hour + service time
-        expected = 1 + (2 * 30 / 60)  # 1 + 1 hour service
-        self.assertEqual(time, expected)
-        self.assertEqual(sequence, [])
-
     def test_estimate_route_time_bhh(self):
         """Test BHH estimation method."""
         time, sequence = estimate_route_time(
@@ -249,41 +234,6 @@ class TestRouteTimeEstimation(unittest.TestCase):
         # Should return result from TSP estimator (which handles pruning internally)
         self.assertAlmostEqual(time, 8.08, places=2)
         self.assertEqual(sequence, [])
-
-
-class TestLegacyEstimation(unittest.TestCase):
-    """Test cases for legacy estimation method through public API."""
-
-    def test_legacy_estimation_various_sizes(self):
-        """Test legacy estimation with various cluster sizes."""
-        depot = {"latitude": 0, "longitude": 0}
-
-        # 0 customers
-        df = pd.DataFrame(columns=["Customer_ID", "Latitude", "Longitude"])
-        time, _ = estimate_route_time(df, depot, 30, 30, method="Legacy")
-        self.assertEqual(time, 1.0)
-
-        # 5 customers, 30 min each = 2.5 hours service + 1 hour travel
-        df = pd.DataFrame(
-            {
-                "Customer_ID": [f"C{i}" for i in range(5)],
-                "Latitude": [0.1 * i for i in range(5)],
-                "Longitude": [0.1 * i for i in range(5)],
-            }
-        )
-        time, _ = estimate_route_time(df, depot, 30, 30, method="Legacy")
-        self.assertEqual(time, 3.5)
-
-        # 10 customers, 15 min each = 2.5 hours service + 1 hour travel
-        df = pd.DataFrame(
-            {
-                "Customer_ID": [f"C{i}" for i in range(10)],
-                "Latitude": [0.1 * i for i in range(10)],
-                "Longitude": [0.1 * i for i in range(10)],
-            }
-        )
-        time, _ = estimate_route_time(df, depot, 15, 30, method="Legacy")
-        self.assertEqual(time, 3.5)
 
 
 class TestBHHEstimation(unittest.TestCase):

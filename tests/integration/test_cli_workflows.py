@@ -71,7 +71,7 @@ vehicles:
 variable_cost_per_hour: 20.0
 
 clustering:
-  route_time_estimation: 'Legacy'
+  route_time_estimation: 'BHH'
   method: 'minibatch_kmeans'
   max_depth: 5
   geo_weight: 0.7

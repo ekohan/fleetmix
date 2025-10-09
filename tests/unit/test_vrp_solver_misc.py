@@ -21,7 +21,6 @@ def simple_params_two_goods():
         )
     }
 
-    # TODO: llevar a test assets
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
     params = dataclasses.replace(params, problem=dataclasses.replace(params.problem, goods=["dry", "chilled"], depot=DepotLocation(latitude=0.0, longitude=0.0), vehicles=vehicles))
 

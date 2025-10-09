@@ -100,25 +100,6 @@ def test_build_distance_duration_matrices_missing_columns():
         build_distance_duration_matrices(customers_df, depot, 30)
 
 
-def test_estimate_route_time_legacy():
-    """Test legacy route time estimation."""
-    customers_df = pd.DataFrame(
-        {"Customer_ID": ["C1", "C2"], "Latitude": [0.1, 0.2], "Longitude": [0.1, 0.2]}
-    )
-
-    depot = {"latitude": 0.0, "longitude": 0.0}
-    service_time = 10  # minutes
-
-    time, sequence = estimate_route_time(
-        customers_df, depot, service_time, 30, method="Legacy"
-    )
-
-    # Legacy always returns 1 hour + service time
-    expected = 1 + (2 * 10 / 60)  # 1 + 20/60 hours
-    assert time == expected
-    assert sequence == []  # Empty sequence for non-TSP methods
-
-
 def test_estimate_route_time_bhh():
     """Test BHH route time estimation."""
     customers_df = pd.DataFrame(
@@ -169,23 +150,6 @@ def test_estimate_route_time_invalid_method():
 
     with pytest.raises(ValueError, match="Unknown route time estimation method"):
         estimate_route_time(customers_df, depot, 10, 30, method="INVALID")
-
-
-def test_legacy_estimation_through_public_api():
-    """Test the legacy estimation behavior through public API."""
-    # 5 customers, 10 min service time each
-    customers_df = pd.DataFrame(
-        {
-            "Customer_ID": [f"C{i}" for i in range(5)],
-            "Latitude": [0.1 * i for i in range(5)],
-            "Longitude": [0.1 * i for i in range(5)],
-        }
-    )
-    depot = {"latitude": 0.0, "longitude": 0.0}
-
-    time, sequence = estimate_route_time(customers_df, depot, 10, 30, method="Legacy")
-    assert time == 1 + (5 * 10 / 60)  # 1 + 50/60 hours
-    assert sequence == []
 
 
 def test_bhh_estimation_through_public_api():

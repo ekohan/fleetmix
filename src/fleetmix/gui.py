@@ -681,8 +681,8 @@ def main():
             )
             st.selectbox(
                 "Route Time Estimation",
-                options=["BHH", "TSP", "Legacy"],
-                index=["BHH", "TSP", "Legacy"].index(
+                options=["BHH", "TSP"],
+                index=["BHH", "TSP"].index(
                     st.session_state.parameters.clustering.get(
                         "route_time_estimation", "BHH"
                     )

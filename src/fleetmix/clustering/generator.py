@@ -10,7 +10,7 @@ import itertools
 import os
 from dataclasses import replace
 from multiprocessing import Manager
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 from joblib import Parallel, delayed
 

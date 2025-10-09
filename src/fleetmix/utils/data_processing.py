@@ -22,7 +22,6 @@ def _get_datasets_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "benchmarking" / "datasets" / "case"
 
 
-# TODO add validations to log if e.g. diff clientIDs share same lat/lon
 def load_customer_demand(demand_file: str):
     """Load customer demand from CSV file.
 

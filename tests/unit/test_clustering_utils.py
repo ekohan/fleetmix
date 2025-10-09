@@ -102,7 +102,7 @@ def params(tmp_path, sample_goods, sample_configurations):
         clustering_method="combine",
         geo_weight=0.5,
         demand_weight=0.5,
-        route_time_estimation="Legacy",
+        route_time_estimation="BHH",
         clustering_max_depth=2,
         small_cluster_size=2,
         nearest_merge_candidates=1,
@@ -110,7 +110,7 @@ def params(tmp_path, sample_goods, sample_configurations):
         pre_nearest_merge_candidates=1,
     )
     io = IOParams(demand_file="dummy", results_dir=tmp_path, format="json")
-    runtime = RuntimeParams(config=tmp_path / "cfg.yaml")
+    runtime = RuntimeParams(config=str(tmp_path / "cfg.yaml"))
     return FleetmixParams(problem=problem, algorithm=algorithm, io=io, runtime=runtime)
 
 
@@ -175,7 +175,7 @@ def test_process_configuration_filters_infeasible(sample_customers, sample_confi
                         goods=["Dry"],
                         depot=DepotLocation(0, 0),
                         max_depth=2,
-                        route_time_estimation="Legacy",
+                        route_time_estimation="BHH",
                         geo_weight=0.5,
                         demand_weight=0.5,
                     ),
@@ -239,7 +239,7 @@ class MockParams:
             clustering_method="combine",
             geo_weight=0.5,
             demand_weight=0.5,
-            route_time_estimation="Legacy",
+            route_time_estimation="BHH",
             clustering_max_depth=3,
         )
         problem = ProblemParams(
@@ -249,7 +249,7 @@ class MockParams:
             variable_cost_per_hour=1.0,
         )
         io = IOParams(demand_file="d", results_dir=Path("."), format="json")
-        runtime = RuntimeParams(config=Path("./cfg"))
+        runtime = RuntimeParams(config="./cfg")
         self.algorithm = algorithm
         self.problem = problem
         self.io = io
@@ -274,7 +274,7 @@ def test_process_configuration_requires_params(sample_customers, sample_configur
                 goods=["Dry"],
                 depot=DepotLocation(0, 0),
                 max_depth=1,
-                route_time_estimation="Legacy",
+                route_time_estimation="BHH",
                 geo_weight=0.5,
                 demand_weight=0.5,
             ),

@@ -50,7 +50,7 @@ def test_estimate_clusters_with_pseudo_customers():
         goods=goods,
         depot=depot_location,
         max_depth=1,
-        route_time_estimation="Legacy",
+        route_time_estimation="BHH",
         geo_weight=1.0,
         demand_weight=0.0,
     )
@@ -92,7 +92,7 @@ def test_estimate_clusters_with_regular_customers():
         goods=goods,
         depot=depot_location,
         max_depth=1,
-        route_time_estimation="Legacy",
+        route_time_estimation="BHH",
         geo_weight=1.0,
         demand_weight=0.0,
     )

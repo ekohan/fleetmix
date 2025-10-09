@@ -83,7 +83,7 @@ EOF"""
                 results_dir=tmp_path,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         # Verify we have 3 customers
@@ -175,7 +175,7 @@ EOF"""
                 results_dir=tmp_path,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         # Verify conversion
@@ -261,7 +261,7 @@ EOF"""
                 results_dir=tmp_path,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         # Run optimization
@@ -336,7 +336,7 @@ EOF"""
                 results_dir=tmp_path,
                 format="json",
             ),
-            runtime=RuntimeParams(config=Path("test_config.yaml")),
+            runtime=RuntimeParams(config="test_config.yaml"),
         )
 
         solution = run_optimization(
@@ -384,7 +384,7 @@ EOF"""
                     results_dir=tmp_path,
                     format="json",
                 ),
-                runtime=RuntimeParams(config=Path("test_config.yaml")),
+                runtime=RuntimeParams(config="test_config.yaml"),
             )
 
             # Just verify it runs without error

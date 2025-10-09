@@ -4,8 +4,6 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/ekohan/fleetmix/ci.yml?label=CI)](https://github.com/ekohan/fleetmix/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Coverage](https://img.shields.io/codecov/c/github/ekohan/fleetmix?label=coverage)](https://codecov.io/gh/ekohan/fleetmix)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ekohan/fleetmix)
-<!-- TODO: refresh deepwiki -->
 <!-- TODO: publish PyPI -->
 
 
@@ -226,7 +224,7 @@ Convert a **single** CVRP / MCVRP instance into FSM format, run optimisation, an
 ```bash
 fleetmix convert --type mcvrp --instance 10_3_3_3_\(01\)
 ```
-
+# TODO: what?
 > *Legacy direct‑script calls still work but show deprecation warnings.*
 
 ---
@@ -327,7 +325,7 @@ class MyCustomClusterer:
 
 The plugin system supports:
 - **Clustering algorithms**: K-means, K-medoids, Agglomerative, Gaussian Mixture, or your own
-- **Route time estimators**: Legacy, BHH, TSP-based, or custom (e.g., with traffic data)
+- **Route time estimators**: BHH, TSP-based, or custom (e.g., with traffic data)
 - **Solvers**: Gurobi, CBC, or any PuLP-compatible solver
 
 > **Tip:** A plugin becomes available as soon as Python imports the module that holds the `@register_*` decorator.  

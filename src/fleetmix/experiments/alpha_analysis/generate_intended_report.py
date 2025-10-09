@@ -9,14 +9,14 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-from typing import Any, Dict, SupportsFloat, cast
+from typing import SupportsFloat, cast
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib.patches import ConnectionPatch, FancyBboxPatch, Rectangle
+from matplotlib.patches import FancyBboxPatch
 
 # Package paths
 PKG_DIR = Path(__file__).resolve().parent

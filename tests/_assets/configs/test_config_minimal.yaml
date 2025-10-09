@@ -29,7 +29,7 @@ clustering:
   distance: euclidean
   geo_weight: 1.0
   demand_weight: 0.0
-  route_time_estimation: Legacy
+  route_time_estimation: BHH
 
 # Data Files
 demand_file: test_demand.csv

@@ -18,7 +18,6 @@ def print_parameter_help():
   --route-time-estimation STR
                            Method to estimate route times
                            Options: 
-                             - Legacy (simple service time based)
                              - BHH (Beardwood-Halton-Hammersley)
                              - TSP (exact TSP solver)
                            Default: BHH
@@ -142,8 +141,8 @@ def parse_args() -> ArgumentParser:
     parser.add_argument(
         "--route-time-estimation",
         type=str,
-        choices=["BHH", "TSP", "Legacy"],
-        help="Method to estimate route times (BHH, TSP, Legacy)",
+        choices=["BHH", "TSP"],
+        help="Method to estimate route times (BHH, TSP)",
     )
     parser.add_argument(
         "--clustering-method",

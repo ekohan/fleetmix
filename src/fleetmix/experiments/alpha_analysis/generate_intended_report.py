@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import json
 from pathlib import Path
-from typing import SupportsFloat, cast
+from typing import Any, SupportsFloat, cast
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -194,7 +194,7 @@ def compute_deltas_from_raw_data() -> pd.DataFrame:
     return df_deltas
 
 
-def load_data():
+def load_data() -> pd.DataFrame:
     """Load all necessary data files."""
     # Main results data
     df_results = pd.DataFrame()
@@ -1616,7 +1616,7 @@ def generate_report_html() -> None:
     print(f"\n✅ Generated intended report: {output_path}")
 
 
-def generate_all_images_and_report():
+def generate_all_images_and_report() -> None:
     """Generate all images and the report."""
     print("\n" + "=" * 60)
     print("GENERATING INTENDED REPORT WITH PROPER STRUCTURE")

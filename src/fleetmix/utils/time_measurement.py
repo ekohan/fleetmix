@@ -23,6 +23,7 @@ import os
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -58,7 +59,7 @@ class TimeRecorder:
         self.measurements: list[TimeMeasurement] = []
 
     @contextmanager
-    def measure(self, span_name: str):
+    def measure(self, span_name: str) -> Any:
         """Context manager to measure execution time of a code block.
 
         Args:

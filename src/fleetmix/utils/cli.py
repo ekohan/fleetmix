@@ -8,7 +8,7 @@ from fleetmix.config.params import FleetmixParams
 from fleetmix.utils.logging import Colors
 
 
-def print_parameter_help():
+def print_parameter_help() -> None:
     """Display detailed help information about parameters"""
     help_text = f"""
 {Colors.BOLD}Fleet Size and Mix Optimization Parameters{Colors.RESET}
@@ -173,7 +173,7 @@ def parse_args() -> ArgumentParser:
     return parser
 
 
-def get_parameter_overrides(args) -> dict[str, Any]:
+def get_parameter_overrides(args: Any) -> dict[str, Any]:
     """Extract parameter overrides from command line arguments"""
     # Convert args to dictionary, excluding None values
     overrides = {k: v for k, v in vars(args).items() if v is not None}
@@ -192,7 +192,7 @@ def get_parameter_overrides(args) -> dict[str, Any]:
     return overrides
 
 
-def load_parameters(args) -> FleetmixParams:
+def load_parameters(args: Any) -> FleetmixParams:
     """Load parameters with optional command line overrides"""
     # Load base parameters
     if args.config:

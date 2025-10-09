@@ -1074,7 +1074,7 @@ def generate_summary_statistics(metrics, df_full, regime_dist):
     return summary
 
 
-def main():
+def main() -> None:
     """Main execution function."""
     print("=" * 60)
     print("FLEET COMPOSITION ANALYSIS FOR MIXED FLEET OPTIMIZATION")

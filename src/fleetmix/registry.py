@@ -1,5 +1,7 @@
 """Registry for pluggable components in FleetMix."""
 
+from typing import Callable, TypeVar
+
 import pandas as pd
 
 from fleetmix.utils.logging import FleetmixLogger
@@ -8,6 +10,13 @@ from .core_types import CapacitatedClusteringContext
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
 
 logger = FleetmixLogger.get_logger(__name__)
+
+# Type variables for decorator types
+ClustererType = TypeVar("ClustererType", bound=type[Clusterer])
+RouteTimeEstimatorType = TypeVar(
+    "RouteTimeEstimatorType", bound=type[RouteTimeEstimator]
+)
+SolverAdapterType = TypeVar("SolverAdapterType", bound=type[SolverAdapter])
 
 # Registries for each component type
 CLUSTERER_REGISTRY: dict[str, type[Clusterer]] = {}
@@ -25,10 +34,10 @@ __all__ = [
 ]
 
 
-def register_clusterer(name: str):
+def register_clusterer(name: str) -> Callable[[ClustererType], ClustererType]:
     """Decorator to register a clusterer implementation."""
 
-    def decorator(cls: type[Clusterer]):
+    def decorator(cls: ClustererType) -> ClustererType:
         if name in CLUSTERER_REGISTRY:
             raise ValueError(f"Clusterer '{name}' is already registered")
         CLUSTERER_REGISTRY[name] = cls
@@ -37,10 +46,12 @@ def register_clusterer(name: str):
     return decorator
 
 
-def register_route_time_estimator(name: str):
+def register_route_time_estimator(
+    name: str,
+) -> Callable[[RouteTimeEstimatorType], RouteTimeEstimatorType]:
     """Decorator to register a route time estimator implementation."""
 
-    def decorator(cls: type[RouteTimeEstimator]):
+    def decorator(cls: RouteTimeEstimatorType) -> RouteTimeEstimatorType:
         if name in ROUTE_TIME_ESTIMATOR_REGISTRY:
             raise ValueError(f"Route time estimator '{name}' is already registered")
         ROUTE_TIME_ESTIMATOR_REGISTRY[name] = cls
@@ -49,10 +60,12 @@ def register_route_time_estimator(name: str):
     return decorator
 
 
-def register_solver_adapter(name: str):
+def register_solver_adapter(
+    name: str,
+) -> Callable[[SolverAdapterType], SolverAdapterType]:
     """Decorator to register a solver adapter implementation."""
 
-    def decorator(cls: type[SolverAdapter]):
+    def decorator(cls: SolverAdapterType) -> SolverAdapterType:
         if name in SOLVER_ADAPTER_REGISTRY:
             raise ValueError(f"Solver adapter '{name}' is already registered")
         SOLVER_ADAPTER_REGISTRY[name] = cls

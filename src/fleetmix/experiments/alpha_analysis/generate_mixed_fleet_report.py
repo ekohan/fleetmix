@@ -6,6 +6,7 @@ This file consolidates all mixed fleet visualization and report generation funct
 import base64
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -38,7 +39,7 @@ REPORT_DIR = RESULTS_DIR / "mixed_fleet_report"
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def encode_image(fig):
+def encode_image(fig: Any) -> str:
     """Convert matplotlib figure to base64 encoded string."""
     buffer = BytesIO()
     fig.savefig(buffer, format="png", dpi=150, bbox_inches="tight")
@@ -48,7 +49,7 @@ def encode_image(fig):
     return f"data:image/png;base64,{image_base64}"
 
 
-def load_and_prepare_data():
+def load_and_prepare_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Load mixed fleet results and prepare for analysis."""
     df = pd.read_parquet(SUMMARY_PATH)
 
@@ -59,7 +60,7 @@ def load_and_prepare_data():
     return df, scv_baseline, mixed_results
 
 
-def create_main_heatmap(mixed_results):
+def create_main_heatmap(mixed_results: pd.DataFrame) -> str:
     """Create the central figure showing MCV adoption and economics."""
     fig, ax = plt.subplots(figsize=(12, 9))
 
@@ -146,7 +147,7 @@ def create_main_heatmap(mixed_results):
     return fig
 
 
-def create_mcv_share_heatmap(mixed_results):
+def create_mcv_share_heatmap(mixed_results: pd.DataFrame) -> str:
     """Create heatmap of MCV share across (α, C) grid."""
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -178,7 +179,7 @@ def create_mcv_share_heatmap(mixed_results):
     return fig
 
 
-def create_cost_savings_heatmap(mixed_results):
+def create_cost_savings_heatmap(mixed_results: pd.DataFrame) -> str:
     """Create heatmap of cost savings vs SCV baseline."""
     fig, ax = plt.subplots(figsize=(10, 8))
 
@@ -211,7 +212,7 @@ def create_cost_savings_heatmap(mixed_results):
     return fig
 
 
-def create_fleet_composition_analysis(mixed_results):
+def create_fleet_composition_analysis(mixed_results: pd.DataFrame) -> str:
     """Analyze fleet composition transitions across parameter space."""
     fig = plt.figure(figsize=(14, 10))
     gs = GridSpec(3, 2, figure=fig, hspace=0.3, wspace=0.3)
@@ -274,7 +275,7 @@ def create_fleet_composition_analysis(mixed_results):
     ax2 = fig.add_subplot(gs[1, 0])
 
     # Categorize fleet types
-    def categorize_fleet(row):
+    def categorize_fleet(row: pd.Series) -> str:
         if row["mcv_share"] < 0.1:
             return "Pure SCV"
         elif row["mcv_share"] > 0.9:
@@ -387,7 +388,7 @@ def create_fleet_composition_analysis(mixed_results):
     return fig
 
 
-def create_efficiency_cascade():
+def create_efficiency_cascade() -> str:
     """Create visualization showing the cascade of efficiency gains."""
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -490,7 +491,7 @@ def create_efficiency_cascade():
     return fig
 
 
-def create_tipping_point_analysis(mixed_results):
+def create_tipping_point_analysis(mixed_results: pd.DataFrame) -> str:
     """Deep dive into tipping point behavior."""
     # Focus on α=1.6, C=20 as representative tipping point
     tipping_data = mixed_results[
@@ -630,7 +631,7 @@ def create_tipping_point_analysis(mixed_results):
     return fig
 
 
-def create_executive_summary_figure(mixed_results):
+def create_executive_summary_figure(mixed_results: pd.DataFrame) -> str:
     """Create the main summary figure showing key insights."""
     fig = plt.figure(figsize=(16, 10))
 
@@ -788,7 +789,7 @@ Worst Cost Impact: {mixed_results["delta_cost_pct_vs_scv"].max():.0f}%"""
     return fig
 
 
-def create_operational_metrics_analysis(mixed_results):
+def create_operational_metrics_analysis(mixed_results: pd.DataFrame) -> str:
     """Create comprehensive analysis of vehicle utilization and operational metrics."""
     fig = plt.figure(figsize=(16, 12))
     gs = GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3)
@@ -1040,7 +1041,7 @@ def create_operational_metrics_analysis(mixed_results):
     return fig
 
 
-def create_html_report():
+def create_html_report() -> str:
     """Generate comprehensive HTML report."""
     # Load data
     df, scv_baseline, mixed_results = load_and_prepare_data()
@@ -1689,7 +1690,7 @@ def create_html_report():
     return report_path
 
 
-def main():
+def main() -> None:
     """Generate the comprehensive mixed fleet report."""
     print("Creating mixed fleet optimization report...")
 

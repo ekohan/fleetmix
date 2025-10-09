@@ -22,7 +22,7 @@ def _get_datasets_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "benchmarking" / "datasets" / "case"
 
 
-def load_customer_demand(demand_file: str):
+def load_customer_demand(demand_file: str) -> pd.DataFrame:
     """Load customer demand from CSV file.
 
     Args:

@@ -73,7 +73,10 @@ source "$HOME/.local/bin/env"
 # Create virtual environment and install all extras
 uv venv fleetmix-env
 source fleetmix-env/bin/activate
-uv sync --all-extras
+uv sync --all-extras --active
+
+# Test
+fleetmix --help
 ```
 
 Prefer `uv run <command>` for tooling, for example `uv run pytest -q`.

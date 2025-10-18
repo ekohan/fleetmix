@@ -1,0 +1,319 @@
+% A. Supplementary Tables
+\section{Supplementary Tables and Figures} \label{app:supp-tables}
+
+The instances used as Benchmark datasets to evaluate the performance of the model, created by \cite{uchoa_new_2017}, are presented in details in Figure~\ref{fig:uchoa-instances}, where n is the number of customers, Dep is the depot location (C=central, E=eccentric, R=random), Cust is the customer dispersion (R=random, C=clustered, RC=half random, half clustered), Dem is the demand distribution (U=unitary, Q=depending on quadrant, SL=many small values and few large values, or other ranges indicated by the values) and Q the vehicle capacity .
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{Generic Paper/Imagens/x_instances_uchoa.pdf}
+  \caption{List of CVRP Instances from \cite{uchoa_new_2017}.}
+  \label{fig:uchoa-instances}
+\end{figure}
+
+% B. Data 
+\section{Data Appendix} \label{app:data}
+\subsection{Parameters List} \label{app:data:params}
+
+
+\begin{table}[H]
+\centering
+\caption{Model Parameters and Baseline Values}
+\begin{tabular}{p{3.5cm}p{5cm}p{3cm}}
+\hline
+\textbf{Category} & \textbf{Parameter} & \textbf{Baseline Value} \\
+\hline
+\multirow{3}{*}{Vehicle Type A} & Capacity & \textbf{2700} \\
+& Fixed Daily Cost & \textbf{100} \\
+& Type & \textbf{MCV} \\
+\hline
+\multirow{3}{*}{Vehicle Type B} & Capacity & \textbf{3300} \\
+& Fixed Daily Cost & \textbf{175} \\
+& Type & \textbf{MCV} \\
+\hline
+\multirow{3}{*}{Vehicle Type C} & Capacity & \textbf{4500} \\
+& Fixed Daily Cost & \textbf{225} \\
+& Type & \textbf{MCV} \\
+\hline
+Cost Parameters & Variable Cost per Hour & \textbf{10} \\
+\hline
+\multirow{3}{*}{Time Parameters} & Average Speed & \textbf{30 km/h} \\
+& Max Route Time & \textbf{10 h} \\
+& Service Time per Customer & \textbf{25 min} \\
+\hline
+\multirow{5}{*}{\parbox[c]{3.5cm}{Clustering\\Parameters}} & Methods & \textbf{combined}, minibatch\_kmeans, kmedoids, agglomerative \\
+& Distance Type & \textbf{Euclidean} \\
+& Max Depth & \textbf{20} \\
+& Geography Weight & \textbf{0-1} \\
+& Demand Weight & \textbf{0-1} \\
+\hline
+Route Estimation & Method & \textbf{BHH} \\
+\hline
+\multirow{3}{*}{Penalties} & Light Load Threshold & \textbf{0} \\
+& Light Load Penalty & \textbf{0} \\
+& Compartment Setup Cost & \textbf{50} \\
+\hline
+\end{tabular}
+\label{tab:model_parameters}
+\begin{flushleft}
+\small Note: All costs are in relative units to maintain confidentiality while preserving real relationships between values. Values in bold represent the default.
+\end{flushleft}
+\end{table}
+
+
+\subsection{Data Sources and Demand Characteristics} 
+\label{app:data:sources-demand}
+
+The 2023 dataset provides monthly aggregated data. Since our model calculates the fleet size and mix based on the notion of a realized “single day” demand, we had to disaggregate the monthly 2023 data and transform into a “single day” representation. To reconstruct the daily demand, then, we sliced each month’s data in the four different ways described below. The 2023 dataset provides a more stable demand representation as averages are used to split the demand along the month.
+
+\begin{itemize}
+  \item \textbf{Demand Profile -- Average Daily Demand:} 
+    Averages the demand of each customer over the period of 9 months per the number of working days in the period and considers it as the daily demand of that customer. This implies that all customers in the dataset are served each day.
+
+  \item \textbf{Demand Profile -- Uniform Visits per Week:} 
+    Uses the average demand as before but selects approximately 15\% of the customers to be served, considering that each weekday has the same demand, as the company performs deliveries 6 days per week. 
+
+  \item \textbf{Demand Profile -- Low Demand:} 
+    Uses the average demand and selects 60\% of the customers to be served.
+
+  \item \textbf{Demand Profile -- High Demand:} 
+    Uses the average demand and selects 10\% of the customers to be served.
+\end{itemize}
+
+The 2024 dataset is more detailed and provides daily demand in a three-month period. It reveals daily demand volatility and patterns. During our initial trials using the dataset, we noted that the binding constraint was always maximum route time, due to the large number of customers with relatively small orders. Therefore, the algorithm tended to select the smallest, cheapest vehicle available for all clusters, with most vehicles well under capacity. To further challenge the algorithm and make sure we were prodding both time but also capacity constraints, we developed an additional filtered demand profile from the dataset, were we removed customer orders with “small demand” (<40 kg) and “big orders” that wouldn’t fit in any of the available trucks (> 4000 kg) and thus were deemed invalid data points.
+
+We analyzed both the original and the filtered datasets for total demand, demand distribution between product types, and number of customers. As an outcome, we selected three “representative” days: low demand, average demand, and peak demand, in order to test our framework over the observed range of daily demand conditions.
+This work on the complementing datasets gave rise to several “demand profiles”, as listed in Table~\ref{tab:demand-profiles}.
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Summary of Demand Profiles}
+\label{tab:demand-profiles}
+\setlength{\tabcolsep}{12pt}
+\begin{tabular}{
+    l
+    l
+    >{\raggedright\arraybackslash}p{3.5cm}
+    r
+    r
+}
+\toprule
+Dataset & Profile ID & Description & Total Demand (Kg) & \# Customers \\
+\midrule
+2023 & 2023\_avg & Average Daily Demand & 42,806 & 1,816 \\
+2023 & 2023\_uniform & Uniform Visits per Week & 5,073 & 319 \\
+2023 & 2023\_low & Low Demand & 7,253 & 255 \\
+2023 & 2023\_high & High Demand & 31,412 & 1,117 \\
+\midrule
+2024 & 2024\_unfiltered\_low & Original Low Demand Day & 15,632 & 181 \\
+2024 & 2024\_unfiltered\_avg & Original Avg Demand Day & 37,256 & 336 \\
+2024 & 2024\_unfiltered\_peak & Original Peak Demand Day & 40,272 & 450 \\
+2024 & 2024\_unfiltered\_all & 73 days demand files, unfiltered & -- & -- \\
+2024 & 2024\_filtered\_low & Filtered Low Demand Day & 14,632 & 77 \\
+2024 & 2024\_filtered\_avg & Filtered Avg Demand Day & 24,127 & 117 \\
+2024 & 2024\_filtered\_peak & Filtered Peak Demand Day & 40,970 & 204 \\
+2024 & 2024\_filtered\_all & 73 days demand files, filtered & -- & -- \\
+\bottomrule
+\end{tabular}
+\label{tab:demand-profiles}
+\begin{tablenotes}
+\small
+\item[Note:] Data is segmented by year (2023 and 2024) and shows various demand profiles with their corresponding total demand and number of customers. Dashes (--) indicate where values are not applicable or available.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\subsection{Demand Clustering Methodology} \label{app:data:clustering}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{>{\raggedright}p{2.2cm}p{2.1cm}p{2.8cm}p{2.5cm}p{3.5cm}}
+\toprule
+Method & Distance & Parameters & Constraints & Advantages \\
+\midrule
+K-means & Euclidean & Number of clusters ($k$) & Capacity ($Q_v$), Time ($T_{max}$) & Fast convergence, simple to implement \\
+\midrule
+K-medoids & Euclidean & Number of clusters ($k$), medoid selection & Capacity ($Q_v$), Time ($T_{max}$) & Robust to outliers \\
+\midrule
+Agglomerative & Composite: $\alpha \cdot d_{geo} + \beta \cdot d_{prod}$ & Linkage criteria, $\alpha$, $\beta$ weights & Capacity ($Q_v$), Time ($T_{max}$) & Captures both spatial and demand factors \\
+\midrule
+Gaussian Mixture & Euclidean & Number of clusters ($k$), covariance type & Capacity ($Q_v$), Time ($T_{max}$) & Flexible cluster shapes, probabilistic cluster assignment \\
+\midrule
+Combine & Multiple (Euclidean \& Composite) & Multiple weight combinations, methods & Capacity ($Q_v$), Time ($T_{max}$) & Ensemble approach, robust solutions, diverse clustering patterns \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of Clustering Methods}
+\label{tab:clustering-methods}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Computational Performance and Quality Metrics of Clustering Algorithms}
+\begin{threeparttable}
+\begin{tabular}{lrrrrr}
+\toprule
+\textbf{N} & \textbf{Algorithm} & \textbf{Total} & \textbf{CPU} & \textbf{Avg Dist} & \textbf{Silhouette} \\
+\textbf{Customers} & & \textbf{Clusters} & \textbf{Time (s)} & \textbf{(km)} & \textbf{Score} \\
+\midrule
+\multirow{5}{*}{262} 
+& K-means & 163 & 0.42 & 4.01 & 0.385 \\
+& K-medoids & 161 & 0.44 & 3.88 & 0.346 \\
+& Agglomerative & 202 & 0.42 & 3.71 & 0.407 \\
+& Gaussian Mixture & TBD & TBD & TBD & TBD \\
+& Combine & TBD & TBD & TBD & TBD \\
+\midrule
+\multirow{5}{*}{329} 
+& K-means & 225 & 0.48 & 3.07 & 0.363 \\
+& K-medoids & 210 & 0.49 & 3.25 & 0.327 \\
+& Agglomerative & 249 & 0.37 & 2.88 & 0.393 \\
+& Gaussian Mixture & TBD & TBD & TBD & TBD \\
+& Combine & TBD & TBD & TBD & TBD \\
+\midrule
+\multirow{5}{*}{1139} 
+& K-means & 715 & 4.98 & 1.57 & 0.446 \\
+& K-medoids & 817 & 4.87 & 1.58 & 0.302 \\
+& Agglomerative & 810 & 4.66 & 1.39 & 0.432 \\
+& Gaussian Mixture & TBD & TBD & TBD & TBD \\
+& Combine & TBD & TBD & TBD & TBD \\
+\midrule
+\multirow{5}{*}{1856} 
+& K-means & 1180 & 8.25 & 1.12 & 0.445 \\
+& K-medoids & 1348 & 8.67 & 1.21 & 0.306 \\
+& Agglomerative & 1309 & 8.27 & 1.02 & 0.441 \\
+& Gaussian Mixture & TBD & TBD & TBD & TBD \\
+& Combine & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item[] Computed using the Baseline Parameter set. CPU Time represents processing time for all configurations. Average Distance calculated using Haversine formula. All clusters satisfy vehicle capacity and time constraints. 
+\end{tablenotes}
+\end{threeparttable}
+\label{tab:clustering-performance}
+\end{table}
+
+% C. Validation
+\section{Validation and Benchmarking} \label{app:validation}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Generic Paper/Imagens/gap_distribution_transformation.png}
+    \caption{Gap distribution by transformation type.}
+    \label{fig:gap-distribution-by-transformation}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Generic Paper/Imagens/truckload_by_transformation.png}
+    \caption{Truck load by transformation type.}
+    \label{fig:truckload-by-transformation}
+\end{figure}
+
+% D. Computational
+\section{Computational Appendix} \label{app:computational}
+\subsection{Code and Replication Resources} \label{app:computational:code}
+
+The project code is hosted at \url{https://github.com/ekohan/mit-fleet-design-optimization/}. Installation instructions are provided in the README file.
+All data has been anonymized:
+
+\begin{itemize}
+\item Noise was added to the original coordinates to give in a radius of +-1 km.
+\item The bounding box representing the area of operations respects the size of the metropolitan wide region into consideration but has been moved to the middle of the ocean. This won’t affect results.
+\item ClientID is a meaningless number.
+\item Every product was mapped and merged into the three product types and were summed to the Kg. No other product dimension was recorded.
+\item Vehicle capacities and other parameters are normalized in accordance with industry standards (e.g. the cheapest vehicle costs \$100, a larger, \$130, etc.).
+\end{itemize}
+
+
+\subsection{Computational Cost Drivers and Their Quantitative Impacts}  \label{app:computational:cost-drivers}
+
+\textbf{MILP Solver.} 
+
+\begin{table}[ht]
+    \centering
+    \caption{MILP Solver Performance Metrics by Number of Customers}
+    \label{tab:milp_metrics_customers}
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \textbf{N Customers} & 
+        \textbf{Decision Variables} & 
+        \textbf{Constraints} & 
+        \textbf{Runtime (s)} & 
+        \textbf{Optimality Gap (\%)} \\
+        \hline
+        262  & 1319 & 426  & 0.33 & 0 \\
+        \hline
+        329  & 2074 & 555 & 0.41  & 0 \\
+        \hline
+        1139 & 5994 & 1864 & 2.77  & 0 \\
+        \hline
+        1856 & 9832 & 3029 & 3.24 & 0 \\
+        \hline
+    \end{tabular}
+    \begin{tablenotes}
+        \small
+        \item \textbf{Notes:}
+        \item All run with K-Means as clustering algorithm.
+        \item Decision Variables: Total number of variables in the MILP model M formulation.
+        \item Constraints: Total number of constraints in the MILP model M formulation.
+        \item Runtime (s): CPU Time taken by the MILP model M to compute results \\ in the experimental setup used (Section 6.1).
+        \item Optimality Gap (\%): Difference between the final solution and the global optimum. 
+    \end{tablenotes}
+\end{table}
+
+Note that the average number of customers for the company is 300. 1139 represents an increase of almost four times its client base, making it a national-wide, not megacity-bound, company – exceeding the limits of this study.
+
+Three main factors drive computational effort:
+
+\paragraph{1. Number and Structure of Clusters.}
+As customer count increases from 262 to 1,856, the number of candidate clusters grows roughly from a few hundred to over a thousand per vehicle configuration. In practice, having more clusters might sound expensive, but since each cluster is already route- and capacity-feasible, the MILP solver only needs to select the best matches. For instance, when moving from 262 to 1,856 customers, decision variables rose from ~1,300 to ~9,800. Yet, the MILP’s runtime increased only from about 0.3 seconds to about 3.2 seconds on average (see Table 14). This demonstrates the structural filtering: more clusters mean more pre-structured, ready-to-use building blocks, not an exponential blow-up in complexity. The clustering phase dominates MILP solve time (~3-5 seconds) because it runs multiple algorithms in parallel for each vehicle configuration, then computes composite distance matrices incorporating both geographical and demand similarities, and performs recursive binary splitting to ensure capacity constraints, finally validating feasibility for each generated cluster.
+This upfront investment in cluster generation pays off in the MILP phase, as all cluster candidates are pre-validated for route and capacity feasibility.
+
+\paragraph{2. Vehicle Configuration Diversity.}
+
+We tested scenarios with up to 21 vehicle configurations. While more configurations increase decision variables, many combinations are quickly pruned. For example, at ~1,100 customers and 21 configurations, ~6,000 variables led to a runtime under 3 seconds. This efficiency stems from systematic elimination of incompatible (cluster, vehicle configuration) pairs before the optimization program starts. The added richness of compartments doesn’t trap the solver; instead, it guides it, since only configuration-cluster pairs that align with product demands remain in the final search space.
+
+\paragraph{3. Long-Horizon Runs and Daily Variations.}
+
+Re-running the model for 180 days, each with a different demand pattern, consistently yielded solve times under 5 seconds per day. Even as daily conditions shifted, the complexity did not spike. This stability is valuable in practice: decision-makers can refresh their fleet plan regularly, adapting to evolving demands without facing computational bottlenecks.
+
+All tests used multiple vehicle configurations and clustering algorithms. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Generic Paper/Imagens/CPU-Times-1.png}
+    \caption{CPU Time vs N customers (a).}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Generic Paper/Imagens/CPU-Times-2.png}
+    \caption{CPU Time vs N customers (b).}
+\end{figure}
+
+\textbf{Post-Processing and Incremental Improvements.} 
+
+The post-processing step, described earlier at the end of Section~\ref{subsec:sa-fsm}, merges small clusters to improve fleet utilization. Empirically, this stage reduced the fleet size by an additional 10\% across several test days, requiring between 0.3s and 3s of additional CPU time depending on the threshold for “small cluster” and the maximum number of iterations. By starting from a feasible solution and introducing only a small set of candidate merges, the solver’s is already “warmed up” by starting with a feasible solution and therefor it’s overhead can remain negligible. In terms of computational cost to solution outcome, it delivered good value at the scale of this problem.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Generic Paper/Imagens/vehicle-reduction-1.png}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Generic Paper/Imagens/vehicle-reduction-2.png}
+\end{figure}
+
+
+\subsection{Scalability} \label{app:computational:scalability}
+
+We term instances with over 1,000 customers as “large” given their complexity and the challenge of serving multiple product categories with flexible compartments. Even at this scale, the solver reported zero optimality gaps. Although worst-case complexity for MILP remains exponential, practical instances benefit from the structural “pre-sorting” provided by clustering. This pre-processing efficiency is evident in the scaling behavior: doubling customers from \~900 to \~1,800 roughly tripled the number of variables, but only increased solve time by about a factor of 1.5. 
+
+\subsection{Linking Results to Section 6 Benchmarks} \label{app:computational:linking-results}
+
+In ~\autoref{sec:validation_robustness_analysis}, we reported that our approach approximated known VRP benchmarks within a maximum 18.9\% gap on single-good scenarios. That gap reflects a trade-off: we achieve near-instant decision support in complex multi-product settings at the cost of not exhaustively routing each customer. While PyVRP or other VRP solvers might close that gap with longer computations, our method’s strength lies in rapid, repeatable runs. For multi-compartment variants and real data, repeatedly solving a full VRP to global optimality is rarely practical. Our decomposition procedure delivers “good enough” fleet plans—often within less than 20\% of a pure routing optimum—within seconds, supporting tactical planning under changing conditions.
+
+\subsection{Computational Summary} \label{app:computational:summary}
+
+In sum, our computational analysis demonstrates that the cluster-first, MILP-second methodology, coupled with a short post-processing phase, achieves a balance between speed and reasonable accuracy. While it does not promise the absolute minimal fleet in all cases (as evidenced by the 18.9\% gap in certain test scenarios), it consistently returns optimal solutions to the given model in seconds, even for large, complex cases. The key cost drivers—customer count, cluster generation, and vehicle variety—enhance rather than impede tractability when harnessed by intelligent pre-processing. For practitioners, the takeaway is straightforward: they can regularly re-optimize fleets as conditions evolve, obtaining near-optimal strategic guidance without long compute times.

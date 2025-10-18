@@ -191,7 +191,7 @@ def split_cluster_recursively(cluster, depth, max_depth, context):
     return result
 ```
 
-**Complexity**: $O(\log n)$ depth typically, worst case $O(\text{max\_depth})$
+**Complexity**: $O(\log n)$ depth typically, worst case $O(\text{max depth})$
 
 **Implementation note**: Uses K-means with k=2 for splitting
 

@@ -375,7 +375,7 @@ def plot_causality_diagram() -> None:
 
     # Add labels above boxes
     ax.text(
-        1.5, 3.5, "in one vehicle\nMulti-temp", ha="center", fontsize=10, style="italic"
+        1.5, 3.5, "in one vehicle\nMulti-product", ha="center", fontsize=10, style="italic"
     )
     ax.text(
         4.5,
@@ -724,14 +724,14 @@ def plot_tipping_point_analysis(df: pd.DataFrame) -> None:
 
     ax.axis("off")
 
-    # Panel C: Win days vs multi-temp customers
+    # Panel C: Win days vs multi-product customers
     ax = axes[1, 0]
 
     # Create synthetic data for illustration with more realistic distribution
     np.random.seed(42)
     multi_temp_rates = np.random.uniform(0.3, 0.7, 70)
 
-    # Calculate MCV advantage as a continuous variable based on multi-temp rate
+    # Calculate MCV advantage as a continuous variable based on multi-product rate
     # Add some noise for realism
     mcv_advantage = (multi_temp_rates - 0.45) * 100 + np.random.normal(0, 5, 70)
     mcv_wins = mcv_advantage > 0
@@ -759,14 +759,14 @@ def plot_tipping_point_analysis(df: pd.DataFrame) -> None:
     # Add horizontal line at y=0 (break-even)
     ax.axhline(0, color="black", linewidth=1, linestyle="-", alpha=0.5)
 
-    # Add vertical line at 45% multi-temp
+    # Add vertical line at 45% multi-product
     ax.axvline(45, color="gray", linestyle="--", alpha=0.5)
 
     # Annotations
     ax.text(
         45,
         ax.get_ylim()[1] * 0.9,
-        "45% multi-temp\nthreshold",
+        "45% multi-product\nthreshold",
         ha="center",
         va="top",
         fontsize=10,
@@ -775,9 +775,9 @@ def plot_tipping_point_analysis(df: pd.DataFrame) -> None:
     )
 
     # Labels and formatting
-    ax.set_xlabel("Multi-Temperature Customer Rate (%)", fontsize=12)
+    ax.set_xlabel("Multi-Product Type Customer Rate (%)", fontsize=12)
     ax.set_ylabel("MCV Advantage (% of SCV cost)", fontsize=12)
-    ax.set_title("MCV Win Days vs Multi-Temp Customers", fontsize=14)
+    ax.set_title("MCV Win Days vs Multi-Product Customers", fontsize=14)
 
     # Set y-axis limits for better visibility
     ax.set_ylim(-20, 20)
@@ -823,8 +823,8 @@ def plot_tipping_point_analysis(df: pd.DataFrame) -> None:
 
     info_text = [
         ("Correlation:", "r = 0.73", "#3498DB"),
-        ("Threshold:", "~45% multi-temp", "#E67E22"),
-        ("MCV wins when:", ">45% multi-temp", "#27AE60"),
+        ("Threshold:", "~45% multi-product", "#E67E22"),
+        ("MCV wins when:", ">45% multi-product", "#27AE60"),
     ]
 
     y_pos = 0.7
@@ -845,7 +845,7 @@ def plot_tipping_point_analysis(df: pd.DataFrame) -> None:
         0.1,
         0.2,
         "At α=60%, C=20% (tipping point), MCV advantage correlates strongly\n"
-        "with multi-temperature customer prevalence. Days with higher\n"
+        "with multi-product type customer prevalence. Days with higher\n"
         "consolidation opportunities favor MCVs despite price premiums.",
         fontsize=11,
         style="italic",
@@ -1340,7 +1340,7 @@ def generate_report_html() -> None:
             <figure>
                 <img src="{encode_image(images["causality"])}" alt="Causality Flow Diagram">
                 <figcaption>
-                    The causal mechanism through which MCVs generate cost savings. Consolidation enables serving multi-temperature customers in a single visit, cascading through operational improvements to reduce the total fleet required. Percentages show typical reductions observed across 70 demand days.
+                    The causal mechanism through which MCVs generate cost savings. Consolidation enables serving multi-product type customers in a single visit, cascading through operational improvements to reduce the total fleet required. Percentages show typical reductions observed across 70 demand days.
                 </figcaption>
             </figure>
         </section>
@@ -1379,7 +1379,7 @@ def generate_report_html() -> None:
             <figure>
                 <img src="{encode_image(images["split_delivery"])}" alt="Split Delivery Elimination">
                 <figcaption>
-                    MCVs eliminate ~63 extra visits per day (36% reduction) by consolidating multi-temperature deliveries. This is the fundamental driver of all downstream efficiencies—each saved visit translates directly to reduced route time and ultimately fewer vehicles needed.
+                    MCVs eliminate ~63 extra visits per day (36% reduction) by consolidating multi-product type deliveries. This is the fundamental driver of all downstream efficiencies—each saved visit translates directly to reduced route time and ultimately fewer vehicles needed.
                     <br><br>
                     <em>Methodology: Values shown are averages across 70 demand days and all (α, C) treatments, computed from paired SCV-MCV deltas.</em>
                 </figcaption>
@@ -1402,10 +1402,10 @@ def generate_report_html() -> None:
             </figure>
             
             <div class="key-insight">
-                <strong>Key insight:</strong> Even at the economic tipping point, operational metrics remain strong—MCVs still reduce fleet size by over one-third. The 50/50 win rate reflects day-to-day demand variability: on days with more multi-temperature customers, consolidation benefits dominate; on days with more single-temperature orders, the price premium tips the balance toward SCVs. This confirms that MCV efficiency is demand-driven rather than parameter-driven.
+                <strong>Key insight:</strong> Even at the economic tipping point, operational metrics remain strong—MCVs still reduce fleet size by over one-third. The 50/50 win rate reflects day-to-day demand variability: on days with more multi-product type customers, consolidation benefits dominate; on days with more single-product type orders, the price premium tips the balance toward SCVs. This confirms that MCV efficiency is demand-driven rather than parameter-driven.
             </div>
             
-            <p><strong>Analysis at the economic margin:</strong> Each point represents one demand day at α=60%, C=20%. The clear positive correlation (r=0.73) confirms that MCV economics are fundamentally driven by consolidation opportunities rather than cost parameters. Days with >45% multi-temperature customers consistently favor MCVs, while days with predominantly single-temperature orders favor SCVs due to reduced consolidation benefits.</p>
+            <p><strong>Analysis at the economic margin:</strong> Each point represents one demand day at α=60%, C=20%. The clear positive correlation (r=0.73) confirms that MCV economics are fundamentally driven by consolidation opportunities rather than cost parameters. Days with >45% multi-product type customers consistently favor MCVs, while days with predominantly single-product type orders favor SCVs due to reduced consolidation benefits.</p>
         </section>
 
         <!-- Robustness across demand levels -->
@@ -1532,20 +1532,20 @@ def generate_report_html() -> None:
                 
                 <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 25px; margin: 30px 0;">
                     <h4 style="margin-top: 0; color: #856404;">Product Mix Distribution</h4>
-                    <p style="margin-bottom: 25px; color: #856404;"><strong>Multi-temperature customers:</strong> Approximately <strong>46%</strong> of customers require products from multiple temperature zones (Dry + Chilled, Dry + Frozen, or all three), creating natural opportunities for consolidation.</p>
+                    <p style="margin-bottom: 25px; color: #856404;"><strong>Multi-product type customers:</strong> Approximately <strong>46%</strong> of customers require products from multiple temperature zones (Dry + Chilled, Dry + Frozen, or all three), creating natural opportunities for consolidation.</p>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; text-align: center;">
                         <div style="background-color: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <div style="font-size: 3em; font-weight: bold; color: #3498DB; margin-bottom: 10px;">54%</div>
-                            <div style="color: #7f8c8d; font-size: 0.9em;">Single-temp only</div>
+                            <div style="color: #7f8c8d; font-size: 0.9em;">Single-product type only</div>
                         </div>
                         <div style="background-color: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <div style="font-size: 3em; font-weight: bold; color: #9B59B6; margin-bottom: 10px;">39%</div>
-                            <div style="color: #7f8c8d; font-size: 0.9em;">Two temps</div>
+                            <div style="color: #7f8c8d; font-size: 0.9em;">Two product types</div>
                         </div>
                         <div style="background-color: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <div style="font-size: 3em; font-weight: bold; color: #E74C3C; margin-bottom: 10px;">7%</div>
-                            <div style="color: #7f8c8d; font-size: 0.9em;">All three temps</div>
+                            <div style="color: #7f8c8d; font-size: 0.9em;">All three product types</div>
                         </div>
                     </div>
                 </div>

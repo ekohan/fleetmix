@@ -465,28 +465,30 @@ def chart3_mcv_adoption_probability_surface(metrics):
 def chart4_fleet_composition_variability(df_full):
     """
     Chart 4: Small multiples showing MCV share variation across demand days.
+    Now showing ALL 70 parameter combinations for comprehensive visual examination.
     """
-    # Select representative parameter combinations
-    selected_params = [
-        (1.0, 0),
-        (1.1, 0),
-        (1.2, 0),
-        (1.3, 0),
-        (1.0, 20),
-        (1.1, 20),
-        (1.2, 20),
-        (1.3, 20),
-        (1.5, 30),
-        (1.6, 40),
-        (1.8, 50),
-        (2.0, 50),
-    ]
+    # Get all unique parameter combinations (sorted for consistent ordering)
+    all_params = df_full[["alpha", "C"]].drop_duplicates().sort_values(["alpha", "C"])
+    all_params_list = list(all_params.itertuples(index=False, name=None))
+    
+    n_blocks = len(all_params_list)
+    print(f"Creating chart with {n_blocks} blocks...")
+    
+    # Use 6 columns (one for each C value: 0%, 10%, 20%, 30%, 40%, 50%)
+    # Each row represents one α value
+    n_cols = 6
+    n_rows = int(np.ceil(n_blocks / n_cols))
+    
+    # Create a very long figure to accommodate all blocks
+    # 6 columns × ~3.5 inches each = 21 inches wide
+    # 11 rows × ~2.5 inches each = 27.5 inches tall
+    fig = plt.figure(figsize=(21, n_rows * 2.5))
+    gs = GridSpec(n_rows, n_cols, figure=fig, hspace=0.4, wspace=0.3)
 
-    fig = plt.figure(figsize=(16, 12))
-    gs = GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3)
-
-    for idx, (alpha, C) in enumerate(selected_params):
-        ax = fig.add_subplot(gs[idx // 3, idx % 3])
+    for idx, (alpha, C) in enumerate(all_params_list):
+        row = idx // n_cols
+        col = idx % n_cols
+        ax = fig.add_subplot(gs[row, col])
 
         # Filter data for this parameter combination
         subset = df_full[(df_full["alpha"] == alpha) & (df_full["C"] == C)].copy()
@@ -540,11 +542,11 @@ def chart4_fleet_composition_variability(df_full):
         ax.legend(fontsize=8, loc="best")
 
     fig.suptitle(
-        "Fleet Composition Variability Across Demand Days\n"
-        + "Each point = one demand day, colored by composition regime",
-        fontsize=14,
+        f"Fleet Composition Variability Across All {n_blocks} Parameter Combinations\n"
+        + "Each point = one demand day, colored by composition regime | Each row = one α value, columns = C from 0% to 50%",
+        fontsize=16,
         weight="bold",
-        y=0.995,
+        y=0.999,
     )
 
     # Add legend for regime colors
@@ -560,11 +562,11 @@ def chart4_fleet_composition_variability(df_full):
     ]
     fig.legend(
         handles=legend_elements,
-        loc="lower center",
+        loc="upper center",
         ncol=4,
-        fontsize=10,
+        fontsize=11,
         frameon=True,
-        bbox_to_anchor=(0.5, -0.02),
+        bbox_to_anchor=(0.5, 0.995),
     )
 
     # Save
@@ -572,6 +574,204 @@ def chart4_fleet_composition_variability(df_full):
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"✓ Chart 4 saved: {output_path}")
 
+    return fig
+
+
+def chart4a_selected_blocks_primary(df_full):
+    """
+    Chart 4A: Primary recommendation - α=1.6 with C=[0%, 20%, 50%]
+    Shows effect of compartment cost at high MCV fixed cost premium.
+    """
+    # Selected parameters: α=1.6 with varying C
+    selected_params = [
+        (1.6, 0, "No Compartment Cost"),
+        (1.6, 20, "Moderate Compartment Cost"),
+        (1.6, 50, "High Compartment Cost"),
+    ]
+    
+    fig = plt.figure(figsize=(18, 5))
+    gs = GridSpec(1, 3, figure=fig, hspace=0.3, wspace=0.3)
+    
+    regime_colors = {
+        "Pure MCV": "#27ae60",
+        "MCV-dominant": "#7dcea0",
+        "True Mixed": "#f39c12",
+        "SCV-dominant": "#e74c3c",
+    }
+    
+    for idx, (alpha, C, label) in enumerate(selected_params):
+        ax = fig.add_subplot(gs[0, idx])
+        
+        # Filter data for this parameter combination
+        subset = df_full[(df_full["alpha"] == alpha) & (df_full["C"] == C)].copy()
+        
+        if len(subset) == 0:
+            continue
+        
+        # Sort by instance (demand day)
+        subset = subset.sort_values("instance").reset_index(drop=True)
+        subset["day_index"] = range(len(subset))
+        
+        # Color by regime
+        colors = [regime_colors[r] for r in subset["regime"]]
+        
+        # Plot
+        ax.scatter(
+            subset["day_index"],
+            subset["mcv_share"] * 100,
+            c=colors,
+            s=50,
+            alpha=0.7,
+            edgecolors="black",
+            linewidths=0.8,
+        )
+        
+        # Add mean line
+        mean_share = subset["mcv_share"].mean() * 100
+        ax.axhline(
+            mean_share,
+            color="blue",
+            linestyle="--",
+            linewidth=2.5,
+            label=f"Mean: {mean_share:.0f}%",
+        )
+        
+        # Formatting
+        ax.set_xlim(-2, len(subset) + 1)
+        ax.set_ylim(-5, 105)
+        ax.set_xlabel("Demand Day Index", fontsize=11, weight="bold")
+        ax.set_ylabel("MCV Share (%)", fontsize=11, weight="bold")
+        ax.set_title(
+            f"{label}\nα={alpha:.1f}, C={int(C)}%",
+            fontsize=12,
+            weight="bold",
+            pad=10,
+        )
+        ax.grid(True, alpha=0.3, linestyle="--")
+        ax.legend(fontsize=10, loc="lower left", frameon=True, shadow=True)
+    
+    # Add legend for regime colors
+    from matplotlib.patches import Patch
+    
+    legend_elements = [
+        Patch(facecolor="#27ae60", edgecolor="black", label="Pure MCV (≥99%)"),
+        Patch(facecolor="#7dcea0", edgecolor="black", label="MCV-dominant (50-99%)"),
+        Patch(facecolor="#f39c12", edgecolor="black", label="True Mixed (10-50%)"),
+        Patch(facecolor="#e74c3c", edgecolor="black", label="SCV-dominant (<10%)"),
+    ]
+    fig.legend(
+        handles=legend_elements,
+        loc="lower center",
+        ncol=4,
+        fontsize=11,
+        frameon=True,
+        bbox_to_anchor=(0.5, -0.08),
+    )
+    
+    # Save
+    output_path = OUTPUT_DIR / "chart4a_selected_primary.png"
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    print(f"✓ Chart 4A (Primary Selection) saved: {output_path}")
+    
+    return fig
+
+
+def chart4b_selected_blocks_alternative(df_full):
+    """
+    Chart 4B: Alternative recommendation - C=20% with α=[1.0, 1.5, 2.0]
+    Shows effect of MCV fixed cost premium at moderate compartment cost.
+    """
+    # Selected parameters: C=20% with varying α
+    selected_params = [
+        (1.0, 20, "Low MCV Fixed Cost Premium"),
+        (1.5, 20, "Medium MCV Fixed Cost Premium"),
+        (2.0, 20, "High MCV Fixed Cost Premium"),
+    ]
+    
+    fig = plt.figure(figsize=(18, 5))
+    gs = GridSpec(1, 3, figure=fig, hspace=0.3, wspace=0.3)
+    
+    regime_colors = {
+        "Pure MCV": "#27ae60",
+        "MCV-dominant": "#7dcea0",
+        "True Mixed": "#f39c12",
+        "SCV-dominant": "#e74c3c",
+    }
+    
+    for idx, (alpha, C, label) in enumerate(selected_params):
+        ax = fig.add_subplot(gs[0, idx])
+        
+        # Filter data for this parameter combination
+        subset = df_full[(df_full["alpha"] == alpha) & (df_full["C"] == C)].copy()
+        
+        if len(subset) == 0:
+            continue
+        
+        # Sort by instance (demand day)
+        subset = subset.sort_values("instance").reset_index(drop=True)
+        subset["day_index"] = range(len(subset))
+        
+        # Color by regime
+        colors = [regime_colors[r] for r in subset["regime"]]
+        
+        # Plot
+        ax.scatter(
+            subset["day_index"],
+            subset["mcv_share"] * 100,
+            c=colors,
+            s=50,
+            alpha=0.7,
+            edgecolors="black",
+            linewidths=0.8,
+        )
+        
+        # Add mean line
+        mean_share = subset["mcv_share"].mean() * 100
+        ax.axhline(
+            mean_share,
+            color="blue",
+            linestyle="--",
+            linewidth=2.5,
+            label=f"Mean: {mean_share:.0f}%",
+        )
+        
+        # Formatting
+        ax.set_xlim(-2, len(subset) + 1)
+        ax.set_ylim(-5, 105)
+        ax.set_xlabel("Demand Day Index", fontsize=11, weight="bold")
+        ax.set_ylabel("MCV Share (%)", fontsize=11, weight="bold")
+        ax.set_title(
+            f"{label}\nα={alpha:.1f}, C={int(C)}%",
+            fontsize=12,
+            weight="bold",
+            pad=10,
+        )
+        ax.grid(True, alpha=0.3, linestyle="--")
+        ax.legend(fontsize=10, loc="lower left", frameon=True, shadow=True)
+    
+    # Add legend for regime colors
+    from matplotlib.patches import Patch
+    
+    legend_elements = [
+        Patch(facecolor="#27ae60", edgecolor="black", label="Pure MCV (≥99%)"),
+        Patch(facecolor="#7dcea0", edgecolor="black", label="MCV-dominant (50-99%)"),
+        Patch(facecolor="#f39c12", edgecolor="black", label="True Mixed (10-50%)"),
+        Patch(facecolor="#e74c3c", edgecolor="black", label="SCV-dominant (<10%)"),
+    ]
+    fig.legend(
+        handles=legend_elements,
+        loc="lower center",
+        ncol=4,
+        fontsize=11,
+        frameon=True,
+        bbox_to_anchor=(0.5, -0.08),
+    )
+    
+    # Save
+    output_path = OUTPUT_DIR / "chart4b_selected_alternative.png"
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    print(f"✓ Chart 4B (Alternative Selection) saved: {output_path}")
+    
     return fig
 
 
@@ -1081,33 +1281,39 @@ def main() -> None:
     print("=" * 60)
 
     # Load data
-    print("\n[1/9] Loading data...")
+    print("\n[1/11] Loading data...")
     mixed, scv_baseline = load_mixed_results()
 
     # Compute metrics
-    print("\n[2/9] Computing composition metrics...")
+    print("\n[2/11] Computing composition metrics...")
     metrics, regime_dist, df_full = compute_composition_metrics(mixed)
 
     # Generate charts
-    print("\n[3/9] Generating Chart 1: MCV Adoption Landscape...")
+    print("\n[3/11] Generating Chart 1: MCV Adoption Landscape...")
     chart1_mcv_adoption_landscape(metrics)
 
-    print("\n[4/9] Generating Chart 2: Fleet Composition Regimes...")
+    print("\n[4/11] Generating Chart 2: Fleet Composition Regimes...")
     chart2_fleet_composition_regimes(regime_dist, metrics)
 
-    print("\n[5/9] Generating Chart 3: MCV Adoption Probability Surface...")
+    print("\n[5/11] Generating Chart 3: MCV Adoption Probability Surface...")
     chart3_mcv_adoption_probability_surface(metrics)
 
-    print("\n[6/9] Generating Chart 4: Fleet Composition Variability...")
+    print("\n[6/11] Generating Chart 4: Fleet Composition Variability...")
     chart4_fleet_composition_variability(df_full)
 
-    print("\n[7/9] Generating Chart 5: Fleet Size Reduction vs MCV Adoption...")
+    print("\n[7/11] Generating Chart 4A: Selected Blocks (Primary)...")
+    chart4a_selected_blocks_primary(df_full)
+
+    print("\n[8/11] Generating Chart 4B: Selected Blocks (Alternative)...")
+    chart4b_selected_blocks_alternative(df_full)
+
+    print("\n[9/11] Generating Chart 5: Fleet Size Reduction vs MCV Adoption...")
     chart5_fleet_size_reduction_vs_mcv_adoption(df_full, scv_baseline)
 
-    print("\n[8/9] Generating Chart 6B: Multi-Good by Cost Level...")
+    print("\n[10/11] Generating Chart 6B: Multi-Good by Cost Level...")
     chart6b_multigood_by_cost_level(df_full)
 
-    print("\n[9/9] Generating Chart 6C: Multi-Good Terciles...")
+    print("\n[11/11] Generating Chart 6C: Multi-Good Terciles...")
     chart6c_multigood_tercile_bars(df_full)
 
     # Generate summary statistics

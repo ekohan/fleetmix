@@ -29,22 +29,10 @@ coverage/coverage-summary.json
 src/*.egg-info/
 
 # Etc
-*tex
-*.pdf
-*.docx
-*.xml
-*.xlsx
 *.egg-info/
-*.txt
 .idea/
 .cursor/
 .cursorignore
-executive_summary_embedded.html
-executive_summary_intended_embedded.html
-scv_baseline_issue.md
-
-# TODO: do add the paper
-paper_wip.txt
 
 # TODO: solve optimality gap implementation
 *-pulp.lp

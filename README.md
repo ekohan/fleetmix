@@ -273,8 +273,8 @@ vehicles:
     max_route_time: 10
     allowed_goods: ["Chilled", "Frozen"]  # No dry goods capability
   
-  # Multi-temperature truck (no allowed_goods = can carry all goods)
-  MultiTempTruck:
+  # Multi-product type truck (no allowed_goods = can carry all goods)
+  MultiProductTruck:
     capacity: 4500
     fixed_cost: 225
     avg_speed: 30

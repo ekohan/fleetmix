@@ -133,8 +133,8 @@ vehicles:
 2. Run with multi-compartment option:
 ```yaml
 vehicles:
-  MultiTempTruck:
-    # No allowed_goods = can carry all
+  MultiProductTruck:
+    # No allowed_goods = can carry all product types
 ```
 
 3. Compare costs and fleet sizes

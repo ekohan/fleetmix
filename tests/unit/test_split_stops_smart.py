@@ -59,7 +59,7 @@ class TestSmartSplitStops:
         configs.append(
             VehicleConfiguration(
                 config_id=4,
-                vehicle_type="MultiTemp",
+                vehicle_type="MultiProduct",
                 capacity=5000,
                 fixed_cost=300,
                 compartments={"Dry": False, "Chilled": True, "Frozen": True}

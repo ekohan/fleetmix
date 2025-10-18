@@ -55,9 +55,9 @@ $$x_{vk} \in \{0,1\}, \quad \forall v \in V, k \in K_v$$
 
 1. **Fixed cost**: Vehicle fixed cost
 2. **Variable cost**: Time-based
-   $$c_{vk}^{\text{variable}} = \text{variable\_cost\_per\_hour} \times t_{vk}$$
+   $$c_{vk}^{\text{variable}} = \text{variable cost per hour} \times t_{vk}$$
    where $t_{vk}$ is route time (see [route_time_estimation.md](route_time_estimation.md))
-3. **Compartment setup cost**: $(|M_v| - 1) \times \text{compartment\_setup\_cost}$
+3. **Compartment setup cost**: $(|M_v| - 1) \times \text{compartment setup cost}$
    where $|M_v|$ is number of active compartments
 4. **Light load penalty**: Applied if load % < threshold
 

@@ -13,11 +13,11 @@ A **vehicle configuration** is a vehicle type with a specific subset of compartm
 
 For each vehicle type and non-empty compartment subset $M' \subseteq M$:
 
-$$v = (\text{vehicle\_type}, M', Q, T, \text{costs})$$
+$$v = (\text{vehicle type}, M', Q, T, \text{costs})$$
 
 **Total configurations**: $r \cdot (2^{|M|} - 1)$ where $r$ = vehicle types, $|M|$ = compartments
 
-**Allowed goods constraint**: $M'_v \subseteq M_{\text{allowed}}^{\text{vehicle\_type}}$ (reduces configurations for specialized vehicles)
+**Allowed goods constraint**: $M'_v \subseteq M_{\text{allowed}}^{\text{vehicle type}}$ (reduces configurations for specialized vehicles)
 
 ## Key Design Choices
 

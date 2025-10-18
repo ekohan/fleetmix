@@ -17,7 +17,7 @@ Estimates route duration for serving a cluster. Used for feasibility checking (P
 
 ### BHH (Beardwood-Halton-Hammersley)
 
-**Formula**: $t_{vk} = \text{setup} + 2 \cdot \text{depot\_travel} + \beta \cdot \sqrt{n \cdot A} / \text{speed} + \text{service} \cdot n$
+**Formula**: $t_{vk} = \text{setup} + 2 \cdot \text{depot travel} + \beta \cdot \sqrt{n \cdot A} / \text{speed} + \text{service} \cdot n$
 
 - $\beta = 0.765$ (constant in implementation)
 - $A$ = cluster area (approximated as $\pi \cdot r^2$ where $r$ = max distance from centroid)

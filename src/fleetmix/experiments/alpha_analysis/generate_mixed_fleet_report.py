@@ -1558,7 +1558,7 @@ def create_html_report() -> str:
             
             <h4>3. Demand Fulfillment Optimization</h4>
             <p>
-                MCVs' multi-temperature capability allows for more flexible demand fulfillment strategies, 
+                MCVs' multi-product type capability allows for more flexible demand fulfillment strategies, 
                 creating spillover benefits in inventory management and customer satisfaction that extend 
                 beyond transportation efficiency.
             </p>
@@ -1567,7 +1567,7 @@ def create_html_report() -> str:
         <h3>Optimal Fleet Design Principles</h3>
         <p>
             The analysis reveals several key principles for achieving optimal fleet design in 
-            multi-temperature distribution:
+            multi-product type distribution:
         </p>
         
         <table>
@@ -1649,7 +1649,7 @@ def create_html_report() -> str:
         <div class="insight-box">
             <h3>3. Demand Characteristics</h3>
             <p>
-                MCV benefits are robust across demand patterns. Even on days with lower multi-temperature 
+                MCV benefits are robust across demand patterns. Even on days with lower multi-product type 
                 demand, MCVs maintain advantages through route efficiency and flexibility.
             </p>
         </div>

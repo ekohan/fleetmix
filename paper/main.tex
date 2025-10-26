@@ -145,7 +145,7 @@ To address this challenge, distributors have increasingly turned to fleets of \a
 \acp{MCV} are generally designed with either fixed or flexible compartments.  \acp{MCV} with fixed compartments have predefined capacities determined during manufacturing and cannot be altered, whereas \acp{MCV} with flexible compartments offer the ability to adjust their sizes \citep{henke2015multi}. 
 In the context of food distribution, \acp{MCV} commonly have three compartments for dry, refrigerated, and frozen foods, with adjustable sizes to match load requirements. Companies like FreshDirect, Sysco, and Whole Foods Markets have reported the benefits of using \acp{MCV}, including improved customer experience through single-stop deliveries and reduced fuel costs, emissions, traffic exposure, and parking issues \citep{MultiTempLogistics2024}. By consolidating different product categories, \acp{MCV} also reduce the number of vehicles needed to meet demand compared to using separate \acp{SCV}.
 
-In this work, we address the tactical design of \ac{MCV} fleets for last-mile food distribution systems. Unlike existing works, our problem considers several important real-world features of modern delivery operations with \acp{MCV}, including heterogeneous vehicles with flexible compartments, both fixed and variable vehicle usage costs, route duration constraints, and a large number of customers. The problem consists of determining three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type, number, and size of compartments assigned to each vehicle,  and (iii) the distribution plan (i.e., demand allocation) for each vehicle. The objective is to minimize total fixed and variable vehicle costs while satisfying customer demand for different product types.
+In this work, we investigate the problem of designing \ac{MCV} fleets for last-mile food distribution systems. Unlike existing works, our problem considers several important real-world features of modern delivery operations with \acp{MCV}, including heterogeneous vehicles with flexible compartments, both fixed and variable vehicle usage costs, route duration constraints, and a large number of customers. The problem consists of determining three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type, number, and size of compartments assigned to each vehicle,  and (iii) the distribution plan (i.e., demand allocation) for each vehicle. The objective is to minimize total fixed and variable vehicle costs while satisfying customer demand for different product types.
 
 Our main methodological and practical contributions can be summarized as follows.
 \begin{enumerate}
@@ -410,45 +410,94 @@ Note that, regardless of the instance category, our matheuristic (from generatin
 
 In summary, these results validate the effectiveness of our matheuristic in finding high-quality solutions while maintaining short computational times.
 
-\section{Case Study} \label{sec:case_study}
+\section{Real-World Case Study} \label{sec:case_study}
 
-% \red{Introduce the section. Recall that we are using the same computational environment described in Section 
+After showing the computational performance of our matheuristic approach, we now present and discuss results from a real-world case study based on the current operation of our industry partner, a leading business-to-business food distributor based in Bogotá, Colombia. We begin this section by describing our real-world problem instances. We then present and discuss managerial insights regarding the benefits of adopting \acp{MCV}. Lastly, we analyze the resulting fleet composition under different cost structures. Throughout this section, we employ the same parameters and computational environment described in Section \ref{sec:synthetic_results}.
 
-We also want to evaluate the effectiveness of our matheuristic in a real-world groceries distribution operation, for that we will use a case study located in Bogota, Colombia. In addition, we will conduct a sensitivity analysis to assess the impact on operations when altering certain parameters, e.g., vehicle capacity, number of visits allowed for each customer, among others. We run all experiments for the case of study in the same computer use in section \ref{sec:synthetic_results}.
+\subsection{Real-World Problem Instances}
 
-The rest of the section is organize as follows. First, we explain the characteristics and why we use the baseline scenario. Second, we delve into the parameters considered in the sensitivity analysis and their impact on operations. Third, we present the results analysis along with the discussion.
+Our industry partner provided us with a rich dataset containing 70 days of real-world demand information. Each day (i.e., problem instance) provides detailed information about customer locations and the quantities of products requested by product type (frozen, refrigerated, and dry). Below, we explain the main characteristics of the service area and vehicle fleet, as well as the parameter values used.
 
-\subsection{Baseline Scenario}
+\paragraph{Service area} 
+The service area is located in Bogotá, Colombia, the country's most populous city. Geographically, the service area spans around \red{1,230} km$^2$. The company serves an average of \red{XX} customers daily from a single depot. Figure \ref{fig:CaseStudyArea} shows the spatial distribution of customers for a representative day \red{(to protect confidentiality, the node locations have been slightly perturbed)}.
 
-The baseline scenario is a more realistic set of instances. The instances have a larger number of customers and also consider demands with greater variability between customers, which resembles the reality in operations of a company that distributes groceries. The baseline scenario allows us to test the matheuristic without focusing on the effect of a specific parameter. The important features of the baseline are described below:
-
-\paragraph{Service area} The service area is located in the city of Bogota, Colombia. With a territorial extension of approximately 1,776~km\textsuperscript{2} and a population of 7,412,566 inhabitants according to the 2018 national census. Bogota is the most populous city in the country and serves as its capital. Geographically, it is located at a latitude of 4°35'56'' North and a longitude of 74°04'51'' West of Greenwich. This demographic and spatial context provides a representative urban environment for testing the performance and adaptability of logistics solutions under real-world conditions.
-
-\paragraph{Customers demand} The demand nodes represent the set of customers to be served in the last-mile delivery network. The dataset includes three months of demand information, that represent 70 daily instances. Each instance provides detailed information about customer locations and the quantity of products requested by product type, i.e., frozen, refrigerated, and dry. The set of customers may vary from day to day, and both the amount and type of products they demand change across days. Though all customers are located within the area represented in Figure \ref{fig:CaseStudyArea}, which illustrates a sample of customer locations, the road network, and the depot position.
-
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.5\textwidth]{Generic Paper/Imagens/bogotamap.png}
-    \caption{Case of Study Service Area}
+    \caption{Service area and customer distribution.}
     \label{fig:CaseStudyArea}
 \end{figure}
 
-\paragraph{Heterogeneous vehicle fleet} The case study considers a heterogeneous fleet composed of flexible multi-compartment vehicles with three capacity levels and associated fixed and variable costs. Vehicle type A has a total capacity of 700 kg and a fixed cost of 10 units; type B has a capacity of 1,300 kg and a fixed cost of 12 units; and type C provides 2,500 kg at a fixed cost of 15 units.
+\paragraph{Heterogeneous \acp{MCV}}
+The company operates a fleet of heterogeneous \acp{MCV}, comprising three vehicle types with flexible compartments.
+Before the delivery horizon begins, the company decides the number of each vehicle type to deploy and their respective compartment configurations.
+Vehicle type A has a total capacity of 700 kg and a fixed cost of \red{10 units}; type B has a capacity of 1,300 kg and a fixed cost of 12 units; and type C provides 2,500 kg at a fixed cost of 15 units \red{(costs have been scaled for confidentiality)}.
+Each vehicle type allows seven compartment configurations (see Section \ref{sec:generate_configurations}), with a (homogeneous) setup cost of 50 units per compartment. We assume that vehicles travel the Euclidean distance between nodes at a constant speed of 30 km/h. Based on the company's recommendation, we set a service time of 25 minutes per stop, which is the average time the company takes to deliver food products to their customers (e.g., local restaurants or hotels). The variable travel cost is 10 units per operating hour, with a maximum route duration of 10 hours. 
 
-Each vehicle type allows seven compartment configurations, as detailed in Section \ref{sec:generate_configurations}, resulting in 21 possible vehicle configurations. The setup cost per compartment is 50 units. The model can select any number of vehicles from these configurations, with no upper bound on the use of a specific configuration.
-
-Even when two vehicles share the same compartment structure, their effective compartment capacities may differ due to the compartment flexibility. This feature allows compartment sizes to adjust dynamically to the product demands assigned to each vehicle, improving capacity utilization while meeting the requirements of the three product types.
-
-The routing cost matrix is derived from Euclidean distances and assumes a constant travel speed of 30 km/h for all vehicles. Each stop includes a service time of 25 minutes. The variable routing cost is 10 units per operating hour, with routes limited to a maximum of 10 hours. Multiple trips per vehicle are not allowed within the same operation.
-
-Having defined the fleet characteristics and operational parameters of the baseline scenario, we now present the sensitivity analysis. We explore how variations in key parameters like vehicle capacity, available service time and maximum route time impact in the solution.  
+\paragraph{Scenarios of analysis} We set the aforementioned parameters as our baseline scenario, capturing the company's current operations. However, we also assess the effects of three key parameters on the benefits of adopting \acp{MCV}: total vehicle capacity, customer service time, and the maximum allowed vehicle route duration. \blue{\textbf{JC}: I need to improve this paragraph.}
 
 \subsection{Benefits of Using Multi-Compartment Vehicles}
-The sensitivity analysis evaluates how variations in selected parameters affect the performance of the proposed matheuristic in the case of study. The analysis focuses on parameters like total costs, service time, and maximum route duration. We changed these parameters in the 70 base instances and compared the KPIs in the form of means in order to capture the impact in every day of the case study.
+The sensitivity analysis evaluates how variations in selected parameters affect the fleet size and composition. The analysis focuses on parameters (i) like service time (the time it takes for a vehicle to serve a customer when this vehicle visits this node); (ii) capacity of the vehicles; (iii) maximum route duration; (iv) fixed cost for multi-compartment vehicles; (v) and compartment set up cost. We changed these parameters in the 70 base instances and compared the KPIs in the form of means in order to capture the impact in every day of the case study. We first focus our analysis in the first three parameters and in how they affect operational variables like the number of vehicles in the fleet. 
 
-The evaluation relies on key performance indicators (KPIs) such as vehicle used, total cost, average load, average customers per vehicle, average route time, and amount of vehicles with one, two or three compartments. These experiments allow identifying which parameters have the greatest impact on operational performance.
+The analysis is shown in Table \ref{tab:sensitivity_analysis}, which summarizes the results obtained when varying vehicle capacity, service time, and maximum route duration in the 70 base instances. Each parameter was modified by a variation of 20\% and 50\% relative to the baseline to quantify the effect on vehicle utilization, total cost, utilization of cargo space, number of customers allocated in each vehicle, route time, and fleet composition. Table \ref{tab:sensitivity_analysis} shows a comparison of these effects in a mixed fleet, with the possibility of being composed of MCVs and SCVs, versus a \ac{SCV} fleet. The comparison between the two types of fleets captures the impact of allowing the use of MCVs.
 
-\subsection{Fleet Composition Analysis}
+\begin{table}[H]
+  \centering
+  \caption{Average operational metrics (over 70 instances) per parameter variation.}
+  \scalebox{0.8}{%
+    \begin{tabular}{lrrrrcrrrrr}
+    \toprule
+    \multirow{2}[4]{*}{Parameter} & \multicolumn{1}{c}{\multirow{2}[4]{*}{Variation}} &       & \multicolumn{2}{c}{\thead{Load vehicle \\ utilization}} &       & \multicolumn{2}{c}{\thead{Customers \\ per vehicle}} &       & \multicolumn{2}{c}{\thead{Effective route \\ duration}} \\
+\cmidrule{4-5}\cmidrule{7-8}\cmidrule{10-11}          &       &       & \multicolumn{1}{c}{MCV} & \multicolumn{1}{c}{SCV} &       & \multicolumn{1}{c}{MCV} & \multicolumn{1}{c}{SCV} &       & \multicolumn{1}{c}{MCV} & \multicolumn{1}{c}{SCV} \\
+    \midrule
+    \multirow{5}[2]{*}{Capacity } & -50\% &       & 87.0\% & 85.9\% &       & 10.0  & 12.2  &       & 5.3   & 6.6 \\
+          & -20\% &       & 83.6\% & 79.6\% &       & 11.7  & 13.3  &       & 6.1   & 7.1 \\
+          & 0\%   &       & 81.4\% & 76.0\% &       & 12.8  & 13.7  &       & 6.6   & 7.3 \\
+          & 20\%  &       & 79.7\% & 71.8\% &       & 13.3  & 14.1  &       & 6.9   & 7.5 \\
+          & 50\%  &       & 76.1\% & 66.5\% &       & 13.8  & 14.4  &       & 7.1   & 7.7 \\
+    \midrule
+    \multirow{5}[2]{*}{Service Time} & -50\% &       & 83.6\% & 78.4\% &       & 16.9  & 19.1  &       & 5.0   & 5.9 \\
+          & -20\% &       & 82.6\% & 76.9\% &       & 14.2  & 15.4  &       & 6.1   & 6.8 \\
+          & 0\%   &       & 81.4\% & 76.0\% &       & 12.8  & 13.7  &       & 6.6   & 7.3 \\
+          & 20\%  &       & 80.4\% & 73.9\% &       & 11.4  & 12.4  &       & 6.9   & 7.7 \\
+          & 50\%  &       & 78.5\% & 70.3\% &       & 10.0  & 10.9  &       & 7.3   & 8.1 \\
+    \midrule
+    \multirow{5}[2]{*}{Max. Route Duration } & -50\% &       & 70.6\% & 57.1\% &       & 7.4   & 8.0   &       & 4.0   & 4.4 \\
+          & -20\% &       & 80.4\% & 72.3\% &       & 10.9  & 11.8  &       & 5.7   & 6.3 \\
+          & 0\%   &       & 81.4\% & 76.0\% &       & 12.8  & 13.7  &       & 6.6   & 7.3 \\
+          & 20\%  &       & 82.5\% & 78.2\% &       & 14.1  & 15.3  &       & 7.3   & 8.1 \\
+          & 50\%  &       & 82.3\% & 78.9\% &       & 15.7  & 17.6  &       & 8.0   & 9.3 \\
+    \bottomrule
+    \end{tabular}%
+    }
+  \label{tab:sensitivity_analysis}%
+\end{table}%
+
+
+{Effects of Vehicle Capacity}. As shown in table \ref{tab:sensitivity_analysis}, increasing vehicle capacity leads to a clear reduction in the number of vehicles required, from an average of 20.2 MCVs in the baseline to 19.4 and 18.5 under +20\% and +50\% capacity, respectively. In the other hand, reducing capacity by 20\% and 50\% increases the fleet size to 22.2 and 26.5 MCVs. This inverse relationship between capacity and fleet size is consistent with expectations, as higher load availability allows for more customers allocated to each selected vehicle in the fleet. The total cost follows the same trend, decreasing by approximately 7\% and 14\% under +20\% and +50\% scenarios, respectively, due to fewer vehicles and improved load factors. In contrast, for SCV-only fleets, cost reductions are less pronounced,  
+
+{Effects of Service Time}. Variations in service time reveal a strong positive correlation with both fleet size and total cost. When service times are extended by 20\% and 50\%, the number of MCVs increases from 20.2 to 22.5 and 25.8, respectively, reflecting the need for additional vehicles to compensate for reduced delivery productivity. Similarly, total operating costs rise by nearly 20\% under the +50\% scenario. The effect is magnified in SCV fleets, where the lack of compartmental flexibility amplifies inefficiencies, as each vehicle performs fewer deliveries per route. Conversely, reducing service time by 50\% lowers the number of vehicles used to 15.9 MCVs and decreases costs by approximately 15\%. 
+
+{Effects of Maximum Route Duration}. Maximum route duration also exerts a strong influence on fleet configuration. Extending the allowable route time by 20\% and 50\% reduces the number of MCVs from 20.2 in the baseline to 18.4 and 16.6, respectively, while decreasing total cost by nearly 10–15\%. Longer routes enhance vehicle productivity by enabling the consolidation of more customers within a single trip. Conversely, when the maximum route time is shortened by 50\%, the number of vehicles increases to 25.8, and total cost rises sharply due to the additional vehicles required to meet service constraints. 
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\linewidth]{Generic Paper/Imagens/enhanced_fleet_cost_comparison_latex.pdf}
+    \vspace{0.1mm}
+    \caption{Fleet Size and Total Cost}
+    \label{fig:fleet size vs total cost}
+\end{figure}
+
+To complement table \ref{tab:sensitivity_analysis}, figure \ref{fig:fleet size vs total cost} illustrates the relationship between the tested parameters and two key metrics: fleet size (top row) and total cost (bottom row). Each subplot compares MCV and SCV performance across the parameter variations. The graphs clearly show consistent, monotonic behavior across all cases: (i) Capacity variation, both fleet size and total cost decline as capacity increases, with the heterogeneous mix fleet exhibiting steeper reductions; (ii) service time variation, longer service times cause nearly linear increases in both metrics, confirming their high operational sensitivity; (iii) maximum route duration, relaxing route time constraints reduces fleet size and total cost sharply at first, with diminishing returns beyond +20\%.
+
+Figure \ref{fig:fleet size vs total cost} visually reinforces the numerical insights from table \ref{tab:sensitivity_analysis}. It highlights the superior performance of the heterogeneous mix fleet, whose performance is less affected by operational changes compared to SCVs. The smoother slopes in the MCV curves indicate that their flexibility in handling multiple products mitigates the adverse effects of time and capacity restrictions.
+
+Overall, the results from Table \ref{tab:sensitivity_analysis} and Figure \ref{fig:fleet size vs total cost} demonstrate that operational parameters—capacity, service time, and route duration—directly influence the fleet mix and utilization level. The next sensitivity analysis extends this exploration to economic parameters, specifically the fixed cost of multi-compartment vehicles and the compartment setup cost. These factors determine not only the total fleet cost but also the cost effectiveness of using \ac{MCV} over \ac{SCV}, shaping the overall composition and mix of the fleet.
+
+\subsection{Fleet Composition Analysis} 
+
+
 
 \section{Discussion} \label{sec:discussion}
 

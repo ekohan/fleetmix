@@ -51,7 +51,14 @@
 \newcommand{\red}[1]{\textcolor{red}{#1}}
 \usepackage{color, colortbl}
 \allowdisplaybreaks
-\usepackage{verbatim} 
+\usepackage{verbatim}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible
+}
 \usepackage[]{acronym}
 \usepackage{lipsum}
 \usepackage{amsmath}
@@ -69,6 +76,7 @@
 \usepackage[left=1in,right=1in,top=1in,bottom=1in,margin=1in]{geometry} % Consolidated geometry options
 \usepackage{etoc} % For the Appendices mini TOC
 \usepackage[colorlinks = true, linkcolor=CITE, citecolor=CITE, urlcolor=CITE]{hyperref}
+\usepackage{microtype}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Subsection}
 \renewcommand{\subsubsectionautorefname}{Subsubsection}
@@ -112,7 +120,7 @@
 \begin{highlights}
 \item We study a fleet size and mix problem with heterogeneous multi-compartment vehicles.
 \item We propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme.
-\item We present \textsc{FleetMix}, an open-source implementation of our matheuristic distributed via PyPI.
+\item We present \textsc{FleetMix}, a spec-driven, open-source implementation of our matheuristic for verifiable and extensible research.
 \item We show the effectiveness of \textsc{FleetMix} compared to existing solution approaches.
 \item We derive several managerial insights 
 % into the value of using multi-compartment vehicles 
@@ -337,19 +345,45 @@ must replace Constraints \eqref{2} in Problem \eqref{P} to allow multiple delive
 We perform an improvement phase on the \ac{MCV} fleet size and mix found by Problem \eqref{P}.
 Specifically, after solving Problem \eqref{P} for a given set of clusters $K$, we consider each pair of clusters $(k_i, k_j)$ selected in the optimal solution $\boldsymbol{x}^*$ (i.e., $x^*_{k_i,v_i} = 1$ and $x^*_{k_j,v_j} = 1$ for some $v_i, v_j \in V$), check if a single vehicle configuration can feasibly serve them together based on the load capacity and route duration constraints, and, if feasible, update the set of clusters by adding $k_i \cup k_j$, i.e., $K = K \cup \{k_i \cup k_j\}$. After finishing updating the set of clusters, we solve Problem \eqref{P} and repeat this procedure until no further improvement can be reached. Note that, unlike the merging procedure performed during the clustering phase (see Section \ref{sec:generate_feasible_clusters}), which considers only small clusters that are geographically close, our improvement phase evaluates all possible pairs of clusters (selected in the optimal solution at hand) regardless of their size or spatial proximity.
 
-\section{\textsc{FleetMix}: A Python Package} \label{sec:fleetmix}
+\section{\textsc{FleetMix}: A Spec-Driven Python Package for Verifiable Research} \label{sec:fleetmix}
 
-To facilitate the practical application and scientific reproducibility of our matheuristic approach, we develop \textsc{FleetMix}, an open-source Python implementation released under the MIT license. The software package (version 1.0.0, tagged as \texttt{paper-1.0.0} in the repository) is available at \url{https://github.com/ekohan/fleetmix} and distributed via PyPI, enabling practitioners and researchers to apply our cluster-first, fleet design-second methodology to their specific contexts while ensuring complete reproducibility of our experiments.
+\textsc{FleetMix} is the executable companion to our matheuristic: a Python package that implements every algorithm and model presented in this paper. Available on PyPI and at \url{https://github.com/ekohan/fleetmix} under the MIT license, it serves three audiences. Reviewers can reproduce our results with a single command, researchers can extend the algorithms by swapping components, and practitioners can deploy it directly in production. The version used for this paper (\texttt{paper-1.0.0}) is permanently archived to ensure reproducibility.
 
-\subsection{Architecture and Design Principles}
+\subsection{Architecture and Design}
 
-\textsc{FleetMix} implements our matheuristic through a modular architecture comprising four core subsystems: (i) a clustering engine that generates feasible customer clusters using the techniques described in Section \ref{sec:generate_feasible_clusters}, (ii) an optimization core that solves the integer programming formulation presented in Section \ref{sec:model_formulation}, (iii) a post-optimization refinement module implementing the improvement phase detailed in Section \ref{sec:improvement_phase}, and (iv) a comprehensive benchmarking framework for systematic evaluation. 
+\textsc{FleetMix} implements our matheuristic through four core modules that mirror the paper's structure: (i) a clustering engine that generates feasible customer clusters using the techniques described in Section \ref{sec:generate_feasible_clusters}, (ii) an optimization core that solves the integer programming formulation presented in Section \ref{sec:model_formulation}, (iii) a post-optimization refinement module implementing the improvement phase detailed in Section \ref{sec:improvement_phase}, and (iv) a benchmarking framework for systematic evaluation. 
 
-The implementation follows a procedural pipeline design where each computational stage operates independently. Through a Protocol-based architecture \citep{pythontyping_protocols_2025}, researchers can substitute individual algorithmic components while maintaining the integrity of the overall pipeline. This extensibility enables experimentation with alternative clustering algorithms, route duration estimators, or MILP solvers. As a result, researchers can rapidly explore new ideas on problem variants. 
+The implementation uses well-defined interfaces between components. Researchers can substitute alternative clustering algorithms, route time estimators, or MILP solvers without modifying other modules.
 
-\subsection{Implementation and Usage}
+\subsection{Specification System}
 
-\textsc{FleetMix} exposes three complementary interfaces to accommodate diverse user requirements. The command-line interface serves as the primary entry point for fleet optimization through \texttt{fleetmix optimize}, with \texttt{fleetmix benchmark} regenerating every experiment presented in Sections \ref{sec:synthetic_results} and \ref{sec:case_study}. For programmatic integration, the Python API (accessible via \texttt{import fleetmix as fm}) allows seamless incorporation into existing workflows. Additionally, a web-based graphical interface facilitates interactive parameter exploration and solution visualization, particularly valuable for fleet managers who need to evaluate multiple scenarios without programming expertise. All three interfaces operate on identical input-output schemas, ensuring reproducibility across usage modalities.
+To address the semantic gap between mathematical description and software implementation in computational research, we connect the paper's mathematical formulation to its software through nine machine-readable specification documents. Each specification details a component's mathematical basis, interface contract, implementation, and usage examples. For example, \texttt{clustering.md} documents the split-and-merge procedure (Algorithm \ref{alg:recursive_split}), its default parameters, and how edge cases are handled, providing context that is difficult to extract from source code alone. This specification layer enables reviewers to trace equations to implementations and researchers to extend the methodology with confidence.
+
+Table \ref{tab:spec_traceability} illustrates this traceability, mapping key elements of our matheuristic from the paper to the corresponding software counterparts.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Traceability between paper sections, specification documents, and implementation modules.}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{@{}p{0.20\textwidth}p{0.34\textwidth}p{0.36\textwidth}@{}}
+    \toprule
+    \textbf{Paper Section} & \textbf{Specification Document} & \textbf{Implementation Module} \\
+    \midrule
+    \S\ref{sec:generate_configurations} Vehicle Configs & \texttt{vehicle\_configurations.md} & \texttt{utils/vehicle\_configurations.py} \\[2pt]
+    \S\ref{sec:generate_feasible_clusters} Clustering & \texttt{clustering.md} & \texttt{clustering/generator.py} \\[2pt]
+    \S\ref{sec:model_formulation} Optimization & \texttt{optimization.md} & \texttt{optimization/core.py} \\[2pt]
+    \S\ref{sec:improvement_phase} Improvement & \texttt{post\_optimization.md} & \texttt{post\_optimization/merge\_phase.py} \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:spec_traceability}
+\end{table}
+
+\subsection{Usage}
+
+\textsc{FleetMix} exposes three interfaces. The command-line tool serves as the primary entry point (e.g., \lstinline|fleetmix optimize --demand customers.csv --config fleet.yaml|), and the command \lstinline|fleetmix benchmark| regenerates every experiment in Sections~\ref{sec:synthetic_results} and~\ref{sec:case_study}. The Python API (\lstinline|import fleetmix as fm|) enables programmatic integration. The web interface allows interactive parameter exploration without coding. All three interfaces use identical input-output schemas, ensuring reproducibility across modalities. The repository includes worked examples: \lstinline|custom_clustering.py| implements a round-robin clustering method, \lstinline|custom_route_time.py| provides a straight-line route time estimator, \lstinline|custom_solver_adapter.py| integrates a solver with relaxed optimality gap, and \lstinline|heterogeneous_fleet.py| demonstrates configuring mixed fleets with product-specific vehicle constraints.
+
+
 
 % \subsection{Computational Performance}
 

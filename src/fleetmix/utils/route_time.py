@@ -555,8 +555,9 @@ class TSPEstimator:
         assert distance_matrix is not None
         assert duration_matrix is not None
 
-        distance_matrices: list[IntMatrix] = [distance_matrix]
-        duration_matrices: list[IntMatrix] = [duration_matrix]
+        # Cast to Any to work around PyVRP type stub limitations
+        distance_matrices: list[Any] = [distance_matrix]
+        duration_matrices: list[Any] = [duration_matrix]
 
         problem_data = ProblemData(
             clients=pyvrp_clients,

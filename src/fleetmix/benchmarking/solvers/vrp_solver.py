@@ -3,7 +3,7 @@ Single-compartment VRP solver module using PyVRP.
 Provides baseline comparison for multi-compartment vehicle solutions.
 """
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -118,16 +118,22 @@ class VRPSolver:
         )
 
         # Create duration matrices for each vehicle type based on their specific avg_speed
-        distance_matrices: list[IntMatrix] = [distance_matrix_int] * len(vehicle_types)
+        distance_matrices_typed: list[IntMatrix] = [distance_matrix_int] * len(
+            vehicle_types
+        )
 
-        duration_matrices: list[IntMatrix] = []
+        duration_matrices_typed: list[IntMatrix] = []
         for vt_spec in self.params.problem.vehicles.values():
             speed = max(float(vt_spec.avg_speed), 1e-6)
             raw_duration = (base_distance_matrix_km / speed) * 3600
             clipped_duration = np.clip(raw_duration, 0, MAX_DURATION_SECONDS)
-            duration_matrices.append(
+            duration_matrices_typed.append(
                 cast(IntMatrix, clipped_duration.astype(np.int_, copy=False))
             )
+
+        # Cast to Any to work around PyVRP type stub limitations
+        distance_matrices: list[Any] = distance_matrices_typed
+        duration_matrices: list[Any] = duration_matrices_typed
 
         # Create problem data
         self.data = ProblemData(

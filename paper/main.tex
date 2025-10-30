@@ -51,7 +51,14 @@
 \newcommand{\red}[1]{\textcolor{red}{#1}}
 \usepackage{color, colortbl}
 \allowdisplaybreaks
-\usepackage{verbatim} 
+\usepackage{verbatim}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible
+}
 \usepackage[]{acronym}
 \usepackage{lipsum}
 \usepackage{amsmath}
@@ -69,6 +76,7 @@
 \usepackage[left=1in,right=1in,top=1in,bottom=1in,margin=1in]{geometry} % Consolidated geometry options
 \usepackage{etoc} % For the Appendices mini TOC
 \usepackage[colorlinks = true, linkcolor=CITE, citecolor=CITE, urlcolor=CITE]{hyperref}
+\usepackage[expansion=false]{microtype}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Subsection}
 \renewcommand{\subsubsectionautorefname}{Subsubsection}
@@ -105,14 +113,13 @@
 \address[PUCV-Address]{Pontificia Universidad Católica de Valparaíso, Valparaíso, Chile}
 % \address[EMeL-Address]{MIT Emerging Market Economies Logistics Lab, Center for Transportation and Logistics, Massachusetts Institute of Technology, Cambridge, USA}
 
-
 \onehalfspacing
 
 %% WRITE YOUR HIGHLIGHTS HERE %%%
 \begin{highlights}
 \item We study a fleet size and mix problem with heterogeneous multi-compartment vehicles.
 \item We propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme.
-\item We present \textsc{FleetMix}, an open-source implementation of our matheuristic distributed via PyPI.
+\item We present \textsc{FleetMix}, a spec-driven, open-source implementation of our matheuristic.
 \item We show the effectiveness of \textsc{FleetMix} compared to existing solution approaches.
 \item We derive several managerial insights 
 % into the value of using multi-compartment vehicles 
@@ -121,13 +128,12 @@ for a real-world case study.
 
 \begin{abstract}	
 Urban food distributors are increasingly relying on flexible, multi-compartment vehicle fleets to handle diverse product mixes and challenging urban environments. While recent research on multi-compartment vehicle routing problems has explored a range of heuristics and constraints, to our knowledge, none has directly addressed fleet size and mix optimization for heterogeneous vehicles with flexible compartments in food distribution systems. Motivated by our collaboration with a major food distributor operating in Colombia, we close this practical and methodological gap by proposing a novel cluster-first, fleet design-second matheuristic approach that quickly produces cost-effective fleet size and mix solutions. 
-% Our approach first generates capacity-feasible, time-compliant candidate clusters using multiple clustering techniques. A mixed-integer linear programming model then selects optimal cluster-vehicle matches, reliably delivering high-quality solutions in seconds. 
 To support practitioners and researchers in applying and replicating our results, we make our matheuristic publicly available through \textsc{FleetMix}, an open-source Python package freely available under the MIT license and distributed via PyPI.
-We show the effectiveness of \textsc{FleetMix} in finding high-quality solutions compared to existing solution approaches on available benchmark instances. Based on a real-world case study, we also show the value of utilizing multi-compartment vehicles to reduce fleet sizes and total logistics costs.
+We show the effectiveness of \textsc{FleetMix} in finding high-quality solutions compared to existing solution approaches on available benchmark instances. Based on a real-world case study from our industry partner, which serves hundreds of customers daily, we also show the value of utilizing multi-compartment vehicles to reduce fleet sizes and total logistics costs.
 \end{abstract} 
 
 \begin{keyword}
-fleet design \sep multi-compartment \sep matheuristic \sep food distribution \sep last-mile logistics
+fleet design \sep multi-compartment \sep matheuristic \sep open-source Python package \sep last mile
 \end{keyword}
 	
 \end{frontmatter}
@@ -145,15 +151,15 @@ To address this challenge, distributors have increasingly turned to fleets of \a
 \acp{MCV} are generally designed with either fixed or flexible compartments.  \acp{MCV} with fixed compartments have predefined capacities determined during manufacturing and cannot be altered, whereas \acp{MCV} with flexible compartments offer the ability to adjust their sizes \citep{henke2015multi}. 
 In the context of food distribution, \acp{MCV} commonly have three compartments for dry, refrigerated, and frozen foods, with adjustable sizes to match load requirements. Companies like FreshDirect, Sysco, and Whole Foods Markets have reported the benefits of using \acp{MCV}, including improved customer experience through single-stop deliveries and reduced fuel costs, emissions, traffic exposure, and parking issues \citep{MultiTempLogistics2024}. By consolidating different product categories, \acp{MCV} also reduce the number of vehicles needed to meet demand compared to using separate \acp{SCV}.
 
-In this work, we address the tactical design of \ac{MCV} fleets for last-mile food distribution systems. Unlike existing works, our problem considers several important real-world features of modern delivery operations with \acp{MCV}, including heterogeneous vehicles with flexible compartments, both fixed and variable vehicle usage costs, route duration constraints, and a large number of customers. The problem consists of determining three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type, number, and size of compartments assigned to each vehicle,  and (iii) the distribution plan (i.e., demand allocation) for each vehicle. The objective is to minimize total fixed and variable vehicle costs while satisfying customer demand for different product types.
+Motivated by our collaboration with a major food distributor operating in Bogotá, Colombia, we investigate the problem of designing \ac{MCV} fleets for last-mile food distribution systems. Unlike existing works, our problem considers several important real-world features of modern delivery operations with \acp{MCV}, including heterogeneous vehicles with flexible compartments, both fixed and variable vehicle usage costs, route duration constraints, and a large number of customers. The problem consists of determining three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type, number, and size of compartments assigned to each vehicle,  and (iii) the distribution plan (i.e., demand allocation) for each vehicle. The objective is to minimize total fixed and variable vehicle costs while satisfying customer demand for different product types.
 
 Our main methodological and practical contributions can be summarized as follows.
 \begin{enumerate}
     \item \textbf{Novel Matheuristic Approach.} We propose a matheuristic approach based on a cluster-first, fleet design-second scheme. In this approach, we first generate feasible, potentially overlapping customer clusters using tailored clustering techniques that group customers while satisfying both vehicle capacity and maximum route duration constraints. We then use a mathematical programming formulation to determine the optimal \ac{MCV} fleet size and mix that minimizes total costs while satisfying each individual customer's demand. An appealing property of our matheuristic is that it can be easily adapted to existing variants addressed in the literature (see Section \ref{sec:literature}), including homogeneous vehicles, fixed compartments, and single- and multi-stop policies (where customers are allowed to be served via a single or multiple vehicle stops, respectively). This makes our matheuristic a unified and versatile approach suitable for a wide range of applications. 
 
-    \item \textbf{Open-Source Python Package.} To support practitioners and decision-makers in applying and replicating our findings, we introduce \textsc{FleetMix}, an open-source Python package available on GitHub (\url{https://github.com/ekohan/fleetmix}) under the MIT license and distributed via PyPI. \textsc{FleetMix} features a modular, protocol-based architecture that allows researchers to replace individual algorithmic components without compromising the integrity of the overall matheuristic pipeline. To further facilitate adoption, we provide three user interfaces: a command-line interface, a Python API, and a web-based graphical interface tailored for fleet managers with no coding experience.
+    \item \textbf{Open-Source Python Package.} To support practitioners and decision-makers in applying and replicating our findings, we introduce \textsc{FleetMix}, an open-source Python package available on GitHub (\url{https://github.com/ekohan/fleetmix}) under the MIT license and distributed via PyPI. \red{\textsc{FleetMix} features a modular, protocol-based architecture that allows researchers to replace individual algorithmic components without compromising the integrity of the overall matheuristic pipeline. To further facilitate adoption, we provide three user interfaces: a command-line interface, a Python API, and a web-based graphical interface tailored for fleet managers with no coding experience.}
 
-    \item \textbf{Numerical Validation and Managerial Insights.} We test our matheuristic approach using both synthetic instances from the literature and a real-world dataset from a food distributor operating in Bogotá, Colombia. Our results show the effectiveness of our matheuristic approach compared to benchmark solution approaches, generating high-quality fleet designs in seconds. For real-world instances, we illustrate the benefits of using \acp{MCV} to increase vehicle utilization and reduce both total costs and the number of vehicles compared to traditional \ac{SCV} fleets.
+    \item \textbf{Numerical Validation and Managerial Insights.} We test our matheuristic approach using both synthetic instances from the literature and a real-world dataset from a food distributor operating in Bogotá, Colombia, which serves hundreds of customers daily. Our results show the effectiveness of our matheuristic approach compared to benchmark solution approaches, generating high-quality fleet designs in seconds. For real-world instances, we illustrate the benefits of using \acp{MCV} to increase vehicle utilization and reduce both total costs and the number of vehicles compared to traditional \ac{SCV} fleets.
 \end{enumerate}
 
 The rest of the manuscript is structured as follows. We review the relevant literature in Section~\ref{sec:literature}, highlighting the research gaps we address and the main contributions of our work. Section~\ref{sec:problem_definition} defines the problem under investigation. In Section~\ref{sec:solution_approach}, we describe our cluster-first, fleet design-second solution approach. Section~\ref{sec:synthetic_results} shows the effectiveness of our matheuristic approach over synthetic instances from the literature, while Section \ref{sec:case_study} presents the results obtained using the real-world case study. We then summarize the main managerial implications of our work in Section \ref{sec:discussion}. Lastly, Section \ref{sec:conclusions} outlines our conclusions and describe several research avenues for future research.
@@ -204,7 +210,7 @@ which facilitates modeling heterogeneous fleets with flexible compartments by ca
 Leveraging this concept, our matheuristic creates feasible customer clusters per vehicle configuration, satisfying both capacity and route duration constraints. 
 An integer programming model then selects the optimal number of vehicles and their compartmentalization (i.e., the number, type, and size of compartments) to serve each individual customer's demand. The fleet size and mix found is then enhanced through an improvement phase that iteratively includes additional customer clusters into our integer program.
 
-Third, we develop \textsc{FleetMix}, an open-source Python package that allows practitioners and researchers to apply our matheuristic and replicate our results. \textsc{FleetMix} features a modular, protocol-based architecture that allows replacing individual components while preserving the overall methodological flow. To accommodate a wide range of users, \textsc{FleetMix} includes three interaction modes: a command-line tool, a Python API, and an intuitive web-based interface developed specifically for fleet managers without coding expertise.
+Third, we develop \textsc{FleetMix}, an open-source Python package that allows practitioners and researchers to apply our matheuristic and replicate our results. \red{\textsc{FleetMix} features a modular, protocol-based architecture that allows replacing individual components while preserving the overall methodological flow.} To accommodate a wide range of users, \textsc{FleetMix} includes three interaction modes: a command-line tool, a Python API, and an intuitive web-based interface developed specifically for fleet managers without coding expertise.
 
 Lastly, we validate the effectiveness of our matheuristic approach using both synthetic instances from the literature and a case study informed by real-world data from a food distributor in Bogotá, Colombia. \red{[Include a sentence summarizing the main results over synthetic instances].}
 Based on our real-world case study, we derive important managerial insights regarding the effects of \red{[to be completed].}
@@ -219,7 +225,7 @@ The delivery fleet comprises a set of heterogeneous vehicle types, each defined 
 we introduce the concept of \emph{vehicle configuration}, defined as a certain vehicle type equipped with a (non-empty) subset of compartments. The set of all vehicle configurations is denoted by $V$. For example, if the company operates two vehicle types and there are three available compartments, each type can be configured in $2^3 - 1 = 7$ distinct ways, resulting in $2 \times 7 = 14$ configurations in $V$. Based on the corresponding vehicle type, each vehicle configuration $v \in V$ has a maximum load capacity of $Q_v$, which can be distributed among its compartments, and a maximum route time duration of $T_v$. 
 
 Given our interest in addressing practical food distribution problems involving hundreds of customers, we aggregate customers into multiple capacitated clusters, denoted by the set $K$. Since these clusters are not necessarily mutually exclusive subsets of $N$, we define $K_i \subseteq K$ as the subset of clusters containing customer $i \in N$. As we explain in further detail in Section \ref{sec:solution_approach}, clusters are created based on the set of vehicle configurations $V$. Notably, we define $K_v \subseteq K$ as the subset of clusters that can be feasibly served by vehicle configuration $v \in V$ regarding maximum load capacity ($Q_v$) and route time duration ($T_v$) constraints. 
-Similarly, let $V_k \subseteq V$ be the set of vehicle configurations that can serve feasibly serve cluster $k \in K$. Based on the business context considered in our work, we consider that each vehicle used performs a single trip during the delivery horizon (e.g., a day). The total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, consists of a fixed cost incurring for dispatching the vehicle and equipping it with the set of compartments associated with the configuration, along with a variable cost based on the distance traveled to serve all customers in the cluster. Table \red{TBD} in \red{Appendix TBD} summarizes our mathematical notation.
+Similarly, let $V_k \subseteq V$ be the set of vehicle configurations that can feasibly serve cluster $k \in K$. Based on the business context considered in our work, we consider that each vehicle used performs a single trip during the delivery horizon (e.g., a day). The total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, consists of a fixed cost incurring for dispatching the vehicle and equipping it with the set of compartments associated with the configuration, along with a variable cost based on the distance traveled to serve all customers in the cluster. Table \red{TBD} in \red{Appendix TBD} summarizes our mathematical notation.
 
 The problem involves determining the optimal \ac{MCV} fleet size and mix by deciding the number of each vehicle configuration to use. Specifically, this includes selecting the appropriate vehicle types, defining their compartmentalization (i.e., number, type, and load capacity associated with each compartment), and assigning each selected vehicle configuration to a specific customer cluster. The objective is to minimize the total fixed and variable vehicle costs while meeting the individual demand of each customer for different product types. Note that, as we address a tactical fleet size and mix problem, operational routing decisions are not explicitly modeled but are implicitly accounted for when verifying that each customer cluster adheres to maximum route time constraints associated with the respective vehicle configuration. 
 
@@ -230,7 +236,7 @@ Given our interest in designing \ac{MCV} fleets for practical food distribution 
 \begin{figure}[H]
     \centering
     \vspace{2.5mm}
-    \includegraphics[width=1.0\textwidth]{Generic Paper/Imagens/methodology_iterative.pdf}
+    \includegraphics[width=1.0\textwidth]{Imagens/methodology_iterative.pdf}
     \vspace{2.5mm}
     \caption{High-level overview of the matheuristic approach.}
     \label{fig:methodology}
@@ -252,9 +258,9 @@ Note that, as described in Section \ref{sec:problem_definition}, the resulting c
 
 In the following, we explain how load capacity and route duration feasibility are verified, as well as how the distance metric is adapted for the clustering techniques used.
 
-\subsubsection{Load Capacity and Route Duration Feasibility Checks}
+\subsubsection{Load Capacity and Route Duration Feasibility Checks} \label{sec:feasibility_checks}
 
-To ensure the creation of feasible customer clusters, we perform both capacity and route duration feasibility checks. Capacity constraints require that the total demand of all product types within a cluster does not exceed the total capacity of the corresponding vehicle configuration, while route duration constraints ensure that the total travel time for serving a cluster remains within a prescribed threshold. Since the total capacity required by a cluster can be readily determined by summing the demand across all product types, we now focus on how route durations are computed within the context of our tactical decision-making problem. We then explain how both capacity and route duration feasibility are ensured through a split-and-merge procedure.
+To ensure the creation of feasible customer clusters, we perform both capacity and route duration feasibility checks. Capacity constraints require that the total demand across all product types within a cluster does not exceed the total capacity of the corresponding vehicle configuration, while route duration constraints ensure that the total travel time to serve a cluster remains within a prescribed threshold. Since the total capacity required by a cluster can be readily determined by summing the demand across all product types, we now focus on how route durations are computed within the context of our tactical decision-making problem. We then explain how both capacity and route duration feasibility are ensured through a split-and-merge procedure.
 
 \paragraph{Computation of vehicle route durations}
 
@@ -264,7 +270,7 @@ Depending on the application context, our matheuristic allows decision-makers to
 \end{equation}
 where $\alpha_{vk}$ is the setup time to dispatch the vehicle configuration, $\delta_{vk}$ the line-haul travel time between the depot and the centroid of the cluster, $\gamma$ the customer service time, and $\beta$ is a non-negative constant. The third term corresponds to the well-known \ac{BHH} approximation presented by \cite{beardwood1959shortest} (see \cite{silva2022demand} for a recent work showing the quality of this approximation to produce near-optimal estimates). 
 
-Note that an alternative method for computing vehicle route durations is to employ an existing routing solver. In our matheuristic implementation (see our GitHub repository), decision-makers can also use the \textsc{PyVRP} library developed by \cite{wouda_pyvrp_2024}, which is recognized as a state-of-the-art vehicle routing solver. While this approach might enhance vehicle routing time estimations, it often requires substantially more computational time compared to the \ac{CA}-based approach, especially when considering a large customer base.
+Note that an alternative method for computing vehicle route durations is to employ an existing routing solver. In our matheuristic implementation (see our GitHub repository), decision-makers can also use the \textsc{PyVRP} library developed by \cite{wouda_pyvrp_2024}, which is recognized as a state-of-the-art vehicle routing solver. While this approach might enhance vehicle routing time estimations, it often requires substantially more computational time than the \ac{CA}-based approach, especially when dealing with large instances.
 
 \paragraph{Split-and-merge procedure}
 After computing vehicle route durations, we verify both load capacity and route duration constraints through a split-and-merge procedure. First, we conduct a recursive binary splitting, as detailed in Algorithm \ref{alg:recursive_split}. When cluster $k \in K_v$ exceeds either the total capacity or the maximum route duration limit associated with vehicle configuration $v \in V$ (i.e., when $\sum_{i \in k} \sum_{p \in P} d_{ip} > Q_v$ or $t_{vk} > T_v$, respectively), the cluster is recursively divided into two subclusters. 
@@ -301,7 +307,7 @@ where $\lambda \in [0,1]$ establishes the weight between geographical proximity,
 
 \subsection{Optimize Fleet Size and Mix with Heterogeneous \acp{MCV}} \label{sec:model_formulation}
 
-Based on the generated set of clusters, we now define the \ac{MCV} fleet size and mix that minimize the total costs incurred to meet each individual customer's demand. It is worth recalling that the total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, includes both a fixed cost (associated with setting up the vehicle’s compartments and dispatching it) and a variable cost that depends on the distance traveled to serve the cluster. Notably, such fixed costs capture the additional operational effort required to set up and operate a \ac{MCV} configuration, as opposed to a \ac{SCV} configuration.
+Based on the generated set of clusters, we now define the \ac{MCV} fleet size and mix that minimizes the total costs incurred to meet each individual customer's demand. It is worth recalling that the total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, includes both a fixed cost (associated with setting up the vehicle’s compartments and dispatching it) and a variable cost that depends on the distance traveled to serve the cluster. Notably, such fixed costs capture the additional operational effort required to set up and operate a \ac{MCV} configuration, as opposed to a \ac{SCV} configuration.
 
 Let $x_{vk}$ be a binary decision variable equal to 1 if and only if vehicle configuration $v \in V$ serves cluster $k \in K_v$. Our integer programming model reads
 \begin{subequations} \label{P}
@@ -325,7 +331,7 @@ Note that, after solving Problem \eqref{P}, the specific load capacity required 
 
 \paragraph{Multi-stop delivery policy} In line with the business context that motivates our work, Constraints \eqref{2} enforce a single-stop policy, where the entire demand for each product type of each customer must be fully served by a single vehicle. However, in other contexts, it is acceptable for customers to receive multiple deliveries. In such cases, while multiple vehicle stops are allowed, splitting the delivery of a single product type is not impractical \citep{henke2015multi, gu2024vehicle}.
 
-Let us introduce the following additional notation to accommodate this multi-stop delivery policy. Let $P_i$ be the set of product types demanded by customer $i \in N$. We define $S_i^p=\{P' \subseteq P_i: p \in P'\}$ as the set of all subsets of $P_i$ that contains product $p \in P_i$. Lastly, for each product type $p \in P_i$, let $K_i^s$ be the subset of clusters containing customer $i \in N$ that can serve the demand of all product types in $s \in S_i^p$. Thus, the following constraints
+Let us introduce the following additional notation to accommodate this multi-stop delivery policy. Let $P_i$ be the set of product types demanded by customer $i \in N$. We define $S_i^p=\{P' \subseteq P_i: p \in P'\}$ as the set of all subsets of $P_i$ that contain product $p \in P_i$. Lastly, for each product type $p \in P_i$, let $K_i^s$ be the subset of clusters containing customer $i \in N$ that can serve the demand of all product types in $s \in S_i^p$. Thus, the following constraints
 \begin{equation}
     \sum_{s \in S_i^p} \sum_{k \in K_i^s} \sum_{v \in V_k} x_{vk} \ = \ 1, \qquad i \in N, p \in P_i,
 \end{equation}
@@ -337,27 +343,47 @@ must replace Constraints \eqref{2} in Problem \eqref{P} to allow multiple delive
 We perform an improvement phase on the \ac{MCV} fleet size and mix found by Problem \eqref{P}.
 Specifically, after solving Problem \eqref{P} for a given set of clusters $K$, we consider each pair of clusters $(k_i, k_j)$ selected in the optimal solution $\boldsymbol{x}^*$ (i.e., $x^*_{k_i,v_i} = 1$ and $x^*_{k_j,v_j} = 1$ for some $v_i, v_j \in V$), check if a single vehicle configuration can feasibly serve them together based on the load capacity and route duration constraints, and, if feasible, update the set of clusters by adding $k_i \cup k_j$, i.e., $K = K \cup \{k_i \cup k_j\}$. After finishing updating the set of clusters, we solve Problem \eqref{P} and repeat this procedure until no further improvement can be reached. Note that, unlike the merging procedure performed during the clustering phase (see Section \ref{sec:generate_feasible_clusters}), which considers only small clusters that are geographically close, our improvement phase evaluates all possible pairs of clusters (selected in the optimal solution at hand) regardless of their size or spatial proximity.
 
-\section{\textsc{FleetMix}: A Python Package} \label{sec:fleetmix}
+\section{\textsc{FleetMix}: A Spec-Driven Python Package} \label{sec:fleetmix}
 
-To facilitate the practical application and scientific reproducibility of our matheuristic approach, we develop \textsc{FleetMix}, an open-source Python implementation released under the MIT license. The software package (version 1.0.0, tagged as \texttt{paper-1.0.0} in the repository) is available at \url{https://github.com/ekohan/fleetmix} and distributed via PyPI, enabling practitioners and researchers to apply our cluster-first, fleet design-second methodology to their specific contexts while ensuring complete reproducibility of our experiments.
+\textsc{FleetMix} is the executable companion to our matheuristic: a Python package that implements all algorithms and models presented in Section \ref{sec:solution_approach}. Available on PyPI and at \url{https://github.com/ekohan/fleetmix} under the MIT license, \textsc{FleetMix} serves two audiences. Researchers can reproduce our results with a single command and extend the algorithms by swapping components, and practitioners can deploy our matheuristic directly in production. The version used for this paper (\texttt{paper-1.0.0}) is permanently archived to ensure reproducibility.
 
-\subsection{Architecture and Design Principles}
+\subsection{Architecture and Design}
 
-\textsc{FleetMix} implements our matheuristic through a modular architecture comprising four core subsystems: (i) a clustering engine that generates feasible customer clusters using the techniques described in Section \ref{sec:generate_feasible_clusters}, (ii) an optimization core that solves the integer programming formulation presented in Section \ref{sec:model_formulation}, (iii) a post-optimization refinement module implementing the improvement phase detailed in Section \ref{sec:improvement_phase}, and (iv) a comprehensive benchmarking framework for systematic evaluation. 
+\textsc{FleetMix} implements our matheuristic through four core modules that mirror the paper's structure: (i) a clustering engine that generates feasible customer clusters using the techniques described in Section \ref{sec:generate_feasible_clusters}, (ii) an optimization core that solves the integer programming formulation presented in Section \ref{sec:model_formulation}, (iii) a post-optimization refinement module implementing the improvement phase detailed in Section \ref{sec:improvement_phase}, and (iv) a benchmarking framework for systematic evaluation.
 
-The implementation follows a procedural pipeline design where each computational stage operates independently. Through a Protocol-based architecture \citep{pythontyping_protocols_2025}, researchers can substitute individual algorithmic components while maintaining the integrity of the overall pipeline. This extensibility enables experimentation with alternative clustering algorithms, route duration estimators, or MILP solvers. As a result, researchers can rapidly explore new ideas on problem variants. 
+The implementation uses well-defined interfaces between components. Researchers can substitute alternative clustering algorithms, route time estimators, or \ac{MILP} solvers without modifying other modules. This modularity is formally defined and enforced by our specification system, which serves as the blueprint for the entire architecture.
 
-\subsection{Implementation and Usage}
+\subsection{Specification System}
 
-\textsc{FleetMix} exposes three complementary interfaces to accommodate diverse user requirements. The command-line interface serves as the primary entry point for fleet optimization through \texttt{fleetmix optimize}, with \texttt{fleetmix benchmark} regenerating every experiment presented in Sections \ref{sec:synthetic_results} and \ref{sec:case_study}. For programmatic integration, the Python API (accessible via \texttt{import fleetmix as fm}) allows seamless incorporation into existing workflows. Additionally, a web-based graphical interface facilitates interactive parameter exploration and solution visualization, particularly valuable for fleet managers who need to evaluate multiple scenarios without programming expertise. All three interfaces operate on identical input-output schemas, ensuring reproducibility across usage modalities.
+To address the semantic gap between mathematical description and software implementation in computational research, we connect the paper's mathematical formulation to its software through nine machine-readable specification documents. Each specification details a component's mathematical basis, interface contract, implementation, and usage examples. For example, \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/clustering.md}{\texttt{clustering.md}} documents the split-and-merge procedure (Algorithm \ref{alg:recursive_split}), its default parameters, and how edge cases are handled, providing context that is difficult to extract from source code alone. This specification layer enables reviewers to trace equations to implementations and researchers to extend the methodology with confidence.
 
-% \subsection{Computational Performance}
+Table \ref{tab:spec_traceability} illustrates this traceability, mapping key elements of our matheuristic from the paper to the corresponding software counterparts.
 
-% The implementation incorporates several computational optimizations to enable deployment at scale. We employ multiprocessing for parallel cluster generation across vehicle configurations, leveraging modern multi-core architectures. For route duration estimation, we implement distance and duration matrix precomputation with persistent caching, significantly reducing the computational overhead of repeated \ac{TSP} evaluations. Furthermore, the merge-phase evaluation in Section \ref{sec:improvement_phase} can be calibrated to consider only geographically proximate cluster pairs, reducing the quadratic complexity of exhaustive pairwise comparisons. \red{Detailed performance analyses across varying instance sizes are presented in Appendix A.}
+\begin{table}[htbp]
+  \centering
+  \caption{Traceability between paper sections, specification documents, and implementation modules.}
+  \small
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{@{}p{0.20\textwidth}p{0.34\textwidth}p{0.36\textwidth}@{}}
+    \toprule
+    \textbf{Paper Section} & \textbf{Specification Document} & \textbf{Implementation Module} \\
+    \midrule
+    \S\ref{sec:generate_configurations} Vehicle Configs & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/vehicle_configurations.md}{\texttt{vehicle\_configurations.md}} & \texttt{utils/vehicle\_configurations.py} \\[2pt]
+    \S\ref{sec:generate_feasible_clusters} Clustering & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/clustering.md}{\texttt{clustering.md}} & \texttt{clustering/generator.py} \\[2pt]
+    \S\ref{sec:model_formulation} Optimization & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/optimization.md}{\texttt{optimization.md}} & \texttt{optimization/core.py} \\[2pt]
+    \S\ref{sec:improvement_phase} Improvement & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/post_optimization.md}{\texttt{post\_optimization.md}} & \texttt{post\_optimization/merge\_phase.py} \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:spec_traceability}
+\end{table}
+
+\subsection{Usage}
+
+\textsc{FleetMix} exposes three interfaces. The command-line tool serves as the primary entry point (e.g., \lstinline|fleetmix optimize --demand customers.csv --config fleet.yaml|), and the command \lstinline|fleetmix benchmark| regenerates every experiment in Sections~\ref{sec:synthetic_results} and~\ref{sec:case_study}. The Python API (\lstinline|import fleetmix as fm|) enables programmatic integration. The web interface allows interactive parameter exploration without coding. All three interfaces use identical input-output schemas, ensuring reproducibility across modalities. The repository includes worked examples: \lstinline|custom_clustering.py| implements a round-robin clustering method, \lstinline|custom_route_time.py| provides a straight-line route time estimator, \lstinline|custom_solver_adapter.py| integrates a solver with relaxed optimality gap, and \lstinline|heterogeneous_fleet.py| demonstrates configuring mixed fleets with product-specific vehicle constraints.
 
 \section{Effectiveness of the Matheuristic Approach} \label{sec:synthetic_results}
 
-In this section, we present a detailed computational study to test the effectiveness of our matheuristic. We run all experiments on a standard workstation (Apple Silicon M1, 2020) with 8 CPU cores and 16 GB of RAM. The implementation was developed in Python, using Gurobi 12.0.2 as a \ac{MILP} solver. 
+In this section, we present a detailed computational study to test the effectiveness of our matheuristic. We run all experiments on a standard workstation (Apple Silicon M1, 2020) with 8 CPU cores and 16 GB of RAM. The implementation was developed in Python, using Gurobi 12.0.2 as a \ac{MILP} solver. \red{Throughout this section, and based on preliminary experiments, we set $\eta = $ and $\Delta = $ to define neighboring clusters when applying our merging procedure described in Section \ref{sec:generate_feasible_clusters}.}
 
 \subsection{Test Instances}
 
@@ -410,47 +436,139 @@ Note that, regardless of the instance category, our matheuristic (from generatin
 
 In summary, these results validate the effectiveness of our matheuristic in finding high-quality solutions while maintaining short computational times.
 
-\section{Case Study} \label{sec:case_study}
+\section{Real-World Case Study} \label{sec:case_study}
 
-% \red{Introduce the section. Recall that we are using the same computational environment described in Section 
+After showing the computational performance of our matheuristic approach, we now present and discuss results from a real-world case study based on the current operations of our industry partner, a leading food distributor based in Bogotá, Colombia. We begin this section by describing our real-world problem instances. We then present and discuss managerial insights regarding the benefits of adopting \acp{MCV}. Lastly, we analyze the resulting fleet composition under different cost structures. 
 
-We also want to evaluate the effectiveness of our matheuristic in a real-world groceries distribution operation, for that we will use a case study located in Bogota, Colombia. In addition, we will conduct a sensitivity analysis to assess the impact on operations when altering certain parameters, e.g., vehicle capacity, number of visits allowed for each customer, among others. We run all experiments for the case of study in the same computer use in section \ref{sec:synthetic_results}.
+Throughout this section, we employ the same parameters and computational environment described in Section \ref{sec:synthetic_results}. \red{For transparency and reproducibly, our instances and detailed computational results are publicly available at \url{https://github.com/ekohan/fleetmix}.}
 
-The rest of the section is organize as follows. First, we explain the characteristics and why we use the baseline scenario. Second, we delve into the parameters considered in the sensitivity analysis and their impact on operations. Third, we present the results analysis along with the discussion.
+\subsection{Real-World Problem Instances}
 
-\subsection{Baseline Scenario}
+Our industry partner provided us with a rich dataset containing 70 days of real-world demand information. Each day (i.e., problem instance) provides detailed information about customer locations and the quantities of products requested by product type (frozen, refrigerated, and dry). Over the 70 days, the number of customers served by the company ranges from 208 to 691, with an average of 379 customers. Below, we explain the main characteristics of the service area and vehicle fleet, as well as the parameter values used.
 
-The baseline scenario is a more realistic set of instances. The instances have a larger number of customers and also consider demands with greater variability between customers, which resembles the reality in operations of a company that distributes groceries. The baseline scenario allows us to test the matheuristic without focusing on the effect of a specific parameter. The important features of the baseline are described below:
+\paragraph{Service area} 
+The service area is located in Bogotá, Colombia, the country's most populous city. Geographically, the service area spans around 1,226 km$^2$. The company serves an average of 379 customers per day from a single depot located on the outskirts of the city. Figure \ref{fig:CaseStudyArea} shows the spatial distribution of customers for a representative day \red{(to protect confidentiality, the node locations have been slightly perturbed)}.
 
-\paragraph{Service area} The service area is located in the city of Bogota, Colombia. With a territorial extension of approximately 1,776~km\textsuperscript{2} and a population of 7,412,566 inhabitants according to the 2018 national census. Bogota is the most populous city in the country and serves as its capital. Geographically, it is located at a latitude of 4°35'56'' North and a longitude of 74°04'51'' West of Greenwich. This demographic and spatial context provides a representative urban environment for testing the performance and adaptability of logistics solutions under real-world conditions.
-
-\paragraph{Customers demand} The demand nodes represent the set of customers to be served in the last-mile delivery network. The dataset includes three months of demand information, that represent 70 daily instances. Each instance provides detailed information about customer locations and the quantity of products requested by product type, i.e., frozen, refrigerated, and dry. The set of customers may vary from day to day, and both the amount and type of products they demand change across days. Though all customers are located within the area represented in Figure \ref{fig:CaseStudyArea}, which illustrates a sample of customer locations, the road network, and the depot position.
-
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.5\textwidth]{Generic Paper/Imagens/bogotamap.png}
-    \caption{Case of Study Service Area}
+    \includegraphics[width=0.6\textwidth]{Imagens/bogotamap.png}
+    \caption{Service area and customer distribution.}
     \label{fig:CaseStudyArea}
 \end{figure}
 
-\paragraph{Heterogeneous vehicle fleet} The case study considers a heterogeneous fleet composed of flexible multi-compartment vehicles with three capacity levels and associated fixed and variable costs. Vehicle type A has a total capacity of 700 kg and a fixed cost of 10 units; type B has a capacity of 1,300 kg and a fixed cost of 12 units; and type C provides 2,500 kg at a fixed cost of 15 units.
+\paragraph{Heterogeneous \acp{MCV}}
+The company operates a fleet of heterogeneous \acp{MCV}, comprising three vehicle types with flexible compartments.
+Before the delivery horizon begins, the company decides the number of each vehicle type to deploy and their respective compartment configurations.
+Vehicle type A has a total capacity of 700 kg and a fixed cost of 80 units; type B has a capacity of 1,300 kg and a fixed cost of 140 units; and type C provides 2,500 kg at a fixed cost of 180 units \red{(costs have been scaled for confidentiality)}.
+Each vehicle type allows seven compartment configurations (see Section \ref{sec:generate_configurations}), with a (homogeneous) setup cost of 50 units per activated compartment. We assume that vehicles travel the Euclidean distance between nodes at a constant speed of 30 km/h. Based on the company's recommendation, we set a service time of 25 minutes per stop, which is the average time the company currently takes to deliver food products to their customers (e.g., local restaurants or hotels). The variable travel cost is 10 units per operating hour, with a maximum route duration of 10 hours. \red{Lastly, given that our instances involve hundreds of customers, we check route duration feasibility through \ac{CA} when generating customer clusters, using a \ac{BHH} constant of $\beta = $ (see Section \ref{sec:feasibility_checks}).} 
 
-Each vehicle type allows seven compartment configurations, as detailed in Section \ref{sec:generate_configurations}, resulting in 21 possible vehicle configurations. The setup cost per compartment is 50 units. The model can select any number of vehicles from these configurations, with no upper bound on the use of a specific configuration.
+\blue{\textbf{JC}: Edited until here.}
 
-Even when two vehicles share the same compartment structure, their effective compartment capacities may differ due to the compartment flexibility. This feature allows compartment sizes to adjust dynamically to the product demands assigned to each vehicle, improving capacity utilization while meeting the requirements of the three product types.
+\paragraph{Scenarios of analysis} We set the aforementioned parameters as our baseline scenario, capturing the company's current operations. However, we also assess the effects of three key parameters on the benefits of adopting \acp{MCV}: total vehicle capacity, customer service time, and the maximum allowed vehicle route duration.
 
-The routing cost matrix is derived from Euclidean distances and assumes a constant travel speed of 30 km/h for all vehicles. Each stop includes a service time of 25 minutes. The variable routing cost is 10 units per operating hour, with routes limited to a maximum of 10 hours. Multiple trips per vehicle are not allowed within the same operation.
-
-Having defined the fleet characteristics and operational parameters of the baseline scenario, we now present the sensitivity analysis. We explore how variations in key parameters like vehicle capacity, available service time and maximum route time impact in the solution.  
+\red{Did we test the impact of employing a single-stop policy?}
 
 \subsection{Benefits of Using Multi-Compartment Vehicles}
-The sensitivity analysis evaluates how variations in selected parameters affect the performance of the proposed matheuristic in the case of study. The analysis focuses on parameters like total costs, service time, and maximum route duration. We changed these parameters in the 70 base instances and compared the KPIs in the form of means in order to capture the impact in every day of the case study.
+The sensitivity analysis assesses how changes in specific parameters influence the fleet size and composition. The analysis focuses on three key parameters: (i) service time, which is the duration it takes for a vehicle to serve a customer at a specific location; (ii) the capacity of the vehicles; (iii) the maximum duration allowed for a route. We modified the parameters in the 70 base instances and compared the key performance indicators (KPIs) by calculating their means to assess the impact throughout each day of the case study. Our initial analysis focuses on how the three parameters influence the number of vehicles selected and the total cost of the operation.
 
-The evaluation relies on key performance indicators (KPIs) such as vehicle used, total cost, average load, average customers per vehicle, average route time, and amount of vehicles with one, two or three compartments. These experiments allow identifying which parameters have the greatest impact on operational performance.
+The analysis presented in figure \ref{fig:fleet size vs total cost} summarizes the results obtained by varying vehicle capacity, service time, and maximum route duration across the 70 base instances.Each parameter was adjusted by a variation of 20\% and 50\% from the baseline to assess the impact on vehicle utilization and total cost. Figure \ref{fig:fleet size vs total cost} shows a comparison of these effects in a mixed fleet, with the possibility of being composed of MCVs and SCVs, versus a \ac{SCV} fleet. The comparison between the two fleet types illustrates the effects of permitting the use of MCVs. In the following paragraphs, we describe how changing the three key parameters affects these fleets.
 
-\subsection{Fleet Composition Analysis}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Imagens/enhanced_fleet_cost_comparison_latex.pdf}
+    \vspace{0.1mm}
+    \caption{Fleet Size and Total Cost}
+    \label{fig:fleet size vs total cost}
+\end{figure}
+
+{Effects of Vehicle Capacity}. The analysis presented in Figure \ref{fig:fleet size vs total cost} reveals that increasing vehicle capacity leads to a reduction in the number of vehicles needed for both fleets. In the baseline scenario, the average number of \acp{MCV} is 20.2. This number decreases to 19.4 with a 20\% increase in capacity and to 18.5 with a 50\% increase. For \acp{SCV}, the baseline average is 27.7; this decreases to 27 with a 20\% capacity increase and to 26.2 with a 50\% increase. Conversely, reducing capacity by 20\% and 50\% results in an increase in fleet size: the number of MCVs rises to 22.2 and 26.5, while the fleet size of SCVs increases to 28.4 and 31, respectively. 
+
+The total cost follows a similar trend, decreasing by approximately 8\% and 16\% under the +20\% and +50\% scenarios for MCVs, and by 5\% and 11\% respectively for SCVs. In contrast, the total cost for MCVs increases by 9\% and 15\% under the -20\% and -50\% scenarios. Similarly, for SCVs, the total cost also rises as vehicle capacity is reduced; with a 20\% reduction, the total cost for MCVs and SCVs increases by 9\% and 7\%, respectively, while a 50\% reduction results in an increase of 25\% and 20\%, respectively.
+
+{Effects of Service Time}. The results presented in Figure \ref{fig:fleet size vs total cost} show that longer service times lead to an increase in the total number of vehicles required in both fleets. For \acp{MCV}, the baseline average fleet size increases from 20.2 to 21.6 and 23.8 under +20\% and +50\% service time scenarios, respectively. Conversely, reducing service time by 20\% and 50\% decreases the fleet size to 19.2 and 17.8. A similar pattern is observed for \acp{SCV}, where the average number of vehicles rises from 27.7 to 29.5 and 32.4 under the +20\% and +50\% scenarios, and decreases to 26.4 and 24.8 when service time is reduced by 20\% and 50\%. These results confirm that service duration directly affects fleet size since longer customer interactions reduce the number of customers that can be visited within the same route duration constraint.
+
+Regarding total cost, the effect of service time follows the same trend. The total cost for \acp{MCV} increases by approximately 7\% and 15\% with +20\% and +50\% longer service times, while reductions of 20\% and 50\% lead to cost decreases of around 6\% and 13\%. For \acp{SCV}, the increase is more pronounced, reaching up to 9\% and 18\% under the +20\% and +50,\% scenarios. This pattern indicates that \acp{MCV} are slightly more efficient at absorbing additional service time due to their capacity to handle multiple products per stop, reducing the need for additional trips compared with single-compartment vehicles. 
+
+{Effects of Maximum Route Duration}. Figure \ref{fig:fleet size vs total cost} also illustrates that increasing the maximum allowable route duration reduces the total number of vehicles required in both fleets. When route duration is extended by 20\% and 50\%, the fleet size of \acp{MCV} decreases from 20.2 to 19.1 and 17.9, respectively. For \acp{SCV}, the corresponding values decline from 27.7 to 26.5 and 24.7. Conversely, when the route duration is reduced by 20\% and 50\%, the number of vehicles rises to 21.8 and 25.6 for \acp{MCV}, and to 29.1 and 33.4 for \acp{SCV}. This behavior shows that route duration is a critical determinant of fleet requirements, as shorter operational windows constrain route feasibility and require deploying more vehicles to meet demand.
+
+The total cost behavior aligns with these fleet size variations. For \acp{MCV}, total cost decreases by roughly 6\% and 13\% under +20\% and +50\% duration scenarios, while reductions of 20\% and 50\% in route duration raise total cost by 8\% and 17\%. Similarly, for \acp{SCV}, total cost decreases by 5\% and 11\% with longer durations and increases by 9\% and 19\% when duration is reduced. These results demonstrate that extending route duration enables better vehicle utilization and reduces total operating costs, particularly benefiting the heterogeneous fleet configuration of \acp{MCV}.
+
+
+
+\begin{table}[H]
+  \centering
+  \caption{Average operational metrics (over 70 instances) per parameter variation.}
+  \scalebox{0.8}{%
+    \begin{tabular}{lrrrrcrrrrr}
+    \toprule
+    \multirow{2}[4]{*}{Parameter} & \multicolumn{1}{c}{\multirow{2}[4]{*}{Variation}} &       & \multicolumn{2}{c}{\thead{Load vehicle \\ utilization}} &       & \multicolumn{2}{c}{\thead{Customers \\ per vehicle}} &       & \multicolumn{2}{c}{\thead{Effective route \\ duration}} \\
+\cmidrule{4-5}\cmidrule{7-8}\cmidrule{10-11}          &       &       & \multicolumn{1}{c}{MCV} & \multicolumn{1}{c}{SCV} &       & \multicolumn{1}{c}{MCV} & \multicolumn{1}{c}{SCV} &       & \multicolumn{1}{c}{MCV} & \multicolumn{1}{c}{SCV} \\
+    \midrule
+    \multirow{5}[2]{*}{Capacity } & -50\% &       & 87.0\% & 85.9\% &       & 10.0  & 12.2  &       & 5.3   & 6.6 \\
+          & -20\% &       & 83.6\% & 79.6\% &       & 11.7  & 13.3  &       & 6.1   & 7.1 \\
+          & 0\%   &       & 81.4\% & 76.0\% &       & 12.8  & 13.7  &       & 6.6   & 7.3 \\
+          & 20\%  &       & 79.7\% & 71.8\% &       & 13.3  & 14.1  &       & 6.9   & 7.5 \\
+          & 50\%  &       & 76.1\% & 66.5\% &       & 13.8  & 14.4  &       & 7.1   & 7.7 \\
+    \midrule
+    \multirow{5}[2]{*}{Service Time} & -50\% &       & 83.6\% & 78.4\% &       & 16.9  & 19.1  &       & 5.0   & 5.9 \\
+          & -20\% &       & 82.6\% & 76.9\% &       & 14.2  & 15.4  &       & 6.1   & 6.8 \\
+          & 0\%   &       & 81.4\% & 76.0\% &       & 12.8  & 13.7  &       & 6.6   & 7.3 \\
+          & 20\%  &       & 80.4\% & 73.9\% &       & 11.4  & 12.4  &       & 6.9   & 7.7 \\
+          & 50\%  &       & 78.5\% & 70.3\% &       & 10.0  & 10.9  &       & 7.3   & 8.1 \\
+    \midrule
+    \multirow{5}[2]{*}{Max. Route Duration } & -50\% &       & 70.6\% & 57.1\% &       & 7.4   & 8.0   &       & 4.0   & 4.4 \\
+          & -20\% &       & 80.4\% & 72.3\% &       & 10.9  & 11.8  &       & 5.7   & 6.3 \\
+          & 0\%   &       & 81.4\% & 76.0\% &       & 12.8  & 13.7  &       & 6.6   & 7.3 \\
+          & 20\%  &       & 82.5\% & 78.2\% &       & 14.1  & 15.3  &       & 7.3   & 8.1 \\
+          & 50\%  &       & 82.3\% & 78.9\% &       & 15.7  & 17.6  &       & 8.0   & 9.3 \\
+    \bottomrule
+    \end{tabular}%
+    }
+  \label{tab:sensitivity_analysis}%
+\end{table}%
+
+The previous analysis examined how variations in capacity, service time, and route duration affect total cost and fleet size. To enhance our findings, Table \ref{tab:sensitivity_analysis} includes additional indicators such as load vehicle utilization, the number of customers served per vehicle, and effective route duration. These additional indicators complement the analysis of the parameters' impact on the total cost and fleet size. 
+
+Load vehicle utilization decreases as vehicle capacity and route duration increase. For multi-compartment vehicles (MCVs), utilization drops from 87\% to 76.1\% as capacity increases from -50\% to +50\%. Similarly, for single-compartment vehicles (SCVs), utilization declines from 85.9\% to 66.5\%. A comparable trend occurs with increasing route duration; utilization is higher under restrictive conditions. In contrast, longer service times lead to a reduction in utilization, with figures decreasing from 83.6\% to 78.5\% for MCVs and from 78.4\% to 70.3\% for SCVs. These results indicate that utilization adjusts based on the operational constraints of each parameter, which aligns with the observed changes in total cost and fleet size. \red{VS: double check this paragraph}
+
+The number of customers per vehicle and the effective route duration vary consistently with the analyzed parameters. Reducing service time increases the number of customers served per vehicle, while longer service times produce the opposite effect. When the maximum route duration increases, both indicators rise, showing longer operational routes and a higher number of customers visited. Conversely, reductions in route duration lead to shorter routes and fewer customers per vehicle. For all scenarios, \acp{SCV} serve a larger number of customers per route, while \acp{MCV} operate with slightly shorter effective durations. The combined behavior of these indicators corresponds to the cost and fleet trends presented in the previous figures.
+
+Overall, the results from Table \ref{tab:sensitivity_analysis} and Figure \ref{fig:fleet size vs total cost} demonstrate that operational parameters—capacity, service time, and route duration—directly influence the fleet mix and utilization level. The next sensitivity analysis extends this exploration to economic parameters, specifically the fixed cost of multi-compartment vehicles and the compartment setup cost. These factors determine not only the total fleet cost but also the cost effectiveness of using \ac{MCV} over \ac{SCV}, shaping the overall composition and mix of the fleet.
+
+
+\subsection{Fleet Composition Analysis} 
+
+This subsection analyzes how compartment-related costs affect fleet composition, specifically the share of (\acp{MCV}) within the total fleet. The analysis varies two cost parameters: the fixed cost associated with selecting an \ac{MCV} and the compartment setup cost. These parameters are increased progressively to observe how the proportion of \acp{MCV} changes across the 70 evaluated instances, each representing one day of operation. The results are presented through two figures that illustrate the impact of these cost variations on the use of \acp{MCV}, which are discussed in the following paragraphs.
+
+The results are summarized in Figure \ref{fig:MCV Adoption Landscape}, which presents the combined effect of the compartment setup cost and the multiplier on the share of multi-compartment vehicles (\acp{MCV}) in the fleet ($\alpha$). The horizontal axis represents the compartment setup cost, which increases from 0\% to 50\% in increments of 10\%. The vertical axis corresponds to the $\alpha$ multiplier, which scales the fixed cost of selecting an \ac{MCV} from 1.0 to 2.0 in increments of 0.1. Each cell in the heat map displays three values: the average \ac{MCV} share in percentage, the number of days (out of 70) in which at least one \ac{MCV} was used, and the number of days in which all vehicles in the fleet were \acp{MCV}, marked with a star.
+
+ \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{Imagens/chart_mcv_adoption_landscape.png}
+    \vspace{0.1mm}
+    \caption{\acp{MCV} Adoption Landscape}
+    \label{fig:MCV Adoption Landscape}
+\end{figure}
+
+The figure shows that as both $\alpha$ and the compartment setup cost increase, the average \ac{MCV} share in the fleet decreases progressively. For low cost values ($\alpha = 1.0$ and $C = 0\%$), the fleet is entirely composed of \acp{MCV} across all instances. As costs rise, the share of \acp{MCV} declines continuously, with a larger number of mixed or single-compartment fleet configurations appearing. When $\alpha$ reaches 2.0 and $C = 50\%$, the average share of \acp{MCV} falls below 10\%, and only a few instances include any \ac{MCV}. The distribution of values across the grid indicates that higher costs lead to a consistent reduction in the proportion of multi-compartment vehicles in the fleet.
+
+Figure \ref{fig:MCV share in the fleet} provides a detailed view of how the \ac{MCV} share varies across the 70 daily instances under different compartment setup cost scenarios. The horizontal axis represents the day index, and the vertical axis indicates the proportion of \acp{MCV} in the fleet for each day. All three plots correspond to $\alpha = 1.6$, meaning that the fixed cost of each \ac{MCV} is 1.6 times higher than the baseline. The left plot represents the baseline condition ($C = 0\%$), the middle plot corresponds to a 20\% increase in compartment setup cost, and the right plot shows the 50\% increase case.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{Imagens/chart_mcv_selected_primary.png}
+    \vspace{0.1mm}
+    \caption{\acp{MCV} Share in the Fleet} 
+    \label{fig:MCV share in the fleet}
+\end{figure}
+
+In the baseline scenario, most days exhibit a high \ac{MCV} share, with the average reaching approximately 89\%. When the compartment setup cost increases to 20\%, the daily \ac{MCV} share becomes more heterogeneous, with values ranging between 20\% and 100\% and an overall mean of 55\%. Under the 50\% setup cost scenario, the \ac{MCV} share drops considerably, with most of the days showing less than 10\% \ac{MCV} usage and a mean value close to 15\%. These results indicate that as the compartment setup cost increases, the presence of \acp{MCV} in the fleet progressively diminishes across daily operations, consistent with the overall pattern observed in Figure \ref{fig:MCV Adoption Landscape}.
+
+The analysis of fleet composition demonstrates the sensitivity of multi-compartment vehicle (\ac{MCV}) adoption to variations in compartment setup and \acp{MCV} selection fixed costs. The following section, Discussion, examines the managerial implications of these results, focusing on the operational benefits and considerations of incorporating \acp{MCV} in food distribution fleets operating within urban environments.
 
 \section{Discussion} \label{sec:discussion}
+
+- MCV 
 
 \red{Summarize the main managerial implications of the work.}
 
@@ -458,7 +576,7 @@ The evaluation relies on key performance indicators (KPIs) such as vehicle used,
 
 \acfp{MCV} are among the most effective vehicle technologies that food distributors can employ to consolidate deliveries of multiple product types while maintaining their specific temperature and loading conditions. Motivated by our collaboration with a major food distributor operating in Bogotá, Colombia, we investigate the design of last-mile delivery fleets involving heterogeneous \acp{MCV} with flexible compartment sizes. Specifically, the decision-making problem faced by the company considers three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type and size of each compartment assigned to each vehicle, and (iii) the distribution plan for each vehicle. The objective is to minimize total logistics costs, which comprise both fixed and variable costs associated with selecting and utilizing vehicles.
 
-To solve this problem, we propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme. Our matheuristic can accommodate several real-world characteristics of modern food distribution operations, including homogeneous and heterogeneous vehicles with fixed or flexible compartment sizes; a comprehensive cost structure that allows including fixed costs, compartment-dependent costs, and variable (distance or time-dependent) costs; and single- and multiple-stop delivery policies. To facilitate the application of our matheuristic, we create \textsc{FleetMix}, an open-source Python package that is publicly available under the MIT license and distributed via PyPI. \textsc{FleetMix} follows state-of-the-practice software engineering practices and features a modular-based architecture that allows replacing individual components while maintaining the integrity of the overall pipeline.
+To solve this problem, we propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme. Our matheuristic can accommodate several real-world characteristics of modern food distribution operations, including homogeneous and heterogeneous vehicles with fixed or flexible compartment sizes; a comprehensive cost structure that allows including fixed costs, compartment-dependent costs, and variable (distance or time-dependent) costs; and single- and multiple-stop delivery policies. To facilitate the application of our matheuristic, we create \textsc{FleetMix}, an open-source Python package that is publicly available under the MIT license and distributed via PyPI. \red{\textsc{FleetMix} follows state-of-the-practice software engineering practices and features a modular-based architecture that allows replacing individual components while maintaining the integrity of the overall pipeline.}
 
 Using established synthetic instances from the literature, we show that \textsc{FleetMix} achieves high-quality fleet designs compared to existing solution approaches. Through a real-world case study informed by real data from our partner industry company, we derive several managerial insights into the value of using \acp{MCV} to reduce total logistics costs and the number of vehicles needed to deliver multiple product types. We show that \red{[summarize main insights.]}
 
@@ -506,7 +624,7 @@ We performed the tests in the 100 available instances (see Figure~\ref{fig:uchoa
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure5.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure5.png}
     \caption{FSM Model Performance Analysis vs Benchmark Instances}
     \label{fig:fsm_model_performance}
 \end{figure}
@@ -537,7 +655,7 @@ In contrast, the “Combined” transformation—where multiple instances are me
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure 8.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure 8.png}
     \caption{Comparison against Lower Bound Across Transformations.}
     \label{fig:fsm_model_performance}
 \end{figure}
@@ -615,7 +733,7 @@ We run our model over each day of this dataset. As we found that in all cases ti
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{Generic Paper/Imagens/bogotamap.png}
+    \includegraphics[width=0.8\textwidth]{Imagens/bogotamap.png}
     \caption{Bogotá Map with Customers and Depot Locations}
     \label{fig:methodology}
 \end{figure}
@@ -628,7 +746,7 @@ We run our model over each day of this dataset. As we found that in all cases ti
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=1\textwidth]{Generic Paper/Imagens/Figure51.jpg}
+    \includegraphics[width=1\textwidth]{Imagens/Figure51.jpg}
     \caption{Product Type Demand by Day of Week (2024 Dataset, averaged over every day)}
     \label{fig:methodology}
 \end{figure}
@@ -648,7 +766,7 @@ We run our model over each day of this dataset. As we found that in all cases ti
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure4.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure4.png}
     \caption{Validation process with inputs, steps, and goals for testing our model.}
     \label{fig:validation_process}
 \end{figure}
@@ -665,14 +783,14 @@ It can be noted that in some points in the charts in Figure~\ref{fig:fsm_model_l
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure6.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure6.png}
     \caption{FSM model performance gap analysis against lower gap.}
     \label{fig:fsm_model_lower_gap}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure7.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure7.png}
     \caption{Time series of recommended \# vehicles by day, with lower and upper bounds.}
     \label{fig:fsm_model_time_series}
 \end{figure}
@@ -757,14 +875,14 @@ Based on Figure~\ref{fig:sensitivity_analysis}, we can derive the following obse
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.8\textwidth]{Generic Paper/Imagens/Figure10.png}
+    \includegraphics[width=0.8\textwidth]{Imagens/Figure10.png}
     \caption{Sensitivity Analysis Charts}
     \label{fig:sensitivity_analysis}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure11.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure11.png}
     \caption{Demand Profiles Sensitivity Analysis}
     \label{fig:sensitivity_analysis_demand}
 \end{figure}
@@ -824,14 +942,14 @@ The last relevant parameter is the number of \textbf{compartments} in each truck
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure8bis.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure8bis.png}
     \caption{Fleet Size Analysis – Daily Vehicle Fleet Required.}
     \label{fig:daily_fleet_required}
 \end{figure}
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.9\textwidth]{Generic Paper/Imagens/Figure9.png}
+    \includegraphics[width=0.9\textwidth]{Imagens/Figure9.png}
     \caption{Service Level vs Idle Fleet Trade-Off}
     \label{fig:service_level_idle_fleet}
 \end{figure}

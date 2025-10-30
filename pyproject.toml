@@ -7,7 +7,7 @@ name = "fleetmix"
 version = "0.1.0b1"
 description = "Fleet Size and Mix optimizer for heterogeneous fleets of multi-compartment vehicles"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "numpy",
     "pandas",

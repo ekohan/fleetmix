@@ -108,7 +108,7 @@ def _collect_day_summary(
 
     # Express α and C as percentages relative to base SCV fixed cost
     base_conf = load_fleetmix_params(
-        Path("src/fleetmix/config/default_config_experiments.yaml")
+        Path("src/fleetmix/config/experiments/fleet_composition/base_config.yaml")
     )
     base_fc = float(next(iter(base_conf.problem.vehicles.values())).fixed_cost)
     alpha_pct = 100.0 * (alpha - 1.0)

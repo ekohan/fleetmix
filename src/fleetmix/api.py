@@ -235,7 +235,6 @@ def optimize(
             default_paths = [
                 Path.cwd() / "config.yaml",
                 Path(__file__).parent / "config" / "default_config.yaml",
-                Path(__file__).parent / "config" / "baseline_config.yaml",
             ]
             for p in default_paths:
                 if p.exists():

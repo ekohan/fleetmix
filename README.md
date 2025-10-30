@@ -217,7 +217,7 @@ You can also specify a config file to use custom parameters:
 
 ```bash
 fleetmix benchmark mcvrp --config custom_config.yaml
-fleetmix benchmark case --config baseline_config.yaml --format excel
+fleetmix benchmark case --config default_config.yaml --format excel
 ```
 
 ### `fleetmix convert`

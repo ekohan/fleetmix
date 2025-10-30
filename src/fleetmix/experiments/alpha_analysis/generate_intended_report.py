@@ -375,7 +375,12 @@ def plot_causality_diagram() -> None:
 
     # Add labels above boxes
     ax.text(
-        1.5, 3.5, "in one vehicle\nMulti-product", ha="center", fontsize=10, style="italic"
+        1.5,
+        3.5,
+        "in one vehicle\nMulti-product",
+        ha="center",
+        fontsize=10,
+        style="italic",
     )
     ax.text(
         4.5,

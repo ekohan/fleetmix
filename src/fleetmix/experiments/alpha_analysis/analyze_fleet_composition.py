@@ -470,15 +470,15 @@ def chart4_fleet_composition_variability(df_full):
     # Get all unique parameter combinations (sorted for consistent ordering)
     all_params = df_full[["alpha", "C"]].drop_duplicates().sort_values(["alpha", "C"])
     all_params_list = list(all_params.itertuples(index=False, name=None))
-    
+
     n_blocks = len(all_params_list)
     print(f"Creating chart with {n_blocks} blocks...")
-    
+
     # Use 6 columns (one for each C value: 0%, 10%, 20%, 30%, 40%, 50%)
     # Each row represents one α value
     n_cols = 6
     n_rows = int(np.ceil(n_blocks / n_cols))
-    
+
     # Create a very long figure to accommodate all blocks
     # 6 columns × ~3.5 inches each = 21 inches wide
     # 11 rows × ~2.5 inches each = 27.5 inches tall
@@ -588,33 +588,33 @@ def chart4a_selected_blocks_primary(df_full):
         (1.6, 20, "Moderate Compartment Cost"),
         (1.6, 50, "High Compartment Cost"),
     ]
-    
+
     fig = plt.figure(figsize=(18, 5))
     gs = GridSpec(1, 3, figure=fig, hspace=0.3, wspace=0.3)
-    
+
     regime_colors = {
         "Pure MCV": "#27ae60",
         "MCV-dominant": "#7dcea0",
         "True Mixed": "#f39c12",
         "SCV-dominant": "#e74c3c",
     }
-    
+
     for idx, (alpha, C, label) in enumerate(selected_params):
         ax = fig.add_subplot(gs[0, idx])
-        
+
         # Filter data for this parameter combination
         subset = df_full[(df_full["alpha"] == alpha) & (df_full["C"] == C)].copy()
-        
+
         if len(subset) == 0:
             continue
-        
+
         # Sort by instance (demand day)
         subset = subset.sort_values("instance").reset_index(drop=True)
         subset["day_index"] = range(len(subset))
-        
+
         # Color by regime
         colors = [regime_colors[r] for r in subset["regime"]]
-        
+
         # Plot
         ax.scatter(
             subset["day_index"],
@@ -625,7 +625,7 @@ def chart4a_selected_blocks_primary(df_full):
             edgecolors="black",
             linewidths=0.8,
         )
-        
+
         # Add mean line
         mean_share = subset["mcv_share"].mean() * 100
         ax.axhline(
@@ -635,7 +635,7 @@ def chart4a_selected_blocks_primary(df_full):
             linewidth=2.5,
             label=f"Mean: {mean_share:.0f}%",
         )
-        
+
         # Formatting
         ax.set_xlim(-2, len(subset) + 1)
         ax.set_ylim(-5, 105)
@@ -649,10 +649,10 @@ def chart4a_selected_blocks_primary(df_full):
         )
         ax.grid(True, alpha=0.3, linestyle="--")
         ax.legend(fontsize=10, loc="lower left", frameon=True, shadow=True)
-    
+
     # Add legend for regime colors
     from matplotlib.patches import Patch
-    
+
     legend_elements = [
         Patch(facecolor="#27ae60", edgecolor="black", label="Pure MCV (≥99%)"),
         Patch(facecolor="#7dcea0", edgecolor="black", label="MCV-dominant (50-99%)"),
@@ -667,12 +667,12 @@ def chart4a_selected_blocks_primary(df_full):
         frameon=True,
         bbox_to_anchor=(0.5, -0.08),
     )
-    
+
     # Save
     output_path = OUTPUT_DIR / "chart4a_selected_primary.png"
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"✓ Chart 4A (Primary Selection) saved: {output_path}")
-    
+
     return fig
 
 
@@ -687,33 +687,33 @@ def chart4b_selected_blocks_alternative(df_full):
         (1.5, 20, "Medium MCV Fixed Cost Premium"),
         (2.0, 20, "High MCV Fixed Cost Premium"),
     ]
-    
+
     fig = plt.figure(figsize=(18, 5))
     gs = GridSpec(1, 3, figure=fig, hspace=0.3, wspace=0.3)
-    
+
     regime_colors = {
         "Pure MCV": "#27ae60",
         "MCV-dominant": "#7dcea0",
         "True Mixed": "#f39c12",
         "SCV-dominant": "#e74c3c",
     }
-    
+
     for idx, (alpha, C, label) in enumerate(selected_params):
         ax = fig.add_subplot(gs[0, idx])
-        
+
         # Filter data for this parameter combination
         subset = df_full[(df_full["alpha"] == alpha) & (df_full["C"] == C)].copy()
-        
+
         if len(subset) == 0:
             continue
-        
+
         # Sort by instance (demand day)
         subset = subset.sort_values("instance").reset_index(drop=True)
         subset["day_index"] = range(len(subset))
-        
+
         # Color by regime
         colors = [regime_colors[r] for r in subset["regime"]]
-        
+
         # Plot
         ax.scatter(
             subset["day_index"],
@@ -724,7 +724,7 @@ def chart4b_selected_blocks_alternative(df_full):
             edgecolors="black",
             linewidths=0.8,
         )
-        
+
         # Add mean line
         mean_share = subset["mcv_share"].mean() * 100
         ax.axhline(
@@ -734,7 +734,7 @@ def chart4b_selected_blocks_alternative(df_full):
             linewidth=2.5,
             label=f"Mean: {mean_share:.0f}%",
         )
-        
+
         # Formatting
         ax.set_xlim(-2, len(subset) + 1)
         ax.set_ylim(-5, 105)
@@ -748,10 +748,10 @@ def chart4b_selected_blocks_alternative(df_full):
         )
         ax.grid(True, alpha=0.3, linestyle="--")
         ax.legend(fontsize=10, loc="lower left", frameon=True, shadow=True)
-    
+
     # Add legend for regime colors
     from matplotlib.patches import Patch
-    
+
     legend_elements = [
         Patch(facecolor="#27ae60", edgecolor="black", label="Pure MCV (≥99%)"),
         Patch(facecolor="#7dcea0", edgecolor="black", label="MCV-dominant (50-99%)"),
@@ -766,12 +766,12 @@ def chart4b_selected_blocks_alternative(df_full):
         frameon=True,
         bbox_to_anchor=(0.5, -0.08),
     )
-    
+
     # Save
     output_path = OUTPUT_DIR / "chart4b_selected_alternative.png"
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"✓ Chart 4B (Alternative Selection) saved: {output_path}")
-    
+
     return fig
 
 

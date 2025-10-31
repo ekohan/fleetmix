@@ -204,7 +204,6 @@ def load_parameters(args: Any) -> FleetmixParams:
         default_paths = [
             Path.cwd() / "config.yaml",
             Path(__file__).parent.parent / "config" / "default_config.yaml",
-            Path(__file__).parent.parent / "config" / "baseline_config.yaml",
         ]
         for p in default_paths:
             if p.exists():

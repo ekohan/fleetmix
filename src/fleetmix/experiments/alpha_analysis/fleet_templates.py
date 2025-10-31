@@ -12,7 +12,9 @@ from fleetmix.config.params import FleetmixParams, ProblemParams
 from fleetmix.core_types import VehicleSpec
 from fleetmix.utils.logging import FleetmixLogger
 
-BASE_CONFIG_PATH = Path("src/fleetmix/config/default_config_experiments.yaml")
+BASE_CONFIG_PATH = Path(
+    "src/fleetmix/config/experiments/fleet_composition/base_config.yaml"
+)
 logger = FleetmixLogger.get_logger(__name__)
 
 

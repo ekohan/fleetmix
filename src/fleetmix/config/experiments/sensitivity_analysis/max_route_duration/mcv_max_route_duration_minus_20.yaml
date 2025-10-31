@@ -1,0 +1,49 @@
+vehicles:
+  A:
+    capacity: 700
+    fixed_cost: 80
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 8
+  B:
+    capacity: 1300
+    fixed_cost: 140
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 8
+  C:
+    capacity: 2500
+    fixed_cost: 180
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 8
+variable_cost_per_hour: 10.0
+depot:
+  latitude: 4.7
+  longitude: -74.1
+goods:
+- Dry
+- Chilled
+- Frozen
+clustering:
+  max_depth: 20
+  method: combine
+  distance: euclidean
+  geo_weight: 0.7
+  demand_weight: 0.3
+  route_time_estimation: BHH
+prune_tsp: false
+demand_file: sales_2024_avg_day_demand.csv
+light_load_penalty: 0
+light_load_threshold: 0
+compartment_setup_cost: 10
+post_optimization: true
+small_cluster_size: 1000
+nearest_merge_candidates: 1000
+max_improvement_iterations: 20
+pre_small_cluster_size: 5
+pre_nearest_merge_candidates: 50
+allow_split_stops: true
+format: json
+gap_rel: 0.005
+time_limit: 600

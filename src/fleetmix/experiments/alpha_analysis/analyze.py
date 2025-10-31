@@ -66,9 +66,11 @@ for path in [
     path.mkdir(parents=True, exist_ok=True)
 
 # Path to the default fleetmix configuration
-BASE_CONFIG_PATH = Path("src/fleetmix/config/default_config_experiments.yaml.yaml")
+BASE_CONFIG_PATH = Path(
+    "src/fleetmix/config/experiments/fleet_composition/base_config.yaml"
+)
 
-# Depot location (from default_config_experiments.yaml.yaml)
+# Depot location (from base_config.yaml)
 DEPOT_LAT, DEPOT_LON = 4.7, -74.1
 R_EARTH_KM = 6371.0
 

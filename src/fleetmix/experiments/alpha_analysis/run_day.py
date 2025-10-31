@@ -23,7 +23,9 @@ from fleetmix.experiments.alpha_analysis.metrics import (
 )
 from fleetmix.utils.data_processing import load_customer_demand
 
-BASE_CONFIG_PATH = Path("src/fleetmix/config/default_config_experiments.yaml")
+BASE_CONFIG_PATH = Path(
+    "src/fleetmix/config/experiments/fleet_composition/base_config.yaml"
+)
 
 
 # Copied utility from run_grid to safely convert numpy & other objects to native types

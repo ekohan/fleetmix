@@ -20,8 +20,7 @@ from .core_types import (
 )
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
 
-# VRP/Benchmarking
-from .pipeline.vrp_interface import VRPType, convert_to_fsm
+# Post-optimization
 from .post_optimization.merge_phase import improve_solution
 
 # Extension system
@@ -65,7 +64,4 @@ __all__ = [
     # Context types
     "CapacitatedClusteringContext",
     "RouteTimeContext",
-    # === VRP/Benchmarking (research utilities) ===
-    "VRPType",
-    "convert_to_fsm",
 ]

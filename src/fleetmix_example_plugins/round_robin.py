@@ -12,8 +12,7 @@ from typing import List
 
 import pandas as pd
 
-from fleetmix.core_types import CapacitatedClusteringContext
-from fleetmix.registry import register_clusterer
+from fleetmix import CapacitatedClusteringContext, register_clusterer
 
 
 @register_clusterer("round_robin")

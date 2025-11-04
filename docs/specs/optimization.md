@@ -156,8 +156,9 @@ See [data_model.md](data_model.md) for complete `FleetmixSolution` structure.
 ### Code Organization
 
 - **Primary Module**: `src/fleetmix/optimization/core.py`
-- **Key Functions**:
-  - `optimize_fleet()`: Main entry point
+- **User API**: Use `fleetmix.optimize()` for high-level access
+- **Key Internal Functions**:
+  - `optimize_fleet()`: Core MILP solver (internal)
   - `_solve_internal()`: Internal implementation
   - `_create_model()`: Construct PuLP model
   - `_extract_solution()`: Parse solver output
@@ -185,13 +186,12 @@ See [data_model.md](data_model.md) for complete `FleetmixSolution` structure.
 ### Basic Usage
 
 ```python
-from fleetmix.optimization.core import optimize_fleet
+import fleetmix
 
-solution = optimize_fleet(
-    clusters=clusters,
-    configurations=vehicle_configs,
-    customers=customers,
-    parameters=params,
+# High-level API (recommended)
+solution = fleetmix.optimize(
+    demand="customers.csv",
+    config="config.yaml",
 )
 
 print(f"Total cost: ${solution.total_cost:,.2f}")
@@ -201,10 +201,27 @@ for cfg_id, count in solution.vehicles_used.items():
     print(f"  {cfg_id}: {count}")
 ```
 
+### Advanced: Direct Access to Core Solver
+
+For advanced users who need to work with pre-generated clusters:
+
+```python
+from fleetmix.optimization.core import optimize_fleet
+
+# Direct access to core MILP solver (advanced usage)
+solution = optimize_fleet(
+    clusters=clusters,
+    configurations=vehicle_configs,
+    customers=customers,
+    parameters=params,
+)
+```
+
 ### With Custom Solver
 
 ```python
 import pulp
+from fleetmix.optimization.core import optimize_fleet
 
 # Use Gurobi with custom settings
 gurobi_solver = pulp.GUROBI(

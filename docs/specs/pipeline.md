@@ -37,9 +37,9 @@ Output: Fleet Design Solution
 
 ### Main Entry Point
 
-**Public API**: `fleetmix.api.optimize()` - High-level interface for users
+**Public API**: `fleetmix.optimize()` - High-level interface for users
 
-**Internal Pipeline**: `fleetmix.pipeline.vrp_interface.run_optimization()` - Core orchestration
+**Internal Pipeline**: Uses `fleetmix.optimization.core.optimize_fleet()` for core MILP solving
 
 ### Phase Execution
 
@@ -57,7 +57,7 @@ Output: Fleet Design Solution
 
 ### Entry Points
 
-- **Python API**: `import fleetmix; fleetmix.optimize()`
+- **Python API**: `import fleetmix; solution = fleetmix.optimize(demand="data.csv", config="config.yaml")`
 - **CLI**: `fleetmix optimize` 
 - **GUI**: `fleetmix gui`
 

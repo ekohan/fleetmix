@@ -16,8 +16,7 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from fleetmix.core_types import RouteTimeContext
-from fleetmix.registry import register_route_time_estimator
+from fleetmix import RouteTimeContext, register_route_time_estimator
 
 
 @register_route_time_estimator("straight_line")

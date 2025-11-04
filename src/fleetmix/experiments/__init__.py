@@ -1,9 +1,4 @@
-"""Bundled experiment modules for Fleetmix.
+"""Bundled experiment modules for Fleetmix."""
 
-All experiments now live under the package path
-``fleetmix.experiments``.
-"""
-
-
-# NOTE: No top-level ``experiments`` alias is registered. Importers must
-# use ``fleetmix.experiments`` explicitly.
+# Experiments are internal-only - no public exports
+__all__ = []

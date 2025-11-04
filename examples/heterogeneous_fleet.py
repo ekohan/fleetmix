@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Dict
 
 import fleetmix as fm
+from fleetmix import VehicleSpec
 from fleetmix.config import FleetmixParams, load_fleetmix_params
-from fleetmix.core_types import VehicleSpec
 
 
 def build_demo_parameters() -> FleetmixParams:

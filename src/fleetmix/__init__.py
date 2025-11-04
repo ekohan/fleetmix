@@ -9,18 +9,19 @@ from .clustering.generator import generate_feasible_clusters
 # Core types
 from .config.params import FleetmixParams
 from .core_types import (
+    CapacitatedClusteringContext,
     Cluster,
     Customer,
     DepotLocation,
     FleetmixSolution,
+    RouteTimeContext,
     VehicleConfiguration,
     VehicleSpec,
 )
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
-from .optimization.core import optimize_fleet
 
 # VRP/Benchmarking
-from .pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
+from .pipeline.vrp_interface import VRPType, convert_to_fsm
 from .post_optimization.merge_phase import improve_solution
 
 # Extension system
@@ -35,17 +36,16 @@ from .utils.data_processing import load_customer_demand as load_demand
 from .utils.vehicle_configurations import generate_vehicle_configurations
 
 __all__ = [
-    # Version
+    # === Version ===
     "__version__",
-    # Main API
+    # === Main API (primary entry point) ===
     "optimize",
-    # Stage functions
+    # === Pipeline stages (for advanced users) ===
     "load_demand",
     "generate_vehicle_configurations",
     "generate_feasible_clusters",
-    "optimize_fleet",
     "improve_solution",
-    # Types
+    # === Core data types (input/output contracts) ===
     "FleetmixParams",
     "FleetmixSolution",
     "VehicleConfiguration",
@@ -53,15 +53,19 @@ __all__ = [
     "Cluster",
     "Customer",
     "DepotLocation",
-    # VRP
-    "VRPType",
-    "convert_to_fsm",
-    "run_optimization",
-    # Extensions
-    "register_clusterer",
-    "register_route_time_estimator",
-    "register_solver_adapter",
+    # === Extension system (plugin architecture) ===
+    # Protocols
     "Clusterer",
     "RouteTimeEstimator",
     "SolverAdapter",
+    # Registration decorators
+    "register_clusterer",
+    "register_route_time_estimator",
+    "register_solver_adapter",
+    # Context types
+    "CapacitatedClusteringContext",
+    "RouteTimeContext",
+    # === VRP/Benchmarking (research utilities) ===
+    "VRPType",
+    "convert_to_fsm",
 ]

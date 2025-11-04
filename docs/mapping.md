@@ -169,20 +169,28 @@ $$x_{vk} \in \{0,1\}, \quad \forall v \in V, k \in K_v$$
 
 **Implementation**:
 ```python
-# src/fleetmix/optimization/core.py
-def optimize_fleet(
-    clusters: list[Cluster],
-    configurations: list[VehicleConfiguration],
-    customers: list[CustomerBase],
-    parameters: FleetmixParams,
-) -> FleetmixSolution:
-    """
-    Main entry point for fleet size and mix optimization.
-    Builds and solves Problem (P) as PuLP model.
-    """
+# src/fleetmix/api.py
+import fleetmix
+
+# High-level user API
+solution = fleetmix.optimize(
+    demand="customers.csv",
+    config="config.yaml",
+)
+
+# Core MILP solver (internal, in src/fleetmix/optimization/core.py)
+from fleetmix.optimization.core import optimize_fleet
+solution = optimize_fleet(
+    clusters=clusters,
+    configurations=configurations,
+    customers=customers,
+    parameters=parameters,
+)
 ```
 
 **Key Internal Functions**:
+- `optimize()`: High-level API with file I/O and validation
+- `optimize_fleet()`: Core MILP solver (internal)
 - `_solve_internal()`: Internal DataFrame-based implementation
 - `_create_model()`: Builds PuLP model with variables and constraints
 

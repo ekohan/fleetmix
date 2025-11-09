@@ -76,7 +76,8 @@
 \usepackage[left=1in,right=1in,top=1in,bottom=1in,margin=1in]{geometry} % Consolidated geometry options
 \usepackage{etoc} % For the Appendices mini TOC
 \usepackage[colorlinks = true, linkcolor=CITE, citecolor=CITE, urlcolor=CITE]{hyperref}
-\usepackage[expansion=false]{microtype}
+\usepackage{lmodern}
+\usepackage{microtype}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Subsection}
 \renewcommand{\subsubsectionautorefname}{Subsubsection}
@@ -149,7 +150,7 @@ This makes planning efficient delivery operations both increasingly challenging 
 
 To address this challenge, distributors have increasingly turned to fleets of \acp{MCV} in recent years, which enable the simultaneous transport of multiple product categories \citep{ostermeier2021multi}.
 \acp{MCV} are generally designed with either fixed or flexible compartments.  \acp{MCV} with fixed compartments have predefined capacities determined during manufacturing and cannot be altered, whereas \acp{MCV} with flexible compartments offer the ability to adjust their sizes \citep{henke2015multi}. 
-In the context of food distribution, \acp{MCV} commonly have three compartments for dry, refrigerated, and frozen foods, with adjustable sizes to match load requirements. Companies like FreshDirect, Sysco, and Whole Foods Markets have reported the benefits of using \acp{MCV}, including improved customer experience through single-stop deliveries and reduced fuel costs, emissions, traffic exposure, and parking issues \citep{MultiTempLogistics2024}. By consolidating different product categories, \acp{MCV} also reduce the number of vehicles needed to meet demand compared to using separate \acp{SCV}.
+In the context of food distribution, \acp{MCV} commonly have three compartments for dry, refrigerated, and frozen foods, with adjustable sizes to match load requirements. Companies like FreshDirect, Sysco, and Whole Foods Markets have reported the benefits of using \acp{MCV}, including improved customer experience and reduced fuel costs, emissions, traffic exposure, and parking issues \citep{MultiTempLogistics2024}. By consolidating different product categories, \acp{MCV} also reduce the number of vehicles needed to meet demand compared to using separate \acp{SCV}.
 
 Motivated by our collaboration with a major food distributor operating in Bogotá, Colombia, we investigate the problem of designing \ac{MCV} fleets for last-mile food distribution systems. Unlike existing works, our problem considers several important real-world features of modern delivery operations with \acp{MCV}, including heterogeneous vehicles with flexible compartments, both fixed and variable vehicle usage costs, route duration constraints, and a large number of customers. The problem consists of determining three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type, number, and size of compartments assigned to each vehicle,  and (iii) the distribution plan (i.e., demand allocation) for each vehicle. The objective is to minimize total fixed and variable vehicle costs while satisfying customer demand for different product types.
 
@@ -219,13 +220,14 @@ Based on our real-world case study, we derive important managerial insights rega
 
 We now formally introduce the problem under investigation. 
 We consider a single depot with sufficient inventory at the beginning of the delivery horizon to satisfy all customer demands. Let $N' = \{0, 1, ..., n\}$ be the set of nodes, where $0$ denotes the depot and $N=\{1, ..., n\}$ the customers. 
-Further, let $P$ be the set of product types (e.g., dry, chilled, and frozen) and $q_p$ the units of vehicle load capacity required to transport one unit of product type $p \in P$. Each customer $i \in N$ has a demand of $d_{ip}$ units of product type $p \in P$. The food distributor that inspired this work employs a \emph{single-stop policy}, which dictates that the demand for each product type from each customer must be fulfilled by a single vehicle. Nevertheless, we also examine a multi-stop policy in which customers may receive deliveries from multiple vehicles, but each product type must still be delivered in full by one vehicle, as splitting is not practical \citep{gu2024vehicle}.
+Further, let $P$ be the set of product types (e.g., dry, chilled, and frozen) and $q_p$ the units of vehicle load capacity required to transport one unit of product type $p \in P$. Each customer $i \in N$ has a demand of $d_{ip}$ units of product type $p \in P$. We consider a \emph{multi-stop policy}in which customers may receive deliveries from multiple vehicles, but each product type must still be delivered in full by one vehicle, as splitting is not practical \citep{gu2024vehicle}.
 
 The delivery fleet comprises a set of heterogeneous vehicle types, each defined by specific operational characteristics such as maximum load capacity, average speed, and fixed and variable costs. Each vehicle type can divide its load capacity into a set $M$ of flexible compartments, each designed for a specific product type. In other words, vehicles can be configured in multiple ways by assigning different subsets of compartments. To capture this flexibility,
 we introduce the concept of \emph{vehicle configuration}, defined as a certain vehicle type equipped with a (non-empty) subset of compartments. The set of all vehicle configurations is denoted by $V$. For example, if the company operates two vehicle types and there are three available compartments, each type can be configured in $2^3 - 1 = 7$ distinct ways, resulting in $2 \times 7 = 14$ configurations in $V$. Based on the corresponding vehicle type, each vehicle configuration $v \in V$ has a maximum load capacity of $Q_v$, which can be distributed among its compartments, and a maximum route time duration of $T_v$. 
 
 Given our interest in addressing practical food distribution problems involving hundreds of customers, we aggregate customers into multiple capacitated clusters, denoted by the set $K$. Since these clusters are not necessarily mutually exclusive subsets of $N$, we define $K_i \subseteq K$ as the subset of clusters containing customer $i \in N$. As we explain in further detail in Section \ref{sec:solution_approach}, clusters are created based on the set of vehicle configurations $V$. Notably, we define $K_v \subseteq K$ as the subset of clusters that can be feasibly served by vehicle configuration $v \in V$ regarding maximum load capacity ($Q_v$) and route time duration ($T_v$) constraints. 
-Similarly, let $V_k \subseteq V$ be the set of vehicle configurations that can feasibly serve cluster $k \in K$. Based on the business context considered in our work, we consider that each vehicle used performs a single trip during the delivery horizon (e.g., a day). The total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, consists of a fixed cost incurring for dispatching the vehicle and equipping it with the set of compartments associated with the configuration, along with a variable cost based on the distance traveled to serve all customers in the cluster. Table \red{TBD} in \red{Appendix TBD} summarizes our mathematical notation.
+Similarly, let $V_k \subseteq V$ be the set of vehicle configurations that can feasibly serve cluster $k \in K$. Based on the business context considered in our work, we consider that each vehicle used performs a single trip during the delivery horizon (e.g., a day). The total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, consists of a fixed cost incurring for dispatching the vehicle and equipping it with the set of compartments associated with the configuration, along with a variable cost based on the distance traveled to serve all customers in the cluster. 
+% Table \red{TBD} in \red{Appendix TBD} summarizes our mathematical notation.
 
 The problem involves determining the optimal \ac{MCV} fleet size and mix by deciding the number of each vehicle configuration to use. Specifically, this includes selecting the appropriate vehicle types, defining their compartmentalization (i.e., number, type, and load capacity associated with each compartment), and assigning each selected vehicle configuration to a specific customer cluster. The objective is to minimize the total fixed and variable vehicle costs while meeting the individual demand of each customer for different product types. Note that, as we address a tactical fleet size and mix problem, operational routing decisions are not explicitly modeled but are implicitly accounted for when verifying that each customer cluster adheres to maximum route time constraints associated with the respective vehicle configuration. 
 
@@ -293,7 +295,8 @@ This splitting process continues until all resulting clusters satisfy both const
 \end{algorithmic}
 \end{algorithm}
 
-Since Algorithm \ref{alg:recursive_split} may produce small clusters with only a few customers, we then apply a merging step to all clusters $k \in K$ such that $|k| < \eta$, where $\eta$ denotes a minimum cluster size. For each such small cluster $k_i$, we define a neighborhood consisting of \red{all other small clusters within a centroid-to-centroid travel distance of $\Delta$}. Then, for each neighboring cluster $k_j$, we check whether the combined cluster $k_i \cup k_j$ can be feasibly served by a single vehicle configuration, considering both load capacity and route duration constraints. If feasible, we update the set of clusters by adding $k_i \cup k_j$, i.e., $K = K \cup \{k_i \cup k_j\}$. Note that a similar merging procedure is used during our improvement phase, but only to promising clusters selected in optimal solutions (see Section \ref{sec:improvement_phase}).
+Since Algorithm \ref{alg:recursive_split} may produce small clusters with only a few customers, we then apply a merging step to all clusters $k \in K$ such that $|k| < \eta$, where $\eta$ denotes a minimum cluster size. For each such small cluster $k_i$, we define a neighborhood consisting of the $
+\Delta$ closest clusters regarding centroid-to-centroid distance. Then, for each neighboring cluster $k_j$, we check whether the combined cluster $k_i \cup k_j$ can be feasibly served by a single vehicle configuration, considering both load capacity and route duration constraints. If feasible, we update the set of clusters by adding $k_i \cup k_j$, i.e., $K = K \cup \{k_i \cup k_j\}$. Note that a similar merging procedure is used during our improvement phase, but only to promising clusters selected in optimal solutions (see Section \ref{sec:improvement_phase}).
 
 \subsubsection{Distance Metric} \label{distance_metric}
 
@@ -307,7 +310,7 @@ where $\lambda \in [0,1]$ establishes the weight between geographical proximity,
 
 \subsection{Optimize Fleet Size and Mix with Heterogeneous \acp{MCV}} \label{sec:model_formulation}
 
-Based on the generated set of clusters, we now define the \ac{MCV} fleet size and mix that minimizes the total costs incurred to meet each individual customer's demand. It is worth recalling that the total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, includes both a fixed cost (associated with setting up the vehicle’s compartments and dispatching it) and a variable cost that depends on the distance traveled to serve the cluster. Notably, such fixed costs capture the additional operational effort required to set up and operate a \ac{MCV} configuration, as opposed to a \ac{SCV} configuration.
+Based on the generated set of clusters, we now define the \ac{MCV} fleet size and mix that minimizes the total costs incurred to meet each individual customer's demand. It is worth recalling that the total cost of serving cluster $k \in K_v$ with vehicle configuration $v \in V$, denoted by $c_{vk}$, includes both a fixed cost (associated with setting up the vehicle's compartments and dispatching it) and a variable cost that depends on the distance traveled to serve the cluster. Notably, such fixed costs capture the additional operational effort required to set up and operate a \ac{MCV} configuration, as opposed to a \ac{SCV} configuration.
 
 Let $x_{vk}$ be a binary decision variable equal to 1 if and only if vehicle configuration $v \in V$ serves cluster $k \in K_v$. Our integer programming model reads
 \begin{subequations} \label{P}
@@ -329,9 +332,7 @@ Lastly, Constraints \eqref{4} define the domain of the decision variables.
 
 Note that, after solving Problem \eqref{P}, the specific load capacity required for each compartment of the selected vehicle configurations can be readily determined by summing the demand for each product type across all customers in the respective cluster.
 
-\paragraph{Multi-stop delivery policy} In line with the business context that motivates our work, Constraints \eqref{2} enforce a single-stop policy, where the entire demand for each product type of each customer must be fully served by a single vehicle. However, in other contexts, it is acceptable for customers to receive multiple deliveries. In such cases, while multiple vehicle stops are allowed, splitting the delivery of a single product type is not impractical \citep{henke2015multi, gu2024vehicle}.
-
-Let us introduce the following additional notation to accommodate this multi-stop delivery policy. Let $P_i$ be the set of product types demanded by customer $i \in N$. We define $S_i^p=\{P' \subseteq P_i: p \in P'\}$ as the set of all subsets of $P_i$ that contain product $p \in P_i$. Lastly, for each product type $p \in P_i$, let $K_i^s$ be the subset of clusters containing customer $i \in N$ that can serve the demand of all product types in $s \in S_i^p$. Thus, the following constraints
+\paragraph{Multi-stop delivery policy} Note that Constraints \eqref{2} enforce a \emph{single-stop policy}, where the entire demand for each product type of each customer must be fully served by a single vehicle. Let us introduce the following additional notation to accommodate a multi-stop delivery policy. Let $P_i$ be the set of product types demanded by customer $i \in N$. We define $S_i^p=\{P' \subseteq P_i: p \in P'\}$ as the set of all subsets of $P_i$ that contain product $p \in P_i$. Lastly, for each product type $p \in P_i$, let $K_i^s$ be the subset of clusters containing customer $i \in N$ that can serve the demand of all product types in $s \in S_i^p$. Thus, the following constraints
 \begin{equation}
     \sum_{s \in S_i^p} \sum_{k \in K_i^s} \sum_{v \in V_k} x_{vk} \ = \ 1, \qquad i \in N, p \in P_i,
 \end{equation}
@@ -368,10 +369,10 @@ Table \ref{tab:spec_traceability} illustrates this traceability, mapping key ele
     \toprule
     \textbf{Paper Section} & \textbf{Specification Document} & \textbf{Implementation Module} \\
     \midrule
-    \S\ref{sec:generate_configurations} Vehicle Configs & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/vehicle_configurations.md}{\texttt{vehicle\_configurations.md}} & \texttt{utils/vehicle\_configurations.py} \\[2pt]
-    \S\ref{sec:generate_feasible_clusters} Clustering & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/clustering.md}{\texttt{clustering.md}} & \texttt{clustering/generator.py} \\[2pt]
-    \S\ref{sec:model_formulation} Optimization & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/optimization.md}{\texttt{optimization.md}} & \texttt{optimization/core.py} \\[2pt]
-    \S\ref{sec:improvement_phase} Improvement & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/post_optimization.md}{\texttt{post\_optimization.md}} & \texttt{post\_optimization/merge\_phase.py} \\
+    \S\ref{sec:generate_configurations} Vehicle Configs & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/vehicle_configurations.md}{\texttt{vehicle\_configurations.md}} & \href{https://github.com/ekohan/fleetmix/blob/main/src/fleetmix/utils/vehicle_configurations.py}{\texttt{utils/vehicle\_configurations.py}} \\[2pt]
+    \S\ref{sec:generate_feasible_clusters} Clustering & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/clustering.md}{\texttt{clustering.md}} & \href{https://github.com/ekohan/fleetmix/blob/main/src/fleetmix/clustering/generator.py}{\texttt{clustering/generator.py}} \\[2pt]
+    \S\ref{sec:model_formulation} Optimization & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/optimization.md}{\texttt{optimization.md}} & \href{https://github.com/ekohan/fleetmix/blob/main/src/fleetmix/optimization/core.py}{\texttt{optimization/core.py}} \\[2pt]
+    \S\ref{sec:improvement_phase} Improvement & \href{https://github.com/ekohan/fleetmix/blob/main/docs/specs/post_optimization.md}{\texttt{post\_optimization.md}} & \href{https://github.com/ekohan/fleetmix/blob/main/src/fleetmix/post_optimization/merge_phase.py}{\texttt{post\_optimization/merge\_phase.py}} \\
     \bottomrule
   \end{tabular}
   \label{tab:spec_traceability}
@@ -383,7 +384,7 @@ Table \ref{tab:spec_traceability} illustrates this traceability, mapping key ele
 
 \section{Effectiveness of the Matheuristic Approach} \label{sec:synthetic_results}
 
-In this section, we present a detailed computational study to test the effectiveness of our matheuristic. We run all experiments on a standard workstation (Apple Silicon M1, 2020) with 8 CPU cores and 16 GB of RAM. The implementation was developed in Python, using Gurobi 12.0.2 as a \ac{MILP} solver. \red{Throughout this section, and based on preliminary experiments, we set $\eta = $ and $\Delta = $ to define neighboring clusters when applying our merging procedure described in Section \ref{sec:generate_feasible_clusters}.}
+In this section, we present a detailed computational study to test the effectiveness of our matheuristic. We run all experiments on a standard workstation (Apple Silicon M1, 2020) with 8 CPU cores and 16 GB of RAM. The implementation was developed in Python, using Gurobi 12.0.2 as a \ac{MILP} solver. Throughout this section, and based on preliminary experiments, we set $\eta = 5$ customers and $\Delta = 50$ to define neighboring clusters when applying our merging procedure described in Section \ref{sec:generate_feasible_clusters}.
 
 \subsection{Test Instances}
 
@@ -440,14 +441,14 @@ In summary, these results validate the effectiveness of our matheuristic in find
 
 After showing the computational performance of our matheuristic approach, we now present and discuss results from a real-world case study based on the current operations of our industry partner, a leading food distributor based in Bogotá, Colombia. We begin this section by describing our real-world problem instances. We then present and discuss managerial insights regarding the benefits of adopting \acp{MCV}. Lastly, we analyze the resulting fleet composition under different cost structures. 
 
-Throughout this section, we employ the same parameters and computational environment described in Section \ref{sec:synthetic_results}. \red{For transparency and reproducibly, our instances and detailed computational results are publicly available at \url{https://github.com/ekohan/fleetmix}.}
+Throughout this section, we employ the same parameters and computational environment described in Section \ref{sec:synthetic_results}. For transparency and reproducibly, our instances and detailed computational results are publicly available at \url{https://github.com/ekohan/fleetmix/tree/main/src/fleetmix/benchmarking/datasets/case}.
 
 \subsection{Real-World Problem Instances}
 
 Our industry partner provided us with a rich dataset containing 70 days of real-world demand information. Each day (i.e., problem instance) provides detailed information about customer locations and the quantities of products requested by product type (frozen, refrigerated, and dry). Over the 70 days, the number of customers served by the company ranges from 208 to 691, with an average of 379 customers. Below, we explain the main characteristics of the service area and vehicle fleet, as well as the parameter values used.
 
 \paragraph{Service area} 
-The service area is located in Bogotá, Colombia, the country's most populous city. Geographically, the service area spans around 1,226 km$^2$. The company serves an average of 379 customers per day from a single depot located on the outskirts of the city. Figure \ref{fig:CaseStudyArea} shows the spatial distribution of customers for a representative day \red{(to protect confidentiality, the node locations have been slightly perturbed)}.
+The service area is located in Bogotá, Colombia, the country's most populous city. Geographically, the service area spans around 1,226 km$^2$. The company serves an average of 379 customers per day from a single depot located on the outskirts of the city. Figure \ref{fig:CaseStudyArea} shows the spatial distribution of customers for a representative day (to protect confidentiality, the node locations have been slightly perturbed).
 
 \begin{figure}[htbp]
     \centering
@@ -459,41 +460,29 @@ The service area is located in Bogotá, Colombia, the country's most populous ci
 \paragraph{Heterogeneous \acp{MCV}}
 The company operates a fleet of heterogeneous \acp{MCV}, comprising three vehicle types with flexible compartments.
 Before the delivery horizon begins, the company decides the number of each vehicle type to deploy and their respective compartment configurations.
-Vehicle type A has a total capacity of 700 kg and a fixed cost of 80 units; type B has a capacity of 1,300 kg and a fixed cost of 140 units; and type C provides 2,500 kg at a fixed cost of 180 units \red{(costs have been scaled for confidentiality)}.
-Each vehicle type allows seven compartment configurations (see Section \ref{sec:generate_configurations}), with a (homogeneous) setup cost of 50 units per activated compartment. We assume that vehicles travel the Euclidean distance between nodes at a constant speed of 30 km/h. Based on the company's recommendation, we set a service time of 25 minutes per stop, which is the average time the company currently takes to deliver food products to their customers (e.g., local restaurants or hotels). The variable travel cost is 10 units per operating hour, with a maximum route duration of 10 hours. \red{Lastly, given that our instances involve hundreds of customers, we check route duration feasibility through \ac{CA} when generating customer clusters, using a \ac{BHH} constant of $\beta = $ (see Section \ref{sec:feasibility_checks}).} 
+Vehicle type A has a total capacity of 700 kg and a fixed cost of 80 units; type B has a capacity of 1,300 kg and a fixed cost of 140 units; and type C provides 2,500 kg at a fixed cost of 180 units (costs have been scaled for confidentiality).
+Each vehicle type allows seven compartment configurations (see Section \ref{sec:generate_configurations}), with a (homogeneous) setup cost of 50 units per activated compartment. 
+Thus, the fixed cost of using a vehicle configuration is computed as \red{[include formula]}.
+We assume that vehicles travel the Euclidean distance between nodes at a constant speed of 30 km/h. Based on the company's recommendation, we set a service time of 25 minutes per stop, which is the average time the company currently takes to deliver food products to their customers (e.g., local restaurants or hotels). The variable travel cost is 10 units per operating hour, with a maximum route duration of 10 hours. Lastly, given that our instances involve hundreds of customers, we check route duration feasibility through \ac{CA} when generating customer clusters, using a \ac{BHH} constant of $\beta = 0.765$ (see Section \ref{sec:feasibility_checks} and \cite{carlsson2025new} for a detailed discussion of this parameter). 
 
 \blue{\textbf{JC}: Edited until here.}
 
 \paragraph{Scenarios of analysis} We set the aforementioned parameters as our baseline scenario, capturing the company's current operations. However, we also assess the effects of three key parameters on the benefits of adopting \acp{MCV}: total vehicle capacity, customer service time, and the maximum allowed vehicle route duration.
 
-\red{Did we test the impact of employing a single-stop policy?}
-
 \subsection{Benefits of Using Multi-Compartment Vehicles}
-The sensitivity analysis assesses how changes in specific parameters influence the fleet size and composition. The analysis focuses on three key parameters: (i) service time, which is the duration it takes for a vehicle to serve a customer at a specific location; (ii) the capacity of the vehicles; (iii) the maximum duration allowed for a route. We modified the parameters in the 70 base instances and compared the key performance indicators (KPIs) by calculating their means to assess the impact throughout each day of the case study. Our initial analysis focuses on how the three parameters influence the number of vehicles selected and the total cost of the operation.
+The sensitivity analysis assesses how changes in specific parameters influence the fleet size and composition. The analysis focuses on three key parameters: (i) the capacity of the vehicles; (ii) the maximum duration allowed for a route; (iii) service time, which is the duration it takes for a vehicle to serve a customer at a specific location. We modified the parameters in the 70 base instances and compared the key performance indicators (KPIs) by calculating their means to assess the impact throughout each day of the case study. Our initial analysis focuses on how the three parameters influence the number of vehicles selected and the total cost of the operation.
 
-The analysis presented in figure \ref{fig:fleet size vs total cost} summarizes the results obtained by varying vehicle capacity, service time, and maximum route duration across the 70 base instances.Each parameter was adjusted by a variation of 20\% and 50\% from the baseline to assess the impact on vehicle utilization and total cost. Figure \ref{fig:fleet size vs total cost} shows a comparison of these effects in a mixed fleet, with the possibility of being composed of MCVs and SCVs, versus a \ac{SCV} fleet. The comparison between the two fleet types illustrates the effects of permitting the use of MCVs. In the following paragraphs, we describe how changing the three key parameters affects these fleets.
+The analysis presented in figure \ref{fig:fleet size vs total cost} summarizes the results obtained by varying vehicle capacity, service time, and maximum route duration across the 70 base instances. Each parameter was adjusted by a variation of 20\% and 50\% from the baseline to assess the impact on vehicle utilization and total cost. Figure \ref{fig:fleet size vs total cost} shows a comparison of these effects in a mixed fleet, with the possibility of being composed of MCVs and SCVs, versus a \ac{SCV} fleet. The comparison between the two fleet types illustrates the effects of permitting the use of MCVs. The figure is shown below, followed by table \ref{tab:sensitivity_analysis}, which includes additional information for the analysis of results. 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\linewidth]{Imagens/enhanced_fleet_cost_comparison_latex.pdf}
+    \includegraphics[width=1.0\linewidth]{Imagens/enhanced_fleet_cost_comparison_latex.pdf}
     \vspace{0.1mm}
-    \caption{Fleet Size and Total Cost}
+    \caption{Effects of capacity, maximum route duration, and service time on average fleet size and total costs.}
     \label{fig:fleet size vs total cost}
 \end{figure}
 
-{Effects of Vehicle Capacity}. The analysis presented in Figure \ref{fig:fleet size vs total cost} reveals that increasing vehicle capacity leads to a reduction in the number of vehicles needed for both fleets. In the baseline scenario, the average number of \acp{MCV} is 20.2. This number decreases to 19.4 with a 20\% increase in capacity and to 18.5 with a 50\% increase. For \acp{SCV}, the baseline average is 27.7; this decreases to 27 with a 20\% capacity increase and to 26.2 with a 50\% increase. Conversely, reducing capacity by 20\% and 50\% results in an increase in fleet size: the number of MCVs rises to 22.2 and 26.5, while the fleet size of SCVs increases to 28.4 and 31, respectively. 
-
-The total cost follows a similar trend, decreasing by approximately 8\% and 16\% under the +20\% and +50\% scenarios for MCVs, and by 5\% and 11\% respectively for SCVs. In contrast, the total cost for MCVs increases by 9\% and 15\% under the -20\% and -50\% scenarios. Similarly, for SCVs, the total cost also rises as vehicle capacity is reduced; with a 20\% reduction, the total cost for MCVs and SCVs increases by 9\% and 7\%, respectively, while a 50\% reduction results in an increase of 25\% and 20\%, respectively.
-
-{Effects of Service Time}. The results presented in Figure \ref{fig:fleet size vs total cost} show that longer service times lead to an increase in the total number of vehicles required in both fleets. For \acp{MCV}, the baseline average fleet size increases from 20.2 to 21.6 and 23.8 under +20\% and +50\% service time scenarios, respectively. Conversely, reducing service time by 20\% and 50\% decreases the fleet size to 19.2 and 17.8. A similar pattern is observed for \acp{SCV}, where the average number of vehicles rises from 27.7 to 29.5 and 32.4 under the +20\% and +50\% scenarios, and decreases to 26.4 and 24.8 when service time is reduced by 20\% and 50\%. These results confirm that service duration directly affects fleet size since longer customer interactions reduce the number of customers that can be visited within the same route duration constraint.
-
-Regarding total cost, the effect of service time follows the same trend. The total cost for \acp{MCV} increases by approximately 7\% and 15\% with +20\% and +50\% longer service times, while reductions of 20\% and 50\% lead to cost decreases of around 6\% and 13\%. For \acp{SCV}, the increase is more pronounced, reaching up to 9\% and 18\% under the +20\% and +50,\% scenarios. This pattern indicates that \acp{MCV} are slightly more efficient at absorbing additional service time due to their capacity to handle multiple products per stop, reducing the need for additional trips compared with single-compartment vehicles. 
-
-{Effects of Maximum Route Duration}. Figure \ref{fig:fleet size vs total cost} also illustrates that increasing the maximum allowable route duration reduces the total number of vehicles required in both fleets. When route duration is extended by 20\% and 50\%, the fleet size of \acp{MCV} decreases from 20.2 to 19.1 and 17.9, respectively. For \acp{SCV}, the corresponding values decline from 27.7 to 26.5 and 24.7. Conversely, when the route duration is reduced by 20\% and 50\%, the number of vehicles rises to 21.8 and 25.6 for \acp{MCV}, and to 29.1 and 33.4 for \acp{SCV}. This behavior shows that route duration is a critical determinant of fleet requirements, as shorter operational windows constrain route feasibility and require deploying more vehicles to meet demand.
-
-The total cost behavior aligns with these fleet size variations. For \acp{MCV}, total cost decreases by roughly 6\% and 13\% under +20\% and +50\% duration scenarios, while reductions of 20\% and 50\% in route duration raise total cost by 8\% and 17\%. Similarly, for \acp{SCV}, total cost decreases by 5\% and 11\% with longer durations and increases by 9\% and 19\% when duration is reduced. These results demonstrate that extending route duration enables better vehicle utilization and reduces total operating costs, particularly benefiting the heterogeneous fleet configuration of \acp{MCV}.
-
-
+The previous figure examined how variations in capacity, service time, and route duration affect total cost and fleet size. To enhance our findings, Table \ref{tab:sensitivity_analysis} includes additional indicators such as load vehicle utilization, the number of customers served per vehicle, and effective route duration. These additional indicators complement the analysis of the parameters' impact on the total cost and fleet size. In the following paragraphs, we describe how changing the three key parameters affects these fleets.
 
 \begin{table}[H]
   \centering
@@ -527,11 +516,16 @@ The total cost behavior aligns with these fleet size variations. For \acp{MCV}, 
   \label{tab:sensitivity_analysis}%
 \end{table}%
 
-The previous analysis examined how variations in capacity, service time, and route duration affect total cost and fleet size. To enhance our findings, Table \ref{tab:sensitivity_analysis} includes additional indicators such as load vehicle utilization, the number of customers served per vehicle, and effective route duration. These additional indicators complement the analysis of the parameters' impact on the total cost and fleet size. 
+{Effects of Vehicle Capacity}. Figure \ref{fig:fleet size vs total cost} illustrates that vehicle capacity has only a modest effect on fleet size for both MCV and SCV fleets. A 50\% reduction in capacity results in only a slight increase in the number of vehicles—approximately from 20.2 to 26.5 for MCVs and from 27.7 to 31 for SCVs—yet leads to a sharp rise in total cost due to the extra trips required to meet demand. Table \ref{tab:sensitivity_analysis} supports these findings: with a 50\% decrease in capacity, load utilization increases to 87.0\% (MCV) and 85.9\% (SCV), but fewer customers are served per vehicle (10.0 and 12.2), and route durations are shorter (5.3 h and 6.6 h). These results demonstrate that changes in capacity primarily influence total distribution cost rather than fleet size, as the model adjusts utilization and route assignments to compensate.
 
-Load vehicle utilization decreases as vehicle capacity and route duration increase. For multi-compartment vehicles (MCVs), utilization drops from 87\% to 76.1\% as capacity increases from -50\% to +50\%. Similarly, for single-compartment vehicles (SCVs), utilization declines from 85.9\% to 66.5\%. A comparable trend occurs with increasing route duration; utilization is higher under restrictive conditions. In contrast, longer service times lead to a reduction in utilization, with figures decreasing from 83.6\% to 78.5\% for MCVs and from 78.4\% to 70.3\% for SCVs. These results indicate that utilization adjusts based on the operational constraints of each parameter, which aligns with the observed changes in total cost and fleet size. \red{VS: double check this paragraph}
+{Effects of Maximum Route Duration}. The effect of maximum route duration on fleet size and total cost is non-linear. As shown in Figure \ref{fig:fleet size vs total cost}, reducing the allowed duration produces a stronger impact than extending it. When the route duration is reduced by 50\%, the number of vehicles increases by roughly 40–50\%, causing a substantial rise in total cost. Extending route duration leads to only moderate cost reductions and smaller changes in fleet size. However, increasing the maximum duration by 50\% would result in total route times close to 15 hours, which exceeds legal limits for driver working hours and is therefore operationally infeasible.
 
-The number of customers per vehicle and the effective route duration vary consistently with the analyzed parameters. Reducing service time increases the number of customers served per vehicle, while longer service times produce the opposite effect. When the maximum route duration increases, both indicators rise, showing longer operational routes and a higher number of customers visited. Conversely, reductions in route duration lead to shorter routes and fewer customers per vehicle. For all scenarios, \acp{SCV} serve a larger number of customers per route, while \acp{MCV} operate with slightly shorter effective durations. The combined behavior of these indicators corresponds to the cost and fleet trends presented in the previous figures.
+{Effects of Service Time}. Service time exhibits the most linear relationship among the parameters studied, significantly impacting both fleet size and total cost. As shown in Figure \ref{fig:fleet size vs total cost}, reducing service time by 50\% can lead to a nearly 20\% decrease in the number of vehicles needed for both fleet configurations, which corresponds to a similar reduction in total costs. Shorter service times enable more customers to be assigned to each route, enhancing vehicle utilization and reducing the overall number of trips required. 
+
+Supporting this finding, Table \ref{tab:sensitivity_analysis} illustrates that when service time is cut by 50\%, the number of customers served per vehicle increases to 16.9 for the MCV configuration and 19.1 for the SCV configuration, with load utilization rates of 83.6\% and 78.4\%, respectively. These results confirm that improving service efficiency directly enhances operational performance, leading to lower total costs and smaller fleet sizes.
+
+
+
 
 Overall, the results from Table \ref{tab:sensitivity_analysis} and Figure \ref{fig:fleet size vs total cost} demonstrate that operational parameters—capacity, service time, and route duration—directly influence the fleet mix and utilization level. The next sensitivity analysis extends this exploration to economic parameters, specifically the fixed cost of multi-compartment vehicles and the compartment setup cost. These factors determine not only the total fleet cost but also the cost effectiveness of using \ac{MCV} over \ac{SCV}, shaping the overall composition and mix of the fleet.
 
@@ -568,10 +562,6 @@ The analysis of fleet composition demonstrates the sensitivity of multi-compartm
 
 \section{Discussion} \label{sec:discussion}
 
-- MCV 
-
-\red{Summarize the main managerial implications of the work.}
-
 \section{Conclusions} \label{sec:conclusions}
 
 \acfp{MCV} are among the most effective vehicle technologies that food distributors can employ to consolidate deliveries of multiple product types while maintaining their specific temperature and loading conditions. Motivated by our collaboration with a major food distributor operating in Bogotá, Colombia, we investigate the design of last-mile delivery fleets involving heterogeneous \acp{MCV} with flexible compartment sizes. Specifically, the decision-making problem faced by the company considers three interconnected decisions: (i) the number of each vehicle type to use, (ii) the type and size of each compartment assigned to each vehicle, and (iii) the distribution plan for each vehicle. The objective is to minimize total logistics costs, which comprise both fixed and variable costs associated with selecting and utilizing vehicles.
@@ -596,28 +586,28 @@ This section describes the data sources used to evaluate our solution approach. 
 We also incorporate the CVRP benchmark instances introduced by Uchoa et al. (2017), which are widely used to test and compare routing algorithms due to their diverse topologies and demand patterns. However, they are originally defined for single-product scenarios, while our problem requires managing multiple product types with MCVs. To address this discrepancy, we adapt the instances to introduce product diversity and compartment-related constraints. We use four adaptation strategies:
 
 \begin{enumerate}
-    \item \textit{Split.} Divide each customer’s total demand into multiple product types (dry, chilled, frozen) without changing overall volume or geography. This keeps the core complexity of the instance but now requires vehicles to handle multiple product types within their compartments.
+    \item \textit{Split.} Divide each customer's total demand into multiple product types (dry, chilled, frozen) without changing overall volume or geography. This keeps the core complexity of the instance but now requires vehicles to handle multiple product types within their compartments.
     
     \item \textit{Scaled.} Increase demands, capacities, and fleet sizes in proportion to the number of product types. The spatial relationships and customer distributions remain the same, but the larger scale tests how well the model handles more complex, multi-product loads.
     
-    \item \textit{Combined.} Merge multiple CVRP instances into a single problem, assigning each original instance to a different product type. Although each instance’s characteristics remain the same, the combined scenario forces the model to manage multiple independent demand profiles at once.
+    \item \textit{Combined.} Merge multiple CVRP instances into a single problem, assigning each original instance to a different product type. Although each instance's characteristics remain the same, the combined scenario forces the model to manage multiple independent demand profiles at once.
     
     \item \textit{Spatial Differentiation.} Vary product mixes by region within the same instance. For instance, one area might have a higher proportion of chilled products, while another relies more on dry goods. This lets us see if the fleet configuration can adapt to geographically distinct product requirements.
 \end{enumerate}
 
-By using both real and synthetic datasets, we created a broad set of scenarios. This setup allows us to evaluate how our model responds to a range of operational challenges, from stable, long-term patterns to sudden, short-term fluctuations, and to situate our model in relation to simple single-product benchmarks to more elaborate multi-product situations. In the following sections, we use these datasets to assess the model’s performance.
+By using both real and synthetic datasets, we created a broad set of scenarios. This setup allows us to evaluate how our model responds to a range of operational challenges, from stable, long-term patterns to sudden, short-term fluctuations, and to situate our model in relation to simple single-product benchmarks to more elaborate multi-product situations. In the following sections, we use these datasets to assess the model's performance.
 
 \subsection{Results on Synthetic Instances}
 
 To demonstrate the performance of our proposed approach, we perform several validation checks against the referenced datasets, which are summarized in Figure \ref{fig:validation_process}. Notably, we define lower and upper bounds to measure the quality of our solutions.
 
-\textit{Upper and lower bounds with synthetic benchmark instances.} To complement our analysis, we also test our algorithm on 100 CVRP benchmark instances from \cite{uchoa_new_2017}. We conduct the test in two steps: 1) Initial testing using single compartments to be able to directly compare our results with the best-known value from the literature. 2) We generate multi-compartment instances using the transformations listed in Section \ref{sec:synthetic_instances}. The comparison with the original instances, as well as with the “scaled”, “split” and “spatial” multi-good adaptations, serve as a theoretical lower bound. In contrast, the “combined” transformation serves as an upper bound, as we assume the target number of vehicles is the sum of all the best-known solutions of the instances that were combined; thus, assuming an optimized, SCV-only fleet.
+\textit{Upper and lower bounds with synthetic benchmark instances.} To complement our analysis, we also test our algorithm on 100 CVRP benchmark instances from \cite{uchoa_new_2017}. We conduct the test in two steps: 1) Initial testing using single compartments to be able to directly compare our results with the best-known value from the literature. 2) We generate multi-compartment instances using the transformations listed in Section \ref{sec:synthetic_instances}. The comparison with the original instances, as well as with the "scaled", "split" and "spatial" multi-good adaptations, serve as a theoretical lower bound. In contrast, the "combined" transformation serves as an upper bound, as we assume the target number of vehicles is the sum of all the best-known solutions of the instances that were combined; thus, assuming an optimized, SCV-only fleet.
 We compared our model to standard CVRP benchmark instances to validate the soundness of our outcomes. However, we note that we are solving a tactical fleet size and mix problem, not a stylized optimal routing problem.
 
 
 \subsubsection{Single-Good Base Cases}
 
-We begin by verifying our model performance using a single-good scenario that matches the original CVRP parameters. We treat the instance’s demand as demand for the “Dry” good, and preserve the instance’s original capacity and vehicle numbers. Our comparison with best-known solutions serves as a baseline to check if our model produces results in line with what’s well-established in the literature. 
+We begin by verifying our model performance using a single-good scenario that matches the original CVRP parameters. We treat the instance's demand as demand for the "Dry" good, and preserve the instance's original capacity and vehicle numbers. Our comparison with best-known solutions serves as a baseline to check if our model produces results in line with what's well-established in the literature. 
 Unlike the single-product benchmarks that serve as lower-bound, our upper-bound construction involves combining separate single-product solutions into one multi-product setting. This construction relies on assumptions that prevent a true one-to-one comparison. However, we aimed to create a fair as possible comparison when introducing the muti-compartment scenario.
 
 We performed the tests in the 100 available instances (see Figure~\ref{fig:uchoa-instances}). The overall results can be seen in Figure \ref{fig:fsm_model_performance}. Results show that our heuristic achieves a mean gap of 18,9\%. This error margin, while serving as a guidance, cannot be considered as purely solution degradation. Since our algorithm always recommends slightly larger fleets than the best-known values, it provides built-in resilience against practical issues, such as truck driver route adherence, traffic delays, variable stop times and day-to-day demand fluctuations, which are not considered in idealized CVRP solutions.
@@ -650,8 +640,8 @@ To better understand the performance, we calculated the correlation between the 
 
 \subsubsection{Multiple Product Types Adaptations}
 
-When we adapt the single-product benchmarks into “Scaled,” “Split,” and “Spatial” multi-product types variants, these scenarios serve as theoretical lower bounds, since we assume the instances can be solved with the same routes as the original version. Across these three transformations, our results consistently remain within a roughly 20\% gap, mirroring the performance observed in the simpler single-good baseline. Notably, no clear pattern emerges to suggest that one of these transformations leads to a distinctly larger or smaller gap; all three appear equally challenging and produce broadly similar outcomes.
-In contrast, the “Combined” transformation—where multiple instances are merged—acts as an upper bound, since we compare our solution to what would be required if we sum the minimal fleets for each separate instance. In this setting, our approach stays within the established bounds, highlighting the value added by MCVs to what would be an optimized SCV-only fleet.
+When we adapt the single-product benchmarks into "Scaled,", "Split,", and "Spatial" multi-product types variants, these scenarios serve as theoretical lower bounds, since we assume the instances can be solved with the same routes as the original version. Across these three transformations, our results consistently remain within a roughly 20\% gap, mirroring the performance observed in the simpler single-good baseline. Notably, no clear pattern emerges to suggest that one of these transformations leads to a distinctly larger or smaller gap; all three appear equally challenging and produce broadly similar outcomes.
+In contrast, the "Combined" transformation—where multiple instances are merged—acts as an upper bound, since we compare our solution to what would be required if we sum the minimal fleets for each separate instance. In this setting, our approach stays within the established bounds, highlighting the value added by MCVs to what would be an optimized SCV-only fleet.
 
 \begin{figure}[h]
     \centering
@@ -660,13 +650,13 @@ In contrast, the “Combined” transformation—where multiple instances are me
     \label{fig:fsm_model_performance}
 \end{figure}
 
-Taken together, these findings with synthetic instances suggest that the model’s outcome remains stable across different adaptation strategies, closely tracking around the 20\% margin seen in the real-world instances, described next.
+Taken together, these findings with synthetic instances suggest that the model's outcome remains stable across different adaptation strategies, closely tracking around the 20\% margin seen in the real-world instances, described next.
 
 \section{Case of Study (Real-World Instances)} \label{sec:case_of_study}
 
 
 
-We tested instances ranging from 262 to 1,856 customers. We also included a long-horizon scenario—180 daily runs—to assess the solution’s stability over time. For each run, we recorded maximums of:
+We tested instances ranging from 262 to 1,856 customers. We also included a long-horizon scenario—180 daily runs—to assess the solution's stability over time. For each run, we recorded maximums of:
 \begin{itemize}
     \item Clustering Phase Time: Under 10 seconds, even for ~1,800 customers. 
     \item MILP Solve Time: Under 5 seconds for up to 1,856 customers.
@@ -721,9 +711,9 @@ Our real-world data comes from a single corporate repository covering the Bogot�
 
 \textit{Long-Horizon Aggregated Dataset (2023).} Spanning nine months (January–September 2023) and about 195,000 aggregated sales records, this dataset establishes a stable baseline for strategic decisions. Since our model operates at a daily level, we disaggregate the monthly data to create single-day demand profiles. We do this by breaking down average monthly customer demands into plausible daily scenarios, each reflecting a specific structure (e.g., average daily demand, uniform visits per week, low-demand conditions, high-demand conditions). This systematic approach captures a spectrum of plausible operating states without overreliance on any single daily snapshot.
 
-\textit{Daily Transaction-Level Dataset (2024).} For a closer look at short-term fluctuations, we use roughly 138,000 daily line-item records from June to August 2024. The plot with the customers' location in Figure 3 highlights the coverage along all Bogotá’s metropolitan area. This dataset presents clear day-to-day shifts in order volumes and product mixes. Figure 2 illustrates the average weekly demand split across the different product types.
+\textit{Daily Transaction-Level Dataset (2024).} For a closer look at short-term fluctuations, we use roughly 138,000 daily line-item records from June to August 2024. The plot with the customers' location in Figure 3 highlights the coverage along all Bogotá's metropolitan area. This dataset presents clear day-to-day shifts in order volumes and product mixes. Figure 2 illustrates the average weekly demand split across the different product types.
 
-We run our model over each day of this dataset. As we found that in all cases time was the limiting factor, we derive a second dataset where we exclude customer orders considered too small. This demand profile is called ``Capacity-Stressing", for its purpose is to examine the model’s behavior when time is not the binding constraint. By doing so, we test scenarios where both time and capacity constraints matter, rather than allowing one factor to dominate.
+We run our model over each day of this dataset. As we found that in all cases time was the limiting factor, we derive a second dataset where we exclude customer orders considered too small. This demand profile is called ``Capacity-Stressing", for its purpose is to examine the model's behavior when time is not the binding constraint. By doing so, we test scenarios where both time and capacity constraints matter, rather than allowing one factor to dominate.
 
 
 
@@ -757,7 +747,7 @@ We run our model over each day of this dataset. As we found that in all cases ti
 \subsubsection{Assumptions }
 
 \subsection{Results on Real-World Instances}
-\textit{Upper bound with real-world instances and SCV fleet}. To create an operational upper bound on fleet size, we treat each product category independently and solve three separate VRP instances, one for each type of good. Customer orders are disaggregated by product type, requiring multiple visits to the same customer location if more than one product type is ordered. Solving three independent VRP and summing their fleet results, this method calculates a “worst-case” scenario that serves as a reference point for cost and number of vehicles if no MCV was available in the fleet. 
+\textit{Upper bound with real-world instances and SCV fleet}. To create an operational upper bound on fleet size, we treat each product category independently and solve three separate VRP instances, one for each type of good. Customer orders are disaggregated by product type, requiring multiple visits to the same customer location if more than one product type is ordered. Solving three independent VRP and summing their fleet results, this method calculates a "worst-case" scenario that serves as a reference point for cost and number of vehicles if no MCV was available in the fleet. 
 
 \textit{Lower bound with real-world instances and MCV fleet}. We also consider another simplified scenario where product types are ignored, and the total demand of all product types is summed up for each customer. We then solve a classical SCVRP with maximum length constraints that generates the ideal routes to serve each customer location at once. For each resulting route, we determine ex-post the compartment configuration setup needed to serve the route. While this idealized scenario may not fully capture real-world constraints, it does highlight the absolute best-case scenario: a scenario where the flexibility of MCVs is fully exploited, and each route is as efficient as possible.
 
@@ -773,7 +763,7 @@ We run our model over each day of this dataset. As we found that in all cases ti
 
 \subsubsection{Evaluation of Upper and Lower Bounds}
 
-For this evaluation we considered the daily 2024 dataset. We present two demand profile settings: (i) \textit{real company data}, where every order is included, and (ii) \textit{capacity stressed}, where unusually small or large orders are left out. In this demand profile we remove customers with demand below 40Kg, resulting a reduction of customer count by 62\% while maintaining 85\% of the total demand, which more than doubles the average order weight. Figure~\ref{fig:fsm_model_lower_gap} and Figure~\ref{fig:fsm_model_time_series} illustrate daily outcomes compared against the lower and upper bounds mentioned before. Here, “outcome” refers to the number of vehicles needed to satisfy the demand. Each day is solved independently, requiring 1.8 seconds on average.
+For this evaluation we considered the daily 2024 dataset. We present two demand profile settings: (i) \textit{real company data}, where every order is included, and (ii) \textit{capacity stressed}, where unusually small or large orders are left out. In this demand profile we remove customers with demand below 40Kg, resulting a reduction of customer count by 62\% while maintaining 85\% of the total demand, which more than doubles the average order weight. Figure~\ref{fig:fsm_model_lower_gap} and Figure~\ref{fig:fsm_model_time_series} illustrate daily outcomes compared against the lower and upper bounds mentioned before. Here, "outcome" refers to the number of vehicles needed to satisfy the demand. Each day is solved independently, requiring 1.8 seconds on average.
 
 In Figure~\ref{fig:fsm_model_lower_gap}(a), we present the gap of the model against real world data, the solutions generally stay close to the lower bound with an average deviation of +8.5\%, which shows the effectiveness of the proposed model at finding near-optimal fleet compositions. In Figure~\ref{fig:fsm_model_time_series}(a), the time series ordered from highest to lowest demand in presented and it can also be confirmed visually that the results are much closer to lower bound than upper bound.  We can also observe consistency in this achievement, as the model's outcome remains close to the lower bound even on days with high demand volatility. 
 
@@ -817,7 +807,7 @@ Using the defined upper and lower and bounds with the same data as previous anal
 
 It is interesting to note though that the advantage reduces significantly for the filtered data, which has a higher demand per customer. This is an intuitive outcome, as we see the benefits of MCVs when there are a lot of customers to be served, and with smaller orders, time constraints become more relevant. And then the fact the route can be done only once, and with one stop at the customer, enables the savings that are observed.
 
-Having established that our model’s results hold steady under a range of conditions, we now turn to practical recommendations for the sponsor company’s fleet design.
+Having established that our model's results hold steady under a range of conditions, we now turn to practical recommendations for the sponsor company's fleet design.
 
 \subsubsection{Sensitivity Analysis - Analysis Outcomes}
 
@@ -891,13 +881,13 @@ Figure~\ref{fig:sensitivity_analysis_demand} compares three typical days of real
 
 (h) \textit{Demand Profiles}: By evaluating three different demand profiles we can get many different insights. We used two sets of days, which had the same total weight, but for one dataset we grouped nearby customers, targeting a reduction of approximately 50\% in the number of customers while maintaining the demand. The characteristics of each day can be seen in Figure~\ref{fig:sensitivity_analysis_demand}(i). We can see that by concentrating customers the algorithm manages to increase the Load Percentage as seen in Figure~\ref{fig:sensitivity_analysis_demand}(iv) this is an indication that with the rea life data, time constraints are more important than capacity constraints. Consequently, there is a reduction in fleet size and cost per kg, as shown in Figure~\ref{fig:sensitivity_analysis_demand}(ii) and (iii). Another interesting remark from Figure~\ref{fig:sensitivity_analysis_demand}(iv) is that the lower and upper bounds get much tighter when using grouped demand, which means that the benefit of MCVs are reduced when the main constraint is capacity and not weight. 
 
-(i) \textit{Clustering method}s: To verify clustering methods performance, we analyzed the selection frequency of each of them in a multiple day’s dataset. The tests were divided into two scenarios: Profile 1, which is real demand from sponsor company, considering all customers, and Profile 2, which has the same source data of Profile 1, but excludes low-demand customers.
+(i) \textit{Clustering method}s: To verify clustering methods performance, we analyzed the selection frequency of each of them in a multiple day's dataset. The tests were divided into two scenarios: Profile 1, which is real demand from sponsor company, considering all customers, and Profile 2, which has the same source data of Profile 1, but excludes low-demand customers.
 
-In both scenarios the K-means method achieved the highest frequency of cluster selection by the algorithm. However, in Profile 2, its representativeness decreased because this method performs better in scenarios with more dispersed demand. On the other hand, from Profile 1 to Profile 2, there was an increase in the selection of the Merged method, which merges what we deem “small clusters” into larger one. Since the filtered Profile 2 has more geographical dispersion of customers, our binary-splitting capacitating algorithm will produce sparser clusters. This indicates that the post-processing step which collects and groups small clusters is effective at producing better results by consolidation.
+In both scenarios the K-means method achieved the highest frequency of cluster selection by the algorithm. However, in Profile 2, its representativeness decreased because this method performs better in scenarios with more dispersed demand. On the other hand, from Profile 1 to Profile 2, there was an increase in the selection of the Merged method, which merges what we deem "small clusters" into larger one. Since the filtered Profile 2 has more geographical dispersion of customers, our binary-splitting capacitating algorithm will produce sparser clusters. This indicates that the post-processing step which collects and groups small clusters is effective at producing better results by consolidation.
 
 The Agglomerative method demonstrated low representativeness, which is aligned with the sensitivity analysis, where varying the weights of the geographic location and demand similarity parameters had a marginal impact on costs. This outcome reflects that this method generated only a few clusters selected by the algorithm and points in the direction of distance being a much more important driver of routes than similarity of demand.
 
-Our analysis shows that no method stood out over the others, k-means for example was the most selected one with 38\% of cases. This confirms our strategy to use of all the available methods together in the “combine” algorithm as this enables the model to have a better performance. The detailed results are presented in Table~\ref{tab:clustering_statistics}.
+Our analysis shows that no method stood out over the others, k-means for example was the most selected one with 38\% of cases. This confirms our strategy to use of all the available methods together in the "combine" algorithm as this enables the model to have a better performance. The detailed results are presented in Table~\ref{tab:clustering_statistics}.
 
 \begin{table}[h]
     \centering
@@ -975,7 +965,7 @@ The last relevant parameter is the number of \textbf{compartments} in each truck
 
 \subsubsection{MCV Advantages and Trade-Offs}
 
-When comparing SCV fleet against MCV fleet in the same demand profiles, there is a clear advantage of using MCVs in the fleet, with a reduction in costs from 16\% to 40\% and number of vehicles from 18\% to 42\% using our baseline data and depending on demand profile. And also, a better usage of the vehicle’s capacity, with a higher average load ratio, as an example we have achieved 35\% average load for SCVs and 48\% for MCVs on real data.
+When comparing SCV fleet against MCV fleet in the same demand profiles, there is a clear advantage of using MCVs in the fleet, with a reduction in costs from 16\% to 40\% and number of vehicles from 18\% to 42\% using our baseline data and depending on demand profile. And also, a better usage of the vehicle's capacity, with a higher average load ratio, as an example we have achieved 35\% average load for SCVs and 48\% for MCVs on real data.
 
 As a consequence of reduce fleet to attend the same or higher demand, MCVs will enable a reduction in the total distance the trucks will travel and consequently in emissions.
 
@@ -995,7 +985,7 @@ From the Sensitivity Analysis, we get to the conclusion that the main constraint
 
 \subsubsection{Vehicle Load Optimization}
 
-\textit{Smaller Capacity Vehicles}: The average load is relatively low at 49\% for an average day demand. Therefore, there is a possibility of including a smaller vehicle type, with around 1900 kg of capacity while still serving the customer’s demands. However, this strategy would only be financially beneficial if accompanied by a reduction in vehicle fixed costs of around 20\%. 
+\textit{Smaller Capacity Vehicles}: The average load is relatively low at 49\% for an average day demand. Therefore, there is a possibility of including a smaller vehicle type, with around 1900 kg of capacity while still serving the customer's demands. However, this strategy would only be financially beneficial if accompanied by a reduction in vehicle fixed costs of around 20\%. 
 
 \textit{Customers Orders Consolidation}: Companies could try to offer an advantage to customers if they manage to make bigger orders or reduce the number of weekly deliveries. For example, if a customer, instead of ordering three times per week, consolidates the three orders in one, this would reduce operational costs and part of this benefit could be offered to the customer.
 
@@ -1004,7 +994,7 @@ From the Sensitivity Analysis, we get to the conclusion that the main constraint
 
 \subsection{Conclusions}
 
-Urban food distribution demand has been continuously increasing following urbanization trends around the world, being even more pronounced in developing countries. Food distributors face complex logistics challenges to deliver in dense urban environments, with limited storage space, traffic congestion and difficulty parking. In this context, MCVs increasingly helped companies face these challenges by allowing the simultaneous delivery of products with different temperature requirements, commonly split between dry, refrigerated and frozen goods.  The companies’ decision on their fleet composition becomes even more challenging, as now they must decide between vehicles capacity, number of compartments available, and the type of compartments.
+Urban food distribution demand has been continuously increasing following urbanization trends around the world, being even more pronounced in developing countries. Food distributors face complex logistics challenges to deliver in dense urban environments, with limited storage space, traffic congestion and difficulty parking. In this context, MCVs increasingly helped companies face these challenges by allowing the simultaneous delivery of products with different temperature requirements, commonly split between dry, refrigerated and frozen goods.  The companies' decision on their fleet composition becomes even more challenging, as now they must decide between vehicles capacity, number of compartments available, and the type of compartments.
 
 To support the companies on fleet decision, we develop a cluster-first, fleet design-second heurists approach that defines the optimal fleet size and mix based on a daily demand. Our model works in a three-step process. First, the possible vehicle configurations are defined based on the available vehicle types. Second, the customers are grouped into serviceable clusters, based on the previously generated vehicle configurations, using different clustering techniques and parameters. And finally, a Fleet Size and Mix optimization model matches the most cost-effective cluster-vehicle configuration pairs that serve all the customers. In a post-processing step small clusters are recombined to further improve the solution.
 
@@ -1014,11 +1004,11 @@ Based on the test results we derive some managerial implications. We highlight t
 
 Future works included adding a multi-period capacity for the model, simplifying fleet decision compared to fleet composition calculations for daily demand. Moreover, the model could be extended to include stochastic parameters and demand, time windows, driver overtime, outsourced fleet, and volume constraints. These additional features would make the FSM Model reflect additional real-life complexities. 
 
-\subsection{Limitations and Future Research}
+\subsection{Limitations and Future Research}
 
 Our study had a practical approach to deliver a base fleet size for the company, and some assumptions were made that could limit its application depending on the operations. We therefore have the following suggestions to expand the precision and applicability of the model.
 
-\textit{Multi-period capacity}: We have focused on optimizing the fleet by using a single day approach. To generalize the results for a longer period we run the algorithm over many days to draw conclusions. A more comprehensive approach could focus on optimizing the fleet over a different day’s scenario. This is especially feasible using an extension of our algorithm as it has already proven to be very computationally efficient.
+\textit{Multi-period capacity}: We have focused on optimizing the fleet by using a single day approach. To generalize the results for a longer period we run the algorithm over many days to draw conclusions. A more comprehensive approach could focus on optimizing the fleet over a different day's scenario. This is especially feasible using an extension of our algorithm as it has already proven to be very computationally efficient.
 
 \textit{Stochastic Parameters}: We have used fixed baseline parameters throughout our study, such as speeds and time to serve the customers, which are known to be variable. By implementing the possibility for them to be follow a probability distribution would increase the adherence to real-life operations.
 Stochastic Demand: As the data shows, demand is also clearly stochastic. By implementing a forecast with stochastic demand, the algorithm could be used to better simulate future scenarios and support longer term fleet decisions.
@@ -1033,13 +1023,13 @@ Other important parameters on fleet operation would also be interesting to model
 
 \textit{Extra Hours}: As time is the main constraint, staff extra hours could be included in the model to evaluate the trade-off between the additional labor costs and fleet costs.
 
-\textit{Weight and Volume Constraints}: Based on the sponsor company’s experience, we have focused our constraints only on weight. But depending on the type of product that is being delivered, volume could also play a role. Combining both constraints would make the model more comprehensive for both for higher density or higher volume products.
+\textit{Weight and Volume Constraints}: Based on the sponsor company's experience, we have focused our constraints only on weight. But depending on the type of product that is being delivered, volume could also play a role. Combining both constraints would make the model more comprehensive for both for higher density or higher volume products.
 
 \textit{Clustering efficiency and \ac{MILP} constraints coefficients}: Our current solution approach involves combining several common clustering algorithms in a clever, but brute-force enumeration that could be refined. To implement a more incremental and closer to Column Generation technique, we could iteratively feed the \ac{MILP} model with improved cluster configurations and therefore invoke it more often. The post-processing step already does this in a provisional way. The trade-off between solution quality and runtime should be studied further. 
 
 \section{Validation and Robustness Analysis}  \label{sec:validation_robustness_analysis}
 
-In Section~\ref{sec:validation_robustness_analysis}, we present our experimental methodology and results. We begin by describing our computational environment in Section~\ref{subsec:experimental_setup_metrics}, including the baseline parameter set that guides our comparisons. Next, Section~\ref{subsec:validation_producedure} presents our validation procedure and details how we establish upper and lower bounds to benchmark solution quality. Section~\ref{subsec:results_synthetic_instances} evaluates the model’s performance using the synthetic benchmark instances. Finally Section~\ref{subsec:results_real_instances} examines the model’s performance under various demand profiles drawn from real-world instances.
+In Section~\ref{sec:validation_robustness_analysis}, we present our experimental methodology and results. We begin by describing our computational environment in Section~\ref{subsec:experimental_setup_metrics}, including the baseline parameter set that guides our comparisons. Next, Section~\ref{subsec:validation_producedure} presents our validation procedure and details how we establish upper and lower bounds to benchmark solution quality. Section~\ref{subsec:results_synthetic_instances} evaluates the model's performance using the synthetic benchmark instances. Finally Section~\ref{subsec:results_real_instances} examines the model's performance under various demand profiles drawn from real-world instances.
 
 \subsection{Experimental Setup and Metrics} \label{subsec:experimental_setup_metrics}
 

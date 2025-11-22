@@ -200,6 +200,23 @@ def _collect_day_summary(
     st_stats = stops_stats(solution)
     dist_stats = distance_ratios(total_distance, num_customers, total_used)
 
+    # Extract runtime measurements
+    time_measurements_data = []
+    total_wall_time = 0.0
+    if solution.time_measurements:
+        for tm in solution.time_measurements:
+            time_measurements_data.append(
+                {
+                    "span_name": tm.span_name,
+                    "wall_time": float(tm.wall_time),
+                    "process_user_time": float(tm.process_user_time),
+                    "process_system_time": float(tm.process_system_time),
+                    "children_user_time": float(tm.children_user_time),
+                    "children_system_time": float(tm.children_system_time),
+                }
+            )
+            total_wall_time += tm.wall_time
+
     return convert_numpy_types(
         {
             "instance": demand_path.stem,
@@ -243,6 +260,9 @@ def _collect_day_summary(
             "solver_runtime_sec": float(solution.solver_runtime_sec or 0.0),
             "solver_status": str(solution.solver_status or "Unknown"),
             "optimality_gap": float(solution.optimality_gap or 0.0),
+            # Runtime measurements
+            "total_runtime_sec": float(total_wall_time),
+            "time_measurements": time_measurements_data,
         }
     )
 

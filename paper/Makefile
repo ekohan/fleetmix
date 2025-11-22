@@ -37,12 +37,14 @@ $(PDF): $(TEX) $(BIB)
 	@echo "==> Final pass..."
 	$(LATEX) $(LATEX_FLAGS) $(MAIN)
 	@echo "==> PDF compiled successfully: $(PDF)"
+	@$(MAKE) clean
 
 # Quick compile (single pass, no bibliography)
 quick: $(TEX)
 	@echo "==> Quick compile (single pass)..."
 	$(LATEX) $(LATEX_FLAGS) $(MAIN)
 	@echo "==> PDF compiled: $(PDF)"
+	@$(MAKE) clean
 
 # Watch mode - recompile on changes (requires latexmk)
 watch:

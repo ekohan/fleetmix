@@ -19,19 +19,20 @@ logger = FleetmixLogger.get_logger(__name__)
 
 
 def make_scv_fleet(demand_day: str) -> FleetmixParams:
-    """Create params for SCV-only fleet (one vehicle type per good)."""
+    """Create params for SCV-only fleet (one vehicle type per good, for each base vehicle type)."""
     base_params = load_fleetmix_params(BASE_CONFIG_PATH)
     goods = base_params.problem.goods
-    base_vehicle = next(
-        iter(base_params.problem.vehicles.values())
-    )  # Use first as template
+
+    # Create SCV for each vehicle type × good combination
     scv_vehicles = {}
-    for good in goods:
-        scv_spec = dataclasses.replace(
-            base_vehicle,
-            allowed_goods=[good],
-        )
-        scv_vehicles[f"SCV_{good}"] = scv_spec
+    for vt_name, vt_spec in base_params.problem.vehicles.items():
+        for good in goods:
+            scv_spec = dataclasses.replace(
+                vt_spec,
+                allowed_goods=[good],
+            )
+            scv_vehicles[f"SCV_{vt_name}_{good}"] = scv_spec
+
     scv_problem = dataclasses.replace(
         base_params.problem,
         vehicles=scv_vehicles,
@@ -67,15 +68,13 @@ def make_mixed_fleet(
     """Create params for mixed fleet (SCV + MCV) with alpha multiplier on MCV and C setup cost."""
     base_params = load_fleetmix_params(BASE_CONFIG_PATH)
     goods = base_params.problem.goods
-    base_vehicle = next(
-        iter(base_params.problem.vehicles.values())
-    )  # Use first as template
 
-    # SCV vehicles: one per good
+    # SCV vehicles: one per vehicle type × good combination
     scv_vehicles: dict[str, VehicleSpec] = {}
-    for good in goods:
-        scv_spec = dataclasses.replace(base_vehicle, allowed_goods=[good])
-        scv_vehicles[f"SCV_{good}"] = scv_spec
+    for vt_name, vt_spec in base_params.problem.vehicles.items():
+        for good in goods:
+            scv_spec = dataclasses.replace(vt_spec, allowed_goods=[good])
+            scv_vehicles[f"SCV_{vt_name}_{good}"] = scv_spec
 
     # MCV vehicles: use all defined vehicles, apply alpha multiplier
     mcv_vehicles: dict[str, VehicleSpec] = {}

@@ -33,6 +33,9 @@ src/*.egg-info/
 .idea/
 .cursor/
 .cursorignore
+.agentic-rules/
+.ipynb_checkpoints/
+fleet-comparision-metrics.ipynb
 
 # TODO: solve optimality gap implementation
 *-pulp.lp

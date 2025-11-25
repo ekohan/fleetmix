@@ -116,7 +116,6 @@ def _list_instances(suite: str) -> None:
     )
 
 
-# TODO: runner logic can be simplified. perhaps we can just use the unified pipeline interface for all cases?
 def _run_single_instance(
     suite: str,
     instance: str,
@@ -126,63 +125,78 @@ def _run_single_instance(
     allow_split_stops: Optional[bool] = None,
     config_path: Path | None = None,
 ) -> None:
-    """Run a single benchmark instance."""
+    """Run a single benchmark instance using unified pipeline."""
+    # 1. Validation
+    available = _get_available_instances(suite)
+    if instance not in available:
+        log_error(f"{suite.upper()} instance '{instance}' not found")
+        console.print(
+            f"[yellow]Available instances:[/yellow] {', '.join(available[:5])}{'...' if len(available) > 5 else ''}"
+        )
+        console.print(
+            f"[dim]Use 'fleetmix benchmark {suite} --list' to see all available instances[/dim]"
+        )
+        raise typer.Exit(1)
+
+    datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / suite
+    instance_file: Path | None = None
+
     if suite == "mcvrp":
-        # Run single MCVRP instance
-        datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "mcvrp"
-        dat_path = datasets_dir / f"{instance}.dat"
+        instance_file = datasets_dir / f"{instance}.dat"
+        filename_suffix = ""
+    elif suite == "cvrp":
+        # CVRP loader finds files by instance name internally
+        instance_file = None
+        filename_suffix = "_normal"
+    else:  # case
+        instance_file = datasets_dir / f"{instance}.csv"
+        filename_suffix = ""
 
-        if not dat_path.exists():
-            log_error(f"MCVRP instance '{instance}' not found")
-            available = _get_available_instances("mcvrp")
-            console.print(
-                f"[yellow]Available instances:[/yellow] {', '.join(available[:5])}{'...' if len(available) > 5 else ''}"
-            )
-            console.print(
-                "[dim]Use 'fleetmix benchmark mcvrp --list' to see all available instances[/dim]"
-            )
-            raise typer.Exit(1)
+    # 2. Setup Output Path
+    # Determine output directory
+    target_dir = output_dir or Path("results")
 
-        # ------------------------------------------------------
-        # CI fast-exit: avoid heavy conversion/optimisation
-        # ------------------------------------------------------
-        import os as _os
+    # Determine filename
+    config_name = config_path.stem if config_path else None
 
-        if (
-            _os.getenv("PYTEST_CURRENT_TEST") is not None
-            and _os.getenv("FLEETMIX_SKIP_OPTIMISE", "1") == "1"
-        ):
-            placeholder_dir = output_dir or Path("results")
-            placeholder_dir.mkdir(parents=True, exist_ok=True)
-            ext = "xlsx" if format == "xlsx" else "json"
-            if config_path:
-                config_name = config_path.stem
-                placeholder_file = (
-                    placeholder_dir / f"mcvrp_{config_name}-{instance}.{ext}"
-                )
-            else:
-                placeholder_file = placeholder_dir / f"mcvrp_{instance}.{ext}"
-            placeholder_file.write_text("{}")
-            return  # success exit for test
+    if config_name:
+        stem = f"{suite}_{config_name}-{instance}{filename_suffix}"
+    else:
+        stem = f"{suite}_{instance}{filename_suffix}"
 
-        log_progress(f"Running MCVRP instance {instance}...")
+    ext = "xlsx" if format == "xlsx" else "json"
+    output_path = target_dir / f"{stem}.{ext}"
 
-        # Load config or use default
-        if config_path:
-            params = load_fleetmix_params(config_path)
-        else:
-            # Use default config
-            if _DEFAULT_CONFIG is None:
-                raise RuntimeError("No default configuration found")
-            params = _DEFAULT_CONFIG
+    # 3. CI Fast Exit
+    import os as _os
 
-        # Override output directory if specified
-        if output_dir:
-            params = dataclasses.replace(
-                params, io=dataclasses.replace(params.io, results_dir=output_dir)
-            )
+    if (
+        _os.getenv("PYTEST_CURRENT_TEST") is not None
+        and _os.getenv("FLEETMIX_SKIP_OPTIMISE", "1") == "1"
+    ):
+        target_dir.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("{}")
+        return
 
-        # Override allow_split_stops if specified
+    log_progress(f"Running {suite.upper()} instance {instance}...")
+
+    # 4. Load Configuration
+    if config_path:
+        params = load_fleetmix_params(config_path)
+    else:
+        if _DEFAULT_CONFIG is None:
+            raise RuntimeError("No default configuration found")
+        params = _DEFAULT_CONFIG
+
+    # Override output directory in params
+    if output_dir:
+        params = dataclasses.replace(
+            params, io=dataclasses.replace(params.io, results_dir=output_dir)
+        )
+
+    # 5. Suite-Specific Data Preparation
+    if suite == "mcvrp":
+        # Apply split stops override
         if allow_split_stops is not None:
             params = dataclasses.replace(
                 params,
@@ -191,119 +205,13 @@ def _run_single_instance(
                 ),
             )
 
-        # Use the unified pipeline interface for conversion
         customers_df, instance_spec = convert_to_fsm(
-            VRPType.MCVRP, instance_path=dat_path
+            VRPType.MCVRP, instance_path=instance_file
         )
-
-        # Update params.problem with fields from InstanceSpec
         params = params.apply_instance_spec(instance_spec)
 
-        # Use the API for optimization
-        solution = api.optimize(demand=customers_df, config=params)
-
-        # Save results with specified format
-        ext = "xlsx" if format == "xlsx" else "json"
-        if config_path:
-            config_name = config_path.stem
-            output_path = (
-                params.io.results_dir / f"mcvrp_{config_name}-{instance}.{ext}"
-            )
-        else:
-            output_path = params.io.results_dir / f"mcvrp_{instance}.{ext}"
-
-        save_optimization_results(
-            solution=solution,
-            parameters=params,
-            filename=str(output_path),
-            format=format,
-            is_benchmark=True,
-            expected_vehicles=params.problem.expected_vehicles,
-        )
-
-        # Display results summary table
-        table = Table(title=f"MCVRP Benchmark Results: {instance}", show_header=True)
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
-
-        table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
-        table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
-        table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
-        table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
-        table.add_row("Vehicles Used", str(solution.vehicles_used))
-        table.add_row("Expected Vehicles", str(params.problem.expected_vehicles))
-        table.add_row("Missing Customers", str(len(solution.missing_customers)))
-        table.add_row("Solver Status", solution.solver_status)
-        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
-
-        # Add cluster load percentages if available
-        if solution.selected_clusters:
-            for i, cluster in enumerate(solution.selected_clusters):
-                # Calculate load percentage from total demand and vehicle capacity
-                config = _find_config_by_id(
-                    solution.configurations, str(cluster.config_id)
-                )
-                total_demand = sum(cluster.total_demand.values())
-                load_pct = (total_demand / config.capacity) * 100
-
-                table.add_row(
-                    f"Cluster {cluster.cluster_id} Load %", f"{load_pct:.1f}%"
-                )
-
-        console.print(table)
-        log_success(f"Results saved to {output_path.name}")
-
     elif suite == "cvrp":
-        # Run single CVRP instance
-        available = _get_available_instances("cvrp")
-        if instance not in available:
-            log_error(f"CVRP instance '{instance}' not found")
-            console.print(
-                f"[yellow]Available instances:[/yellow] {', '.join(available[:5])}{'...' if len(available) > 5 else ''}"
-            )
-            console.print(
-                "[dim]Use 'fleetmix benchmark cvrp --list' to see all available instances[/dim]"
-            )
-            raise typer.Exit(1)
-
-        # CI fast-exit stub after validation
-        import os as _os
-
-        if (
-            _os.getenv("PYTEST_CURRENT_TEST") is not None
-            and _os.getenv("FLEETMIX_SKIP_OPTIMISE", "1") == "1"
-        ):
-            placeholder_dir = output_dir or Path("results")
-            placeholder_dir.mkdir(parents=True, exist_ok=True)
-            ext = "xlsx" if format == "xlsx" else "json"
-            if config_path:
-                config_name = config_path.stem
-                placeholder_file = (
-                    placeholder_dir / f"cvrp_{config_name}-{instance}_normal.{ext}"
-                )
-            else:
-                placeholder_file = placeholder_dir / f"cvrp_{instance}_normal.{ext}"
-            placeholder_file.write_text("{}")
-            return
-
-        log_progress(f"Running CVRP instance {instance}...")
-
-        # Load config or use default
-        if config_path:
-            params = load_fleetmix_params(config_path)
-        else:
-            # Use default config
-            if _DEFAULT_CONFIG is None:
-                raise RuntimeError("No default configuration found")
-            params = _DEFAULT_CONFIG
-
-        # Override output directory if specified
-        if output_dir:
-            params = dataclasses.replace(
-                params, io=dataclasses.replace(params.io, results_dir=output_dir)
-            )
-
-        # For CVRP normal: force disable split-stops as it's single-product
+        # Force disable split-stops for CVRP Normal
         was_enabled = params.problem.allow_split_stops
         if allow_split_stops is True or (allow_split_stops is None and was_enabled):
             log_debug(
@@ -314,124 +222,15 @@ def _run_single_instance(
             problem=dataclasses.replace(params.problem, allow_split_stops=False),
         )
 
-        # Use the unified pipeline interface for conversion
-        # CVRP requires benchmark_type and uses instance_names instead of instance_path
         customers_df, instance_spec = convert_to_fsm(
             VRPType.CVRP,
             instance_names=[instance],
             benchmark_type=CVRPBenchmarkType.NORMAL,
         )
-
-        # Update params.problem with fields from InstanceSpec
         params = params.apply_instance_spec(instance_spec)
 
-        # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api.optimize(demand=customers_df, config=params)
-
-        # Save results with specified format
-        ext = "xlsx" if format == "xlsx" else "json"
-        if config_path:
-            config_name = config_path.stem
-            output_path = (
-                params.io.results_dir / f"cvrp_{config_name}-{instance}_normal.{ext}"
-            )
-        else:
-            output_path = params.io.results_dir / f"cvrp_{instance}_normal.{ext}"
-        save_optimization_results(
-            solution=solution,
-            parameters=params,
-            filename=str(output_path),
-            format=format,
-            is_benchmark=True,
-            expected_vehicles=params.problem.expected_vehicles,
-        )
-
-        # Display results summary table
-        table = Table(title=f"CVRP Benchmark Results: {instance}", show_header=True)
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
-
-        table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
-        table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
-        table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
-        table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
-        table.add_row("Vehicles Used", str(solution.vehicles_used))
-        table.add_row("Expected Vehicles", str(params.problem.expected_vehicles))
-        table.add_row("Missing Customers", str(len(solution.missing_customers)))
-        table.add_row("Solver Status", solution.solver_status)
-        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
-
-        # Add cluster load percentages if available
-        if solution.selected_clusters:
-            for i, cluster in enumerate(solution.selected_clusters):
-                # Calculate load percentage from total demand and vehicle capacity
-                config = _find_config_by_id(
-                    solution.configurations, str(cluster.config_id)
-                )
-                total_demand = sum(cluster.total_demand.values())
-                load_pct = (total_demand / config.capacity) * 100
-
-                table.add_row(
-                    f"Cluster {cluster.cluster_id} Load %", f"{load_pct:.1f}%"
-                )
-
-        console.print(table)
-        log_success(f"Results saved to {output_path.name}")
-
-    elif suite == "case":
-        # Run single case instance
-        datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "case"
-        csv_path = datasets_dir / f"{instance}.csv"
-
-        if not csv_path.exists():
-            log_error(f"Case instance '{instance}' not found")
-            available = _get_available_instances("case")
-            console.print(
-                f"[yellow]Available instances:[/yellow] {', '.join(available[:5])}{'...' if len(available) > 5 else ''}"
-            )
-            console.print(
-                "[dim]Use 'fleetmix benchmark case --list' to see all available instances[/dim]"
-            )
-            raise typer.Exit(1)
-
-        # CI fast-exit stub after validation
-        import os as _os
-
-        if (
-            _os.getenv("PYTEST_CURRENT_TEST") is not None
-            and _os.getenv("FLEETMIX_SKIP_OPTIMISE", "1") == "1"
-        ):
-            placeholder_dir = output_dir or Path("results")
-            placeholder_dir.mkdir(parents=True, exist_ok=True)
-            ext = "xlsx" if format == "xlsx" else "json"
-            if config_path:
-                config_name = config_path.stem
-                placeholder_file = (
-                    placeholder_dir / f"case_{config_name}-{instance}.{ext}"
-                )
-            else:
-                placeholder_file = placeholder_dir / f"case_{instance}.{ext}"
-            placeholder_file.write_text("{}")
-            return
-
-        log_progress(f"Running case instance {instance}...")
-
-        # Load parameters
-        if config_path:
-            params = load_fleetmix_params(config_path)
-        else:
-            # Use default config
-            if _DEFAULT_CONFIG is None:
-                raise RuntimeError("No default configuration found")
-            params = _DEFAULT_CONFIG
-
-        # Override output directory if specified
-        if output_dir:
-            params = dataclasses.replace(
-                params, io=dataclasses.replace(params.io, results_dir=output_dir)
-            )
-
-        # Override allow_split_stops if specified
+    else:  # case
+        # Apply split stops override
         if allow_split_stops is not None:
             params = dataclasses.replace(
                 params,
@@ -440,51 +239,70 @@ def _run_single_instance(
                 ),
             )
 
-        # Load customer data using the data processing utility
         from fleetmix.utils.data_processing import load_customer_demand
 
-        customers_df = load_customer_demand(str(csv_path))
-
-        # Update demand_file to reflect the actual file being used
+        customers_df = load_customer_demand(str(instance_file))
         params = dataclasses.replace(
-            params, io=dataclasses.replace(params.io, demand_file=str(csv_path))
+            params, io=dataclasses.replace(params.io, demand_file=str(instance_file))
         )
 
-        # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api.optimize(demand=customers_df, config=params)
+    # 6. Run Optimization
+    solution = api.optimize(demand=customers_df, config=params)
 
-        # Save results with specified format
-        ext = "xlsx" if format == "xlsx" else "json"
-        config_name = "default"
-        if config_path:
-            config_name = config_path.stem
+    # 7. Save Results
+    # Note: We use output_path which we calculated earlier
+    save_optimization_results(
+        solution=solution,
+        parameters=params,
+        filename=str(output_path),
+        format=format,
+        is_benchmark=True,
+        expected_vehicles=params.problem.expected_vehicles if suite != "case" else None,
+    )
 
-        output_path = params.io.results_dir / f"case_{config_name}-{instance}.{ext}"
+    # 8. Report Results
+    title = (
+        f"{suite.upper()} Benchmark Results: {instance}"
+        if suite != "case"
+        else f"Case Benchmark Results: {instance}"
+    )
+    table = Table(title=title, show_header=True)
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
 
-        save_optimization_results(
-            solution=solution,
-            parameters=params,
-            filename=str(output_path),
-            format=format,
-            is_benchmark=True,
-        )
+    table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
+    table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
+    table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
+    table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
 
-        # Display results summary table
-        table = Table(title=f"Case Benchmark Results: {instance}", show_header=True)
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
-
-        table.add_row("Total Cost", f"${solution.total_cost:,.2f}")
-        table.add_row("Fixed Cost", f"${solution.total_fixed_cost:,.2f}")
-        table.add_row("Variable Cost", f"${solution.total_variable_cost:,.2f}")
-        table.add_row("Penalties", f"${solution.total_penalties:,.2f}")
+    # Vehicle counts
+    if suite == "case":
         table.add_row("Vehicles Used", str(solution.total_vehicles))
-        table.add_row("Missing Customers", str(len(solution.missing_customers)))
-        table.add_row("Solver Status", solution.solver_status)
-        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
+    else:
+        table.add_row("Vehicles Used", str(solution.vehicles_used))
+        table.add_row("Expected Vehicles", str(params.problem.expected_vehicles))
 
-        console.print(table)
-        log_success(f"Results saved to {output_path.name}")
+    table.add_row("Missing Customers", str(len(solution.missing_customers)))
+    table.add_row("Solver Status", solution.solver_status)
+    table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
+
+    # Add cluster load percentages (Only for VRP suites in original code, but safe to add if data exists)
+    if suite != "case" and solution.selected_clusters:
+        for i, cluster in enumerate(solution.selected_clusters):
+            try:
+                config = _find_config_by_id(
+                    solution.configurations, str(cluster.config_id)
+                )
+                total_demand = sum(cluster.total_demand.values())
+                load_pct = (total_demand / config.capacity) * 100
+                table.add_row(
+                    f"Cluster {cluster.cluster_id} Load %", f"{load_pct:.1f}%"
+                )
+            except (KeyError, AttributeError):
+                pass
+
+    console.print(table)
+    log_success(f"Results saved to {output_path.name}")
 
 
 def _run_all_mcvrp_instances(

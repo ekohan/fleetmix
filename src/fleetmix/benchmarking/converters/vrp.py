@@ -39,7 +39,6 @@ def convert_vrp_to_fsm(
     """
     Dispatch CVRP/MCVRP conversion to the appropriate converter.
     """
-    # TODO: asegurarse de no overridear params.vehicles infinite route time etc.
     # Normalize vrp_type
     if not isinstance(vrp_type, VRPType):
         vrp_type = VRPType(vrp_type.lower())

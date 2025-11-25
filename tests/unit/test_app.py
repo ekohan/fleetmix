@@ -141,7 +141,7 @@ def test_setup_logging_priority(mock_setup_logging):
     [
         ("mcvrp", "ut_temp_mcvrp", "mcvrp_ut_temp_mcvrp.json"),
         ("cvrp", "ut_temp_cvrp", "cvrp_ut_temp_cvrp_normal.json"),
-        ("case", "ut_temp_case", "case_default-ut_temp_case.json"),
+        ("case", "ut_temp_case", "case_ut_temp_case.json"),
     ],
 )
 @patch("fleetmix.app.save_optimization_results")

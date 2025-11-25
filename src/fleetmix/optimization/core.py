@@ -59,7 +59,6 @@ from fleetmix.core_types import (
     FleetmixSolution,
     VehicleConfiguration,
 )
-from fleetmix.preprocess.demand import get_origin_id
 from fleetmix.utils.cluster_conversion import dataframe_to_clusters
 from fleetmix.utils.debug import ModelDebugger
 from fleetmix.utils.logging import Colors, FleetmixLogger, Symbols
@@ -418,9 +417,22 @@ def _create_model(
                 origin_id[customer_id] = customer_obj.get_origin_id()
                 subset[customer_id] = customer_obj.get_goods_subset()
             else:
-                # Fallback for any missing customers
-                origin_id[customer_id] = get_origin_id(customer_id)
-                subset[customer_id] = tuple()  # Empty for missing customers
+                # Fallback for edge case where cluster contains customer not in customers_df
+                # Parse pseudo-customer ID format: "C001::dry" or "C001::dry-chilled"
+                customer_id_str = str(customer_id)
+                if "::" in customer_id_str:
+                    origin_id[customer_id] = customer_id_str.split("::")[0]
+                    subset_str = customer_id_str.split("::")[1]
+                    subset[customer_id] = tuple(subset_str.split("-"))
+                else:
+                    # Regular customer ID
+                    origin_id[customer_id] = customer_id_str
+                    subset[customer_id] = tuple()
+
+                logger.warning(
+                    f"Customer {customer_id} found in clusters but not in customers_df. "
+                    "This may indicate a data integrity issue."
+                )
 
         # Get all physical customers and their goods
         physical_customers = set(origin_id.values())

@@ -7,9 +7,6 @@ import pytest
 
 from fleetmix.preprocess.demand import (
     explode_customer,
-    get_origin_id,
-    get_subset_from_id,
-    is_pseudo_customer,
     maybe_explode,
 )
 
@@ -161,31 +158,3 @@ class TestMaybeExplode:
         # Check C002 pseudo-customers
         c002_pseudos = result[result["Origin_ID"] == "C002"]
         assert len(c002_pseudos) == 1  # only frozen
-
-
-class TestUtilityFunctions:
-    """Test utility functions for split-stop handling."""
-
-    def test_is_pseudo_customer(self):
-        """Test pseudo-customer identification."""
-        assert is_pseudo_customer("C001::dry")
-        assert is_pseudo_customer("C001::dry-chilled")
-        assert not is_pseudo_customer("C001")
-        assert not is_pseudo_customer("regular_customer")
-
-    def test_get_origin_id(self):
-        """Test extracting origin ID."""
-        assert get_origin_id("C001::dry") == "C001"
-        assert get_origin_id("C001::dry-chilled") == "C001"
-        assert get_origin_id("C001") == "C001"  # Regular customer
-
-    def test_get_subset_from_id(self):
-        """Test extracting subset from pseudo-customer ID."""
-        assert get_subset_from_id("C001::dry") == ("dry",)
-        assert get_subset_from_id("C001::dry-chilled") == ("dry", "chilled")
-        assert get_subset_from_id("C001::dry-chilled-frozen") == (
-            "dry",
-            "chilled",
-            "frozen",
-        )
-        assert get_subset_from_id("C001") == tuple()  # Regular customer

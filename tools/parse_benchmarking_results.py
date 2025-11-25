@@ -11,7 +11,6 @@ def parse_vrp_results(vrp_type: str):
     results_dir = PROJECT_ROOT / "results"
     rows = []
 
-    # TODO: este pattern matching es horrible. simplificar.
     if vrp_type == "case":
         # For case benchmark, look for both default naming and config-based naming
         patterns = [

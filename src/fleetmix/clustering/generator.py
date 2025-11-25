@@ -411,7 +411,6 @@ def _get_clustering_context_list(
         logger.debug("Generating context variations for 'combine' method")
 
         # Check if sub_methods are specified in the clustering params
-        # TODO: offer this as a parameter
         # For now, use default sub_methods since this is not part of the structured params yet
         sub_methods = None
         if sub_methods is None:

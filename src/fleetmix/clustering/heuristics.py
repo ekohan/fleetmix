@@ -405,7 +405,6 @@ def create_normal_dataset_clusters(
 
 
 def generate_cluster_id_base(config_id: str | int) -> int:
-    # TODO: fix this hack, set a type.
     """Generate a base cluster ID from the configuration ID."""
     return int(str(config_id) + "000")
 

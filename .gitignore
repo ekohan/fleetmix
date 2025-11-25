@@ -15,6 +15,7 @@ src/fleetmix/experiments/alpha_analysis/results/raw
 src/fleetmix/experiments/alpha_analysis/results/raw_mixed
 src/fleetmix/experiments/alpha_analysis/results/summary.parquet
 src/fleetmix/experiments/alpha_analysis/results/summary_mixed.parquet
+src/fleetmix/experiments/alpha_analysis/results/
 
 # Testing
 .hypothesis/

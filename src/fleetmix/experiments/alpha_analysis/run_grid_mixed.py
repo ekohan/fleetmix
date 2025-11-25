@@ -90,7 +90,7 @@ def _collect_day_summary(
     demand_cols = [c for c in customers_df.columns if c.endswith("_Demand")]
     total_kg = float(customers_df[demand_cols].sum().sum()) if demand_cols else 0.0
 
-    solution = optimize(customers_df, params)
+    solution = optimize(customers_df, params, output_dir=None)
 
     # Metrics
     cp_drop = cost_per_drop(solution.total_cost, num_customers)

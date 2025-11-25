@@ -38,17 +38,18 @@ This repository supports our paper *Designing Multi‑Compartment Last‑Mile Ve
 1. [Installation](#installation)
 2. [Quick Start](#quick-start)
 3. [📐 Specifications & Documentation](#-specifications--documentation) ⭐
-4. [Matheuristic Overview](#matheuristic-overview)
-5. [Command‑Line Usage](#command-line-usage)
-6. [Python API](#python-api)
-7. [Configuration](#configuration)
-8. [Composability & Extensibility](#composability--extensibility)
-9. [Benchmarking Suite](#benchmarking-suite)
-10. [Repository Layout](#repository-layout)
-11. [Paper ↔ Code Map](#paper-↔-code-map)
-12. [Contributing](#contributing)
-13. [Citation](#citation)
-14. [License](#license)
+4. [🔬 Reproducing Paper Experiments](#-reproducing-paper-experiments) ⭐
+5. [Matheuristic Overview](#matheuristic-overview)
+6. [Command‑Line Usage](#command-line-usage)
+7. [Python API](#python-api)
+8. [Configuration](#configuration)
+9. [Composability & Extensibility](#composability--extensibility)
+10. [Benchmarking Suite](#benchmarking-suite)
+11. [Repository Layout](#repository-layout)
+12. [Paper ↔ Code Map](#paper-↔-code-map)
+13. [Contributing](#contributing)
+14. [Citation](#citation)
+15. [License](#license)
 
 ---
 
@@ -168,6 +169,28 @@ Each phase of the matheuristic has a comprehensive specification:
 Supporting specs: **[Data Model](docs/specs/data_model.md)** | **[Configuration](docs/specs/configuration.md)** | **[Protocols](docs/specs/protocols.md)**
 
 **💡 Tip**: Start with [docs/README.md](docs/README.md) for a guided tour of the documentation.
+
+---
+
+## 🔬 Reproducing Paper Experiments
+
+All experiments from the paper can be reproduced using the `fleetmix reproduce-paper` command suite:
+
+```bash
+# View available experiments
+fleetmix reproduce-paper --help
+
+# Experiment 1: MCVRP benchmark instances (Section: Effectiveness of the Matheuristic Approach)
+fleetmix reproduce-paper mcvrp-instances
+
+# Experiment 2: Sensitivity analysis (Section: Benefits of using MCVs)
+fleetmix reproduce-paper sensitivity-analysis
+
+# Experiment 3: Fleet composition analysis (Section: Impact of Cost Structure on Fleet Composition)
+fleetmix reproduce-paper fleet-composition
+```
+
+**📖 Full documentation:** [docs/REPRODUCE_PAPER.md](docs/REPRODUCE_PAPER.md)
 
 ---
 

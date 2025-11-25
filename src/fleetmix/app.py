@@ -1302,5 +1302,207 @@ def experiments(
         raise typer.Exit(1)
 
 
+# ============================================================================
+# REPRODUCE PAPER COMMAND GROUP
+# ============================================================================
+
+# Create sub-app for reproduce-paper commands
+reproduce_paper_app = typer.Typer(
+    help="Reproduce experiments from the FleetMix paper",
+    add_completion=False,
+)
+app.add_typer(reproduce_paper_app, name="reproduce-paper")
+
+
+@reproduce_paper_app.command("mcvrp-instances")
+def reproduce_mcvrp_instances(
+    config: Path | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Config file (default: experiments/synthetic_test_instances/base_config.yaml)",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory (default: results/paper/mcvrp_instances/)",
+    ),
+    instances: str | None = typer.Option(
+        None,
+        "--instances",
+        "-i",
+        help="Comma-separated list of specific instances to run (default: all)",
+    ),
+    list_instances: bool = typer.Option(
+        False, "--list", "-l", help="List all available instances and exit"
+    ),
+    skip_existing: bool = typer.Option(
+        True,
+        "--skip-existing/--no-skip-existing",
+        help="Skip instances with existing results",
+    ),
+) -> None:
+    """
+    Run MCVRP benchmark instances from Henke (2015, 2019).
+
+    Reproduces results from paper Section: Effectiveness of the Matheuristic Approach.
+    Total instances: ~198 (150 from Henke 2015, 45 from Henke 2019, 3 larger).
+
+    Examples:
+
+        # List all available instances
+        fleetmix reproduce-paper mcvrp-instances --list
+
+        # Run all instances
+        fleetmix reproduce-paper mcvrp-instances
+
+        # Run specific instances
+        fleetmix reproduce-paper mcvrp-instances --instances "10_3_3_1_01,10_3_3_1_02"
+    """
+    from fleetmix.experiments.reproduce_paper.mcvrp_runner import run_mcvrp_instances
+
+    # Parse instances list
+    instance_list = None
+    if instances:
+        instance_list = [inst.strip() for inst in instances.split(",")]
+
+    run_mcvrp_instances(
+        config_path=config,
+        output_dir=output,
+        instances=instance_list,
+        list_instances=list_instances,
+        skip_existing=skip_existing,
+    )
+
+
+@reproduce_paper_app.command("sensitivity-analysis")
+def reproduce_sensitivity_analysis(
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory (default: results/paper/sensitivity_analysis/)",
+    ),
+    parameters: str | None = typer.Option(
+        None,
+        "--parameters",
+        "-p",
+        help="Comma-separated parameters: capacity, service_time, max_route_duration, variable_cost, all (default: capacity,service_time,max_route_duration)",
+    ),
+    fleet_types: str | None = typer.Option(
+        None,
+        "--fleet-types",
+        "-f",
+        help="Fleet types to test: mcv, scv, both (default: both)",
+    ),
+    variations: str | None = typer.Option(
+        None,
+        "--variations",
+        help="Variations: minus_50, minus_20, baseline, plus_20, plus_50, all (default: all)",
+    ),
+    demand_days: str | None = typer.Option(
+        None,
+        "--demand-days",
+        "-d",
+        help="Specific demand days (comma-separated) or 'all' (default: all)",
+    ),
+    skip_existing: bool = typer.Option(
+        True,
+        "--skip-existing/--no-skip-existing",
+        help="Skip configs with existing results",
+    ),
+) -> None:
+    """
+    Run parameter sensitivity analysis (MCV vs SCV comparison).
+
+    Reproduces results from paper Section: Benefits of Using Multi-Compartment Vehicles.
+    Total runs: 37 configs × 70 days = 2,590 experiments.
+
+    Examples:
+
+        # Run all sensitivity analysis experiments
+        fleetmix reproduce-paper sensitivity-analysis
+
+        # Run only capacity variations
+        fleetmix reproduce-paper sensitivity-analysis --parameters capacity
+
+        # Run only MCV fleet
+        fleetmix reproduce-paper sensitivity-analysis --fleet-types mcv
+
+        # Run baseline only (for testing)
+        fleetmix reproduce-paper sensitivity-analysis --variations baseline
+    """
+    from fleetmix.experiments.reproduce_paper.sensitivity_runner import (
+        run_sensitivity_analysis,
+    )
+
+    run_sensitivity_analysis(
+        output_dir=output,
+        parameters=parameters,
+        fleet_types=fleet_types,
+        variations=variations,
+        demand_days=demand_days,
+        skip_existing=skip_existing,
+    )
+
+
+@reproduce_paper_app.command("fleet-composition")
+def reproduce_fleet_composition(
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory (default: results/paper/fleet_composition/)",
+    ),
+    alpha_grid: str | None = typer.Option(
+        None,
+        "--alpha-grid",
+        help="Alpha values (comma-separated) or 'default' (default: 1.0 to 2.0, 11 values)",
+    ),
+    c_values: str | None = typer.Option(
+        None,
+        "--c-values",
+        help="C values (comma-separated) or 'default' (default: 0 to 50, 6 values)",
+    ),
+    demand_days: str | None = typer.Option(
+        None,
+        "--demand-days",
+        "-d",
+        help="Specific demand days (comma-separated) or 'all' (default: all = 70 days)",
+    ),
+    skip_existing: bool = typer.Option(
+        True,
+        "--skip-existing/--no-skip-existing",
+        help="Skip existing parameter combinations",
+    ),
+) -> None:
+    """
+    Run fleet composition analysis across alpha-C grid.
+
+    Reproduces results from paper Section: Impact of Cost Structure on Fleet Composition.
+    Total runs: 11 alphas × 6 C values × 70 days = 4,620 mixed fleet + 70 SCV baselines.
+
+    Examples:
+
+        # Run full grid
+        fleetmix reproduce-paper fleet-composition
+
+        # Run with custom grid
+        fleetmix reproduce-paper fleet-composition --alpha-grid "1.0,1.2,1.4,1.6" --c-values "0,10,20"
+    """
+    from fleetmix.experiments.reproduce_paper.fleet_composition_runner import (
+        run_fleet_composition,
+    )
+
+    run_fleet_composition(
+        output_dir=output,
+        alpha_grid=alpha_grid,
+        c_values=c_values,
+        demand_days=demand_days,
+        skip_existing=skip_existing,
+    )
+
+
 if __name__ == "__main__":
     app()

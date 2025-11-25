@@ -19,7 +19,7 @@ from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, VRPSolution
 from fleetmix.benchmarking.converters.vrp import VRPType, convert_vrp_to_fsm as convert_to_fsm
-from fleetmix.api import optimize as api_optimize
+from fleetmix import api
 from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams
 
 
@@ -206,7 +206,7 @@ EOF
             runtime=RuntimeParams(config="test_config.yaml"),
         )
 
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test
@@ -248,7 +248,7 @@ EOF
             runtime=RuntimeParams(config="test_config.yaml"),
         )
 
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test
@@ -384,7 +384,7 @@ EOF
 
         start_optimization = time.time()
 
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test

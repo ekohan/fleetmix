@@ -145,7 +145,7 @@ def test_setup_logging_priority(mock_setup_logging):
     ],
 )
 @patch("fleetmix.app.save_optimization_results")
-@patch("fleetmix.app.api_optimize")
+@patch("fleetmix.app.api.optimize")
 @patch("fleetmix.app.convert_to_fsm")
 @patch("fleetmix.app.FleetmixParams.apply_instance_spec", lambda self, spec: self)
 @patch("fleetmix.app.log_success")
@@ -241,7 +241,7 @@ def test_run_single_instance_missing_file(suite, missing_message, tmp_path):
 
 
 @patch("fleetmix.app.log_error")
-@patch("fleetmix.app.api_optimize")
+@patch("fleetmix.app.api.optimize")
 @patch("fleetmix.app.convert_to_fsm", return_value=(pd.DataFrame(), MagicMock()))
 @patch("fleetmix.app.load_fleetmix_params")
 def test_run_all_mcvrp_instances_handles_errors(
@@ -324,7 +324,7 @@ def test_run_all_case_instances_success(
 
     run_calls: list[Path] = []
     def fake_run(**kwargs):
-        # api_optimize signature: demand, config, output_dir, format, verbose
+        # api.optimize signature: demand, config, output_dir, format, verbose
         params = kwargs.get("config")
         if params:
             run_calls.append(params.io.results_dir)
@@ -341,7 +341,7 @@ def test_run_all_case_instances_success(
 
     saves: list[str] = []
 
-    monkeypatch.setattr("fleetmix.app.api_optimize", fake_run)
+    monkeypatch.setattr("fleetmix.app.api.optimize", fake_run)
     monkeypatch.setattr(
         "fleetmix.app.save_optimization_results",
         lambda **kwargs: saves.append(kwargs["filename"]),

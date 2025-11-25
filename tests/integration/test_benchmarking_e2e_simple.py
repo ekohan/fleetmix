@@ -17,7 +17,7 @@ from fleetmix.benchmarking import (
 )
 from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams
 from fleetmix.benchmarking.converters.vrp import VRPType, convert_vrp_to_fsm as convert_to_fsm
-from fleetmix.api import optimize as api_optimize
+from fleetmix import api
 
 
 class TestSimpleBenchmarking:
@@ -91,7 +91,7 @@ EOF"""
         assert len(customers_df) == 3
 
         # Run optimization
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test
@@ -190,7 +190,7 @@ EOF"""
         assert len(demand_cols) >= 3
 
         # Run optimization
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test
@@ -272,7 +272,7 @@ EOF"""
         )
 
         # Run optimization
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test
@@ -349,7 +349,7 @@ EOF"""
             runtime=RuntimeParams(config="test_config.yaml"),
         )
 
-        solution = api_optimize(
+        solution = api.optimize(
             demand=customers_df,
             config=params,
             output_dir=None,  # Don't save during test
@@ -401,7 +401,7 @@ EOF"""
             )
 
             # Just verify it runs without error
-            solution = api_optimize(
+            solution = api.optimize(
                 demand=customers_df,
                 config=params,
                 output_dir=None,  # Don't save during test

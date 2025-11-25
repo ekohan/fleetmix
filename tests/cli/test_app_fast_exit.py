@@ -293,7 +293,7 @@ def test_optimize_normal_flow_creates_results(
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "cli-normal")
     monkeypatch.setenv("FLEETMIX_SKIP_OPTIMISE", "0")
 
-    def fake_api_optimize(**kwargs):
+    def fake_optimize(**kwargs):
         out = Path(kwargs["output_dir"])
         out.mkdir(parents=True, exist_ok=True)
         (out / "summary.json").write_text("{}")
@@ -308,7 +308,7 @@ def test_optimize_normal_flow_creates_results(
             solver_runtime_sec=0.1,
         )
 
-    monkeypatch.setattr("fleetmix.app.api_optimize", fake_api_optimize)
+    monkeypatch.setattr("fleetmix.app.api.optimize", fake_optimize)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -389,7 +389,7 @@ def test_convert_cvrp_normal_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     saved: dict[str, str] = {}
 
     monkeypatch.setattr("fleetmix.app.convert_to_fsm", fake_convert)
-    monkeypatch.setattr("fleetmix.app.api_optimize", lambda **kwargs: fake_run_optimization())
+    monkeypatch.setattr("fleetmix.app.api.optimize", lambda **kwargs: fake_run_optimization())
     monkeypatch.setattr("fleetmix.app.save_optimization_results", lambda **kwargs: saved.setdefault("filename", kwargs["filename"]))
     monkeypatch.setattr("fleetmix.app.FleetmixParams.apply_instance_spec", lambda self, spec: self)
 

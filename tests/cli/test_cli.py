@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from fleetmix import __version__
-from fleetmix.api import optimize as api_optimize
+from fleetmix import api
 from fleetmix.core_types import FleetmixSolution
 
 
@@ -148,7 +148,7 @@ def test_cli_benchmark_mcvrp():
     assert "suite" in result.stdout
 
 
-def test_api_optimize():
+def test_api_optimize_function():
     """Test the Python API with the smoke test data."""
     # Use the existing smoke test data files
     smoke_dir = Path(__file__).parent.parent / "_assets" / "smoke"
@@ -160,7 +160,7 @@ def test_api_optimize():
     assert config_file.exists(), f"Config file not found: {config_file}"
 
     # Test the API
-    solution = api_optimize(
+    solution = api.optimize(
         demand=str(demand_file),
         config=str(config_file),
         output_dir=None,  # Don't save for test

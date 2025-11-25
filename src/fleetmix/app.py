@@ -15,8 +15,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from fleetmix import __version__
-from fleetmix.api import optimize as api_optimize
+from fleetmix import __version__, api
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.benchmarking.converters.vrp import (
     VRPType,
@@ -200,8 +199,8 @@ def _run_single_instance(
         # Update params.problem with fields from InstanceSpec
         params = params.apply_instance_spec(instance_spec)
 
-        # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api_optimize(demand=customers_df, config=params)
+        # Use the API for optimization
+        solution = api.optimize(demand=customers_df, config=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -327,7 +326,7 @@ def _run_single_instance(
         params = params.apply_instance_spec(instance_spec)
 
         # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api_optimize(demand=customers_df, config=params)
+        solution = api.optimize(demand=customers_df, config=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -452,7 +451,7 @@ def _run_single_instance(
         )
 
         # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api_optimize(demand=customers_df, config=params)
+        solution = api.optimize(demand=customers_df, config=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -536,7 +535,7 @@ def _run_all_mcvrp_instances(
             params = params.apply_instance_spec(instance_spec)
 
             # Use the API for optimization (supports two-phase split-stop optimization)
-            solution = api_optimize(demand=customers_df, config=params)
+            solution = api.optimize(demand=customers_df, config=params)
 
             # Save results with specified format
             format = "json"
@@ -621,7 +620,7 @@ def _run_all_cvrp_instances(
             params = params.apply_instance_spec(instance_spec)
 
             # Use the API for optimization (supports two-phase split-stop optimization)
-            solution = api_optimize(demand=customers_df, config=params)
+            solution = api.optimize(demand=customers_df, config=params)
 
             # Save results with specified format
             format = "json"
@@ -699,7 +698,7 @@ def _run_all_case_instances(
             )
 
             # Use the API for optimization (supports two-phase split-stop optimization)
-            solution = api_optimize(demand=customers_df, config=params)
+            solution = api.optimize(demand=customers_df, config=params)
 
             # Save results with appropriate filename
             format = "json"  # Default to JSON for batch runs
@@ -832,7 +831,7 @@ def optimize(
 
                 # Call the API
                 # Only pass verbose if explicitly set via CLI flag, otherwise let config decide
-                solution = api_optimize(
+                solution = api.optimize(
                     demand=str(demand),
                     config=str(config) if config else None,
                     output_dir=str(output),
@@ -845,7 +844,7 @@ def optimize(
         else:
             # Run without progress spinner in quiet mode
             # Only pass verbose if explicitly set via CLI flag, otherwise let config decide
-            solution = api_optimize(
+            solution = api.optimize(
                 demand=str(demand),
                 config=str(config) if config else None,
                 output_dir=str(output),
@@ -1139,7 +1138,7 @@ def convert(
             log_progress("Running optimization on converted instance...")
 
         # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api_optimize(demand=customers_df, config=params)
+        solution = api.optimize(demand=customers_df, config=params)
 
         # Save results
         ext = "xlsx" if format == "xlsx" else "json"

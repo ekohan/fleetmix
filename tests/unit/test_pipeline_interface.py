@@ -59,10 +59,3 @@ def test_convert_to_fsm_mcvrp():
     assert hasattr(instance_spec, 'vehicles')
 
 
-# NOTE: run_optimization has been removed from vrp_interface.py
-# It has been replaced by fleetmix.api.optimize() which includes proper
-# two-phase optimization for split-stop scenarios.
-# Tests for the optimization logic are now in test_api.py
-
-
-

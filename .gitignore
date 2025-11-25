@@ -9,11 +9,6 @@ venv/
 fleetmix-env/
 
 # Results
-results/*.xlsx
-results/*.json
-results/*.html
-results/*.csv
-results/
 src/fleetmix/experiments/alpha_analysis/results/report_images
 src/fleetmix/experiments/alpha_analysis/results/mixed_fleet_report
 src/fleetmix/experiments/alpha_analysis/results/raw
@@ -42,5 +37,3 @@ fleet-comparision-metrics.ipynb
 *-pulp.sol
 gurobi.log
 experiments/*/results/*
-
-!paper/results/**

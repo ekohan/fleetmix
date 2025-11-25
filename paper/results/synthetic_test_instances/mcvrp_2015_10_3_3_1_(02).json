@@ -1,0 +1,262 @@
+{
+  "Solution Summary": {
+    "Total Cost ($)": "2,102.62",
+    "Fixed Cost ($)": "2,000.00",
+    "Variable Cost ($)": "102.62",
+    "Total Penalties ($)": "0.00",
+    "  Light Load Penalties ($)": "0.00",
+    "  Compartment Setup Penalties ($)": "0.00",
+    "Total Vehicles": 2,
+    "Expected Vehicles": 2,
+    "Vehicles Type MCVRP": 2,
+    "Customers per Cluster (Min)": "4",
+    "Customers per Cluster (Max)": "6",
+    "Customers per Cluster (Avg)": "5.0",
+    "Customers per Cluster (Median)": "5.0",
+    "Truck Load % (Min)": "61.2",
+    "Truck Load % (Max)": "84.1",
+    "Truck Load % (Avg)": "72.6",
+    "Truck Load % (Median)": "72.6",
+    "---Parameters---": "",
+    "Demand File": "sales_2024-07-02_demand.csv",
+    "Config File": "default_config.yaml",
+    "Variable Cost per Hour": 10.0,
+    "Max Split Depth": 20,
+    "Clustering Method": "combine",
+    "Clustering Distance": "euclidean",
+    "Geography Weight": 0.7,
+    "Demand Weight": 0.3,
+    "Route Time Estimation Method": "BHH",
+    "Light Load Penalty": 0,
+    "Light Load Threshold": 0,
+    "Compartment Setup Cost": 0,
+    "Vehicle Type MCVRP Capacity": 1000,
+    "Vehicle Type MCVRP Fixed Cost": 1000,
+    "Vehicle Type MCVRP Avg Speed": 30.0,
+    "Vehicle Type MCVRP Service Time": 25.0,
+    "Vehicle Type MCVRP Max Route Time": 168
+  },
+  "Configurations": [
+    {
+      "Config_ID": "1",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 0,
+      "Chilled": 0,
+      "Frozen": 1
+    },
+    {
+      "Config_ID": "2",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 0
+    },
+    {
+      "Config_ID": "3",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 0,
+      "Chilled": 1,
+      "Frozen": 1
+    },
+    {
+      "Config_ID": "4",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 0
+    },
+    {
+      "Config_ID": "5",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 1,
+      "Chilled": 0,
+      "Frozen": 1
+    },
+    {
+      "Config_ID": "6",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 0
+    },
+    {
+      "Config_ID": "7",
+      "Vehicle_Type": "MCVRP",
+      "Capacity": 1000,
+      "Fixed_Cost": 1000,
+      "avg_speed": 30.0,
+      "service_time": 25.0,
+      "max_route_time": 168,
+      "Dry": 1,
+      "Chilled": 1,
+      "Frozen": 1
+    }
+  ],
+  "Selected Clusters": [
+    {
+      "Cluster_ID": 8,
+      "Config_ID": "7",
+      "Vehicle_Type": "MCVRP",
+      "Customers": "['4', '7', '9', '11']",
+      "Total_Demand": "{'Dry': 391.0, 'Chilled': 134.0, 'Frozen': 87.0}",
+      "Centroid_Latitude": 4.769263107362764,
+      "Centroid_Longitude": -74.24717310057322,
+      "Goods_In_Config": [
+        "Dry",
+        "Chilled",
+        "Frozen"
+      ],
+      "Route_Time": 4.5640267599562705,
+      "Method": "minibatch_kmeans",
+      "Num_Customers": 4,
+      "Demand_Dry_pct": 0.6388888888888888,
+      "Load_Dry_pct": 0.391,
+      "Demand_Chilled_pct": 0.21895424836601307,
+      "Load_Chilled_pct": 0.134,
+      "Demand_Frozen_pct": 0.14215686274509803,
+      "Load_Frozen_pct": 0.087,
+      "Load_total_pct": 0.612,
+      "Load_empty_pct": 0.388
+    },
+    {
+      "Cluster_ID": 9,
+      "Config_ID": "7",
+      "Vehicle_Type": "MCVRP",
+      "Customers": "['2', '3', '5', '6', '8', '10']",
+      "Total_Demand": "{'Dry': 336.0, 'Chilled': 302.0, 'Frozen': 203.0}",
+      "Centroid_Latitude": 4.496461046201062,
+      "Centroid_Longitude": -74.00975751606741,
+      "Goods_In_Config": [
+        "Dry",
+        "Chilled",
+        "Frozen"
+      ],
+      "Route_Time": 5.698192925013583,
+      "Method": "minibatch_kmeans",
+      "Num_Customers": 6,
+      "Demand_Dry_pct": 0.3995243757431629,
+      "Load_Dry_pct": 0.336,
+      "Demand_Chilled_pct": 0.3590963139120095,
+      "Load_Chilled_pct": 0.302,
+      "Demand_Frozen_pct": 0.2413793103448276,
+      "Load_Frozen_pct": 0.203,
+      "Load_total_pct": 0.841,
+      "Load_empty_pct": 0.15900000000000003
+    }
+  ],
+  "Vehicle Usage": [
+    {
+      "vehicle_type": "MCVRP",
+      "count": 2
+    }
+  ],
+  "Other Considerations": {
+    "Total Vehicles Used": 2,
+    "Number of Unserved Customers": 0,
+    "Unserved Customers": "None",
+    "Average Customers per Cluster": 5.0,
+    "Average Distance per Cluster": "N/A"
+  },
+  "Execution Details": {
+    "Execution Time (s)": 5.017616499972064,
+    "Solver": "GUROBI_CMD",
+    "Solver Status": "Optimal",
+    "Solver Runtime (s)": 0.020235061645507812,
+    "Optimality Gap (%)": 0.0,
+    "Total Fixed Cost": 2000.0,
+    "Total Variable Cost": 102.6221968,
+    "Total Penalties": 0.0,
+    "Light Load Penalties": 0.0,
+    "Compartment Setup Penalties": 0.0,
+    "Total Cost": 2102.6221968,
+    "Demand File": "sales_2024-07-02_demand.csv"
+  },
+  "Time Measurements": {
+    "vehicle_configuration": {
+      "wall_time": 1.8332968465983868e-05,
+      "process_user_time": 0.0,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    "clustering_phase1": {
+      "wall_time": 2.1961811669752933,
+      "process_user_time": 0.020000000000000018,
+      "process_system_time": 0.0,
+      "children_user_time": 1.4299999999999997,
+      "children_system_time": 0.26
+    },
+    "fsm_phase1": {
+      "wall_time": 0.28589741699397564,
+      "process_user_time": 0.25,
+      "process_system_time": 0.020000000000000018,
+      "children_user_time": 0.0,
+      "children_system_time": 0.010000000000000009
+    },
+    "fsm_post_optimization_phase1": {
+      "wall_time": 0.0015089580556377769,
+      "process_user_time": 0.009999999999999787,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    "clustering_phase2": {
+      "wall_time": 2.2430357090197504,
+      "process_user_time": 0.010000000000000231,
+      "process_system_time": 0.0,
+      "children_user_time": 1.4200000000000008,
+      "children_system_time": 0.27
+    },
+    "fsm_phase2": {
+      "wall_time": 0.28828629199415445,
+      "process_user_time": 0.2599999999999998,
+      "process_system_time": 0.019999999999999962,
+      "children_user_time": 0.009999999999999787,
+      "children_system_time": 0.0
+    },
+    "fsm_post_optimization_phase2": {
+      "wall_time": 0.001398916996549815,
+      "process_user_time": 0.0,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    "global": {
+      "wall_time": 5.017616499972064,
+      "process_user_time": 0.5499999999999998,
+      "process_system_time": 0.03999999999999998,
+      "children_user_time": 2.8600000000000003,
+      "children_system_time": 0.54
+    }
+  }
+}

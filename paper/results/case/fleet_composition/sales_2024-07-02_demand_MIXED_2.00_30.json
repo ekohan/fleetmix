@@ -1,0 +1,117 @@
+{
+  "instance": "sales_2024-07-02_demand",
+  "fleet_type": "MIXED",
+  "alpha": 2.0,
+  "C": 30.0,
+  "alpha_pct": 100.0,
+  "C_pct_scv": 30.0,
+  "allow_split_stops": true,
+  "total_cost": 6109.3667399999995,
+  "total_vehicles": 33,
+  "vehicles_used": {
+    "MCV_A": 1,
+    "SCV_A_Chilled": 13,
+    "SCV_A_Dry": 16,
+    "SCV_A_Frozen": 3
+  },
+  "scv_vehicles": 32,
+  "mcv_vehicles": 1,
+  "mcv_share": 0.030303030303030304,
+  "num_customers": 338,
+  "total_demand": 37591.0,
+  "cost_per_drop": 18.075049526627218,
+  "cost_per_kg": 0.16252205953552712,
+  "split_rate": 0.4289940828402367,
+  "average_visits_per_customer": 1.4911242603550297,
+  "total_route_time_hours": 267.936674,
+  "avg_route_time_hr": 8.119293146618572,
+  "max_route_time_hr": 9.991916664798103,
+  "p95_route_time_hr": 9.846124620845094,
+  "avg_stops_per_route": 15.484848484848484,
+  "max_stops_per_route": 22.0,
+  "avg_vehicle_utilization_pct": 42.282828282828284,
+  "avg_scv_utilization_pct": 41.85648148148148,
+  "avg_mcv_utilization_pct": 55.925925925925924,
+  "utilization_min_pct": 4.666666666666667,
+  "utilization_max_pct": 100.0,
+  "utilization_median_pct": 31.814814814814813,
+  "utilization_std_pct": 31.38720261809,
+  "total_distance_km": 8038.100215152388,
+  "distance_per_drop_km": 23.78136158329109,
+  "distance_per_route_km": 243.57879439855722,
+  "total_fixed_cost": 3400.0,
+  "total_variable_cost": 2679.36674,
+  "total_penalties": 30.0,
+  "total_light_load_penalties": 0.0,
+  "total_compartment_penalties": 30.0,
+  "solver_runtime_sec": 0.02744007110595703,
+  "solver_status": "Optimal",
+  "optimality_gap": 0.0,
+  "total_runtime_sec": 49.92995358497137,
+  "time_measurements": [
+    {
+      "span_name": "vehicle_configuration",
+      "wall_time": 1.9041995983570814e-05,
+      "process_user_time": 0.0,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    {
+      "span_name": "clustering_phase1",
+      "wall_time": 6.360920958977658,
+      "process_user_time": 3.719999999997526,
+      "process_system_time": 0.03999999999999204,
+      "children_user_time": 1.4200000000000728,
+      "children_system_time": 0.2800000000002001
+    },
+    {
+      "span_name": "fsm_phase1",
+      "wall_time": 3.695837916980963,
+      "process_user_time": 1.9799999999995634,
+      "process_system_time": 0.020000000000010232,
+      "children_user_time": 4.679999999998472,
+      "children_system_time": 1.400000000000091
+    },
+    {
+      "span_name": "fsm_post_optimization_phase1",
+      "wall_time": 0.19353437499376014,
+      "process_user_time": 0.15999999999985448,
+      "process_system_time": 0.020000000000010232,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    {
+      "span_name": "clustering_phase2",
+      "wall_time": 8.80524499999592,
+      "process_user_time": 5.430000000000291,
+      "process_system_time": 0.03999999999999204,
+      "children_user_time": 1.4500000000007276,
+      "children_system_time": 0.27999999999974534
+    },
+    {
+      "span_name": "fsm_phase2",
+      "wall_time": 5.648188916995423,
+      "process_user_time": 4.579999999998108,
+      "process_system_time": 0.030000000000001137,
+      "children_user_time": 2.0200000000004366,
+      "children_system_time": 0.7899999999999636
+    },
+    {
+      "span_name": "fsm_post_optimization_phase2",
+      "wall_time": 0.2394033330201637,
+      "process_user_time": 0.2000000000007276,
+      "process_system_time": 0.020000000000010232,
+      "children_user_time": 0.010000000000218279,
+      "children_system_time": 0.0
+    },
+    {
+      "span_name": "global",
+      "wall_time": 24.9868040420115,
+      "process_user_time": 16.11999999999898,
+      "process_system_time": 0.17000000000001592,
+      "children_user_time": 9.579999999999927,
+      "children_system_time": 2.75
+    }
+  ]
+}

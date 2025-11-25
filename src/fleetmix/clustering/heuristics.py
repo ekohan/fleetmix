@@ -129,7 +129,9 @@ class GaussianMixtureClusterer:
         model = GaussianMixture(
             n_components=n_clusters, random_state=42, covariance_type="full"
         )
-        labels = model.fit_predict(data)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            labels = model.fit_predict(data)
         # Convert numpy array to list of ints
         return [int(label) for label in labels]
 

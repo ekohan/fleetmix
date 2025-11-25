@@ -124,8 +124,7 @@ def _two_phase_solve(
 
             if (
                 phase2_solution.total_cost < baseline_solution.total_cost
-                # TODO: saco esto por comparacion con scv baseline
-                # and phase2_vehicles <= baseline_vehicles
+                and phase2_vehicles <= baseline_vehicles
             ):
                 FleetmixLogger.detail(
                     "Using Phase 2 solution (better cost and no more vehicles)"
@@ -147,7 +146,7 @@ def _two_phase_solve(
 def optimize(
     demand: str | Path | pd.DataFrame,
     config: str | FleetmixParams | None = None,
-    output_dir: str = "results",
+    output_dir: str | None = "results",
     format: str = "json",
     verbose: Optional[bool] = None,
     allow_split_stops: Optional[bool] = None,
@@ -163,7 +162,7 @@ def optimize(
             - String path to YAML configuration file
             - Parameters object
             - None (uses default configuration)
-        output_dir: Directory to save results (default: "results")
+        output_dir: Directory to save results (default: "results"). Pass None to skip saving.
         format: Output format - "xlsx" or "json" (default: "json")
         verbose: Enable verbose logging (default: False)
         allow_split_stops: Allow customers to be served by multiple vehicles (default: False)

@@ -189,12 +189,18 @@ solution = optimize_fleet(
 ```
 
 **Key Internal Functions**:
-- `optimize()`: High-level API with file I/O and validation
+- `optimize()`: High-level API with file I/O, validation, and two-phase split-stop orchestration
+- `_two_phase_solve()`: Orchestrates Phase 1 (baseline) and Phase 2 (split-stop) when `allow_split_stops=True`
 - `optimize_fleet()`: Core MILP solver (internal)
 - `_solve_internal()`: Internal DataFrame-based implementation
 - `_create_model()`: Builds PuLP model with variables and constraints
 
-**Multi-Stop Policy**: handled inside `_create_model()` when `params.problem.allow_split_stops` is `True`.
+**Split-Stop Policy**: 
+- When `allow_split_stops=True`, `optimize()` runs two-phase optimization:
+  1. Phase 1: Baseline without split stops
+  2. Phase 2: With split stops (customers can be served by multiple vehicles)
+  3. Returns Phase 2 only if it improves cost without using more vehicles
+- The MILP model handles split customers via the constraint formulation in `_create_model()`
 
 **Spec**: [specs/optimization.md](specs/optimization.md)
 
@@ -298,7 +304,7 @@ fleetmix benchmark case
 | `interfaces.py` | Protocol architecture (§5) |
 | `merging/core.py` | §4.2 (split-and-merge) |
 | `optimization/core.py` | §4.3 (Problem P) |
-| `pipeline/vrp_interface.py` | §4 (overall flow) |
+| `api.py` | §4 (overall flow, two-phase split-stop) |
 | `post_optimization/merge_phase.py` | §4.4 |
 | `preprocess/demand.py` | Data preparation (§6) |
 | `registry.py` | Plugin system (§5) |
@@ -316,7 +322,7 @@ fleetmix benchmark case
 **TODO: check on final version of paper.**
 | Figure | Description | Code Implementation |
 |--------|-------------|---------------------|
-| Figure 1 | Matheuristic pipeline | `pipeline/vrp_interface.py` |
+| Figure 1 | Matheuristic pipeline | `api.py` |
 | Algorithm 1 | Recursive cluster splitting | `clustering/heuristics.py:process_clusters_recursively()` |
 | Table 1 | Comparison with Henke et al. | `benchmarking/` results |
 | Table in §6 | Baseline parameters | Configuration files |

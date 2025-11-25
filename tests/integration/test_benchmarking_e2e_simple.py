@@ -16,7 +16,8 @@ from fleetmix.benchmarking import (
     parse_mcvrp,
 )
 from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams
-from fleetmix.pipeline import VRPType, convert_to_fsm, run_optimization
+from fleetmix.benchmarking.converters.vrp import VRPType, convert_vrp_to_fsm as convert_to_fsm
+from fleetmix.api import optimize as api_optimize
 
 
 class TestSimpleBenchmarking:
@@ -90,8 +91,11 @@ EOF"""
         assert len(customers_df) == 3
 
         # Run optimization
-        solution = run_optimization(
-            customers_df=customers_df, params=params
+        solution = api_optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
         )
 
         # Verify we got a solution
@@ -186,8 +190,11 @@ EOF"""
         assert len(demand_cols) >= 3
 
         # Run optimization
-        solution = run_optimization(
-            customers_df=customers_df, params=params
+        solution = api_optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
         )
 
         # Verify solution
@@ -265,8 +272,11 @@ EOF"""
         )
 
         # Run optimization
-        solution = run_optimization(
-            customers_df=customers_df, params=params
+        solution = api_optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
         )
 
         # Verify VRP-specific output
@@ -339,8 +349,11 @@ EOF"""
             runtime=RuntimeParams(config="test_config.yaml"),
         )
 
-        solution = run_optimization(
-            customers_df=customers_df, params=params
+        solution = api_optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
         )
 
         assert solution is not None
@@ -388,8 +401,11 @@ EOF"""
             )
 
             # Just verify it runs without error
-            solution = run_optimization(
-                customers_df=customers_df, params=params
+            solution = api_optimize(
+                demand=customers_df,
+                config=params,
+                output_dir=None,  # Don't save during test
+                verbose=False,
             )
 
             assert solution is not None

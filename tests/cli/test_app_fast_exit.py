@@ -389,7 +389,7 @@ def test_convert_cvrp_normal_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     saved: dict[str, str] = {}
 
     monkeypatch.setattr("fleetmix.app.convert_to_fsm", fake_convert)
-    monkeypatch.setattr("fleetmix.app.run_optimization", lambda **kwargs: fake_run_optimization())
+    monkeypatch.setattr("fleetmix.app.api_optimize", lambda **kwargs: fake_run_optimization())
     monkeypatch.setattr("fleetmix.app.save_optimization_results", lambda **kwargs: saved.setdefault("filename", kwargs["filename"]))
     monkeypatch.setattr("fleetmix.app.FleetmixParams.apply_instance_spec", lambda self, spec: self)
 

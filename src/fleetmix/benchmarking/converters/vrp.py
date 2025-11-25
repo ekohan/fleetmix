@@ -2,25 +2,29 @@
 Unified converter for both CVRP and MCVRP instances to FSM format.
 """
 
+from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
 import pandas as pd
 
 from fleetmix.benchmarking.converters import cvrp as _cvrp
 from fleetmix.benchmarking.converters import mcvrp as _mcvrp
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
-
-if TYPE_CHECKING:
-    from fleetmix.pipeline.vrp_interface import VRPType
-
 from fleetmix.benchmarking.models import InstanceSpec
 
-__all__ = ["convert_vrp_to_fsm"]
+__all__ = ["convert_vrp_to_fsm", "VRPType"]
+
+
+class VRPType(Enum):
+    """VRP instance types."""
+
+    CVRP = "cvrp"
+    MCVRP = "mcvrp"
 
 
 def convert_vrp_to_fsm(
-    vrp_type: Union[str, "VRPType"],
+    vrp_type: Union[str, VRPType],
     instance_names: list[str]
     | None = None,  # For CVRP, can be multiple for COMBINED type
     instance_path: str
@@ -36,9 +40,6 @@ def convert_vrp_to_fsm(
     Dispatch CVRP/MCVRP conversion to the appropriate converter.
     """
     # TODO: asegurarse de no overridear params.vehicles infinite route time etc.
-    # Import VRPType here to avoid circular import
-    from fleetmix.pipeline.vrp_interface import VRPType
-
     # Normalize vrp_type
     if not isinstance(vrp_type, VRPType):
         vrp_type = VRPType(vrp_type.lower())

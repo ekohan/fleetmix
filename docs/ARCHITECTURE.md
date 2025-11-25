@@ -103,7 +103,7 @@ Located in `src/fleetmix/`, these implement the matheuristic pipeline:
 | `utils/route_time.py` | Route duration estimation | §4.2 | [specs/route_time_estimation.md](specs/route_time_estimation.md) |
 | `optimization/core.py` | Fleet size & mix MILP | §4.3 | [specs/optimization.md](specs/optimization.md) |
 | `post_optimization/merge_phase.py` | Improvement phase | §4.4 | [specs/post_optimization.md](specs/post_optimization.md) |
-| `pipeline/vrp_interface.py` | Pipeline orchestration | §4 | [specs/pipeline.md](specs/pipeline.md) |
+| `api.py` | Pipeline orchestration & two-phase split-stop | §4 | [specs/pipeline.md](specs/pipeline.md) |
 
 ### Supporting Infrastructure
 

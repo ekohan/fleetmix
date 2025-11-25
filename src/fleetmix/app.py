@@ -18,9 +18,14 @@ from rich.table import Table
 from fleetmix import __version__
 from fleetmix.api import optimize as api_optimize
 from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
+from fleetmix.benchmarking.converters.vrp import (
+    VRPType,
+)
+from fleetmix.benchmarking.converters.vrp import (
+    convert_vrp_to_fsm as convert_to_fsm,
+)
 from fleetmix.config import FleetmixParams, load_fleetmix_params
 from fleetmix.core_types import VehicleConfiguration
-from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
 from fleetmix.utils.logging import (
     LogLevel,
     log_debug,
@@ -31,7 +36,6 @@ from fleetmix.utils.logging import (
     setup_logging,
 )
 from fleetmix.utils.save_results import save_optimization_results
-from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
 app = typer.Typer(
     help="Fleetmix: Fleet Size and Mix optimizer for heterogeneous fleets",
@@ -196,8 +200,8 @@ def _run_single_instance(
         # Update params.problem with fields from InstanceSpec
         params = params.apply_instance_spec(instance_spec)
 
-        # Use the unified pipeline interface for optimization
-        solution = run_optimization(customers_df=customers_df, params=params)
+        # Use the API for optimization (supports two-phase split-stop optimization)
+        solution = api_optimize(demand=customers_df, config=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -322,8 +326,8 @@ def _run_single_instance(
         # Update params.problem with fields from InstanceSpec
         params = params.apply_instance_spec(instance_spec)
 
-        # Use the unified pipeline interface for optimization
-        solution = run_optimization(customers_df=customers_df, params=params)
+        # Use the API for optimization (supports two-phase split-stop optimization)
+        solution = api_optimize(demand=customers_df, config=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -447,13 +451,8 @@ def _run_single_instance(
             params, io=dataclasses.replace(params.io, demand_file=str(csv_path))
         )
 
-        # Generate vehicle configurations
-        configs = generate_vehicle_configurations(
-            params.problem.vehicles, params.problem.goods
-        )
-
-        # Run optimization using the same approach as MCVRP/CVRP
-        solution = run_optimization(customers_df=customers_df, params=params)
+        # Use the API for optimization (supports two-phase split-stop optimization)
+        solution = api_optimize(demand=customers_df, config=params)
 
         # Save results with specified format
         ext = "xlsx" if format == "xlsx" else "json"
@@ -536,8 +535,8 @@ def _run_all_mcvrp_instances(
             # Update params.problem with fields from InstanceSpec
             params = params.apply_instance_spec(instance_spec)
 
-            # Use the unified pipeline interface for optimization
-            solution = run_optimization(customers_df=customers_df, params=params)
+            # Use the API for optimization (supports two-phase split-stop optimization)
+            solution = api_optimize(demand=customers_df, config=params)
 
             # Save results with specified format
             format = "json"
@@ -621,8 +620,8 @@ def _run_all_cvrp_instances(
             # Update params.problem with fields from InstanceSpec
             params = params.apply_instance_spec(instance_spec)
 
-            # Use the unified pipeline interface for optimization
-            solution = run_optimization(customers_df=customers_df, params=params)
+            # Use the API for optimization (supports two-phase split-stop optimization)
+            solution = api_optimize(demand=customers_df, config=params)
 
             # Save results with specified format
             format = "json"
@@ -699,13 +698,8 @@ def _run_all_case_instances(
                 params, io=dataclasses.replace(params.io, demand_file=str(csv_path))
             )
 
-            # Generate vehicle configurations
-            configs = generate_vehicle_configurations(
-                params.problem.vehicles, params.problem.goods
-            )
-
-            # Run optimization using the same approach as MCVRP/CVRP
-            solution = run_optimization(customers_df=customers_df, params=params)
+            # Use the API for optimization (supports two-phase split-stop optimization)
+            solution = api_optimize(demand=customers_df, config=params)
 
             # Save results with appropriate filename
             format = "json"  # Default to JSON for batch runs
@@ -1144,7 +1138,8 @@ def convert(
         if not quiet:
             log_progress("Running optimization on converted instance...")
 
-        solution = run_optimization(customers_df=customers_df, params=params)
+        # Use the API for optimization (supports two-phase split-stop optimization)
+        solution = api_optimize(demand=customers_df, config=params)
 
         # Save results
         ext = "xlsx" if format == "xlsx" else "json"

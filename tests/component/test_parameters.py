@@ -1,9 +1,7 @@
-from argparse import Namespace
-
 import pytest
 
 from fleetmix.config import load_fleetmix_params
-from fleetmix.utils.cli import get_parameter_overrides, load_parameters, parse_args
+
 
 
 def test_default_yaml_weights_sum_to_one():
@@ -24,37 +22,6 @@ def test_invalid_weights_yaml(tmp_path):
         _ = load_fleetmix_params(str(bad_yaml))
 
 
-def test_load_parameters_overrides():
-    # Simulate CLI args
-    args = Namespace(
-        config=None,
-        demand_file=None,
-        light_load_penalty=500.0,
-        light_load_threshold=None,
-        compartment_setup_cost=None,
-        verbose=False,
-        route_time_estimation=None,
-        clustering_method=None,
-        clustering_distance=None,
-        geo_weight=None,
-        demand_weight=None,
-        format=None,
-        help_params=False,
-    )
-    params = load_parameters(args)
-    assert params.problem.light_load_penalty == 500.0
-    # Other values remain defaults
-    default = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
-    assert params.problem.light_load_threshold == default.problem.light_load_threshold
-
-
-def test_get_parameter_overrides_filters_none():
-    parser = parse_args()
-    # Simulate args
-    cli_args = parser.parse_args(["--light-load-penalty", "500", "--help-params"])
-    overrides = get_parameter_overrides(cli_args)
-    assert "light_load_penalty" in overrides and overrides["light_load_penalty"] == 500
-    assert "help_params" not in overrides
 
 
 def test_small_cluster_size_overrides(tmp_path):

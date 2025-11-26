@@ -134,6 +134,7 @@ def run_config_on_demand_day(
     config_path: Path,
     demand_path: Path,
     output_dir: Path,
+    skip_existing: bool = True,
 ) -> dict[str, Any] | None:
     """
     Run a single config on a single demand day.
@@ -142,6 +143,7 @@ def run_config_on_demand_day(
         config_path: Path to config YAML
         demand_path: Path to demand CSV
         output_dir: Output directory
+        skip_existing: Whether to skip if output file exists
 
     Returns:
         Dictionary with results, or None if failed
@@ -152,7 +154,7 @@ def run_config_on_demand_day(
     # Create output path
     output_path = output_dir / f"{config_name}_{demand_name}.json"
 
-    if skip_if_exists(output_path):
+    if skip_existing and skip_if_exists(output_path):
         return {"config": config_name, "demand_day": demand_name, "status": "skipped"}
 
     try:
@@ -306,6 +308,7 @@ def run_sensitivity_analysis(
                     config_path=config_path,
                     demand_path=demand_path,
                     output_dir=param_output_dir,
+                    skip_existing=skip_existing,
                 )
 
                 if result:

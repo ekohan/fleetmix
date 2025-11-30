@@ -53,15 +53,20 @@ def setup_cli_assets(tmp_path_factory):
 
     # Create dummy output directories that might be cleaned up by app's own teardown if invoked directly
     # These are relative to workspace root where pytest is run
-    Path("results").mkdir(exist_ok=True)
-    Path("benchmark_results").mkdir(exist_ok=True)
-    Path("converted_instances").mkdir(exist_ok=True)
+    dirs_to_check = ["results", "benchmark_results", "converted_instances"]
+    pre_existing = {d for d in dirs_to_check if Path(d).exists()}
+
+    for d in dirs_to_check:
+        Path(d).mkdir(exist_ok=True)
 
     yield  # Test execution
 
     # Teardown: Clean up generated directories if they exist at the workspace level
     # tmp_path fixtures handle their own cleanup
-    for dir_name in ["results", "benchmark_results", "converted_instances"]:
+    for dir_name in dirs_to_check:
+        if dir_name in pre_existing:
+            continue
+
         dir_to_remove = Path(dir_name)
         if dir_to_remove.exists() and dir_to_remove.is_dir():
             try:

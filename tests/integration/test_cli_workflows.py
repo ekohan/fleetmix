@@ -216,23 +216,6 @@ post_optimization: false
         assert result.exit_code == 0
         assert "fleetmix" in result.output.lower()
 
-    def test_cli_benchmark_mcvrp_list(self):
-        """Test 'fleetmix benchmark mcvrp --list' command."""
-        runner = CliRunner()
-
-        result = runner.invoke(app, ["benchmark", "mcvrp", "--list"])
-
-        # Should work even if no datasets available
-        assert result.exit_code == 0
-
-    def test_cli_benchmark_invalid_suite(self):
-        """Test benchmark command with invalid suite."""
-        runner = CliRunner()
-
-        result = runner.invoke(app, ["benchmark", "invalid_suite"])
-
-        assert result.exit_code == 1
-        assert "Invalid suite" in result.output
 
     def test_cli_help_commands(self):
         """Test that help commands work."""
@@ -248,9 +231,6 @@ post_optimization: false
         assert result.exit_code == 0
         assert "optimize" in result.output.lower()
 
-        result = runner.invoke(app, ["benchmark", "--help"])
-        assert result.exit_code == 0
-        assert "benchmark" in result.output.lower()
 
     def test_cli_optimize_with_default_config(
         self, sample_demand_csv, temp_results_dir

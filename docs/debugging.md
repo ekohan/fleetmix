@@ -20,9 +20,6 @@ Enable MILP debugging by adding the `--debug-milp` flag to any optimization comm
 ```bash
 # Basic usage
 fleetmix optimize --demand demand.csv --config config.yaml --debug-milp debug_output/
-
-# With benchmarks
-fleetmix benchmark mcvrp --instance 10_3_3_1_(01) --debug-milp debug_output/
 ```
 
 ### Programmatic Usage

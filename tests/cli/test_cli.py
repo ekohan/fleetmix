@@ -131,21 +131,6 @@ def test_cli_optimize_missing_file():
     assert "Demand file not found" in result.stderr
 
 
-@pytest.mark.slow
-def test_cli_benchmark_mcvrp():
-    """Test the benchmark command for MCVRP."""
-    # This is a minimal test that just checks the command structure works
-    # We use --help to avoid actually running benchmarks in tests
-    result = subprocess.run(
-        [sys.executable, "-m", "fleetmix", "benchmark", "--help"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    assert result.returncode == 0
-    assert "benchmark" in result.stdout
-    assert "suite" in result.stdout
 
 
 def test_api_optimize_function():

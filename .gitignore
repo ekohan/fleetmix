@@ -23,8 +23,8 @@ src/fleetmix/experiments/alpha_analysis/results/
 # Testing
 .hypothesis/
 .coverage*
-coverage/*
-coverage/coverage-summary.json
+/coverage/
+/htmlcov/
 src/*.egg-info/
 
 # Etc

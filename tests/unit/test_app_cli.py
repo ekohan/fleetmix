@@ -134,40 +134,6 @@ def test_optimize_command_missing_demand(tmp_path):
     )
 
 
-def test_benchmark_list_mcvrp():
-    """Test 'fleetmix benchmark mcvrp --list'."""
-    result = runner.invoke(app, ["benchmark", "mcvrp", "--list"])
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    # More robust check for Rich table output
-    assert (
-        "Available" in result.stdout
-        and "MCVRP" in result.stdout
-        and "Instances" in result.stdout
-    )
-    assert MCVRP_INSTANCE in result.stdout
-
-
-
-
-def test_benchmark_run_mcvrp_instance(tmp_path):
-    """Test running a single MCVRP benchmark instance."""
-    output_dir = tmp_path / "benchmark_mcvrp_cli"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "mcvrp",
-            "--instance",
-            MCVRP_INSTANCE,
-            "--output",
-            str(output_dir),
-            "--format",
-            "json",
-        ],
-    )
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    assert output_dir.exists()
-    assert (output_dir / f"mcvrp_{MCVRP_INSTANCE}.json").exists()
 
 
 
@@ -233,61 +199,3 @@ def test_optimize_command_invalid_config_syntax(tmp_path):
     ), f"Expected config loading error message not found. STDERR: {result.stderr}"
 
 
-def test_benchmark_invalid_instance_mcvrp(tmp_path):
-    """Test 'fleetmix benchmark mcvrp' with a non-existent instance name."""
-    output_dir = tmp_path / "benchmark_invalid_instance_mcvrp"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "mcvrp",
-            "--instance",
-            "NonExistentInstance123",
-            "--output",
-            str(output_dir),  # Output may or may not be used before error
-        ],
-    )
-    assert result.exit_code != 0, (
-        f"Command should fail for non-existent instance. STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    )
-    assert (
-        "not found" in result.stderr.lower()
-        and "NonExistentInstance123" in result.stderr
-    ), f"Expected instance not found error message not found. STDERR: {result.stderr}"
-
-
-
-
-def test_benchmark_invalid_suite_list():
-    """Test 'fleetmix benchmark --list' with an invalid suite name."""
-    result = runner.invoke(app, ["benchmark", "invalidsuitename", "--list"])
-    assert result.exit_code != 0, (
-        f"Command should fail for invalid suite. Exited {result.exit_code}. STDERR: {result.stderr}"
-    )
-    assert "Invalid suite" in result.stderr and "invalidsuitename" in result.stderr, (
-        f"Expected invalid suite error message not found in STDERR: {result.stderr}"
-    )
-
-
-def test_benchmark_invalid_suite_run_instance(tmp_path):
-    """Test 'fleetmix benchmark' with an invalid suite name and an instance."""
-    output_dir = tmp_path / "benchmark_invalid_suite_run"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "invalidsuitetoo",
-            "--instance",
-            "AnyInstance",
-            "--output",
-            str(output_dir),
-        ],
-    )
-    # This should ideally exit with an error before trying to process the instance
-    assert result.exit_code != 0, (
-        f"Command should fail for invalid suite. STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    )
-    # The error message might be generic or specific to the suite
-    assert (
-        "error" in result.stderr.lower() or "invalid suite" in result.stderr.lower()
-    ), f"Expected invalid suite error message not found. STDERR: {result.stderr}"

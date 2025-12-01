@@ -12,6 +12,8 @@ from fleetmix.config.params import FleetmixParams, ProblemParams
 from fleetmix.core_types import VehicleSpec
 from fleetmix.utils.logging import FleetmixLogger
 
+__all__ = ["make_mcv_fleet", "make_mixed_fleet", "make_scv_fleet"]
+
 BASE_CONFIG_PATH = Path(
     "src/fleetmix/config/experiments/fleet_composition/base_config.yaml"
 )

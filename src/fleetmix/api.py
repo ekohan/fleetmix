@@ -22,6 +22,8 @@ from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
+__all__ = ["optimize"]
+
 logger = FleetmixLogger.get_logger("fleetmix.api")
 
 

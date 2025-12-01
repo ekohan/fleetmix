@@ -9,6 +9,16 @@ import numpy as _np
 
 from fleetmix.core_types import FleetmixSolution
 
+__all__ = [
+    "average_visits_per_customer",
+    "cost_per_drop",
+    "cost_per_kg",
+    "distance_ratios",
+    "route_time_stats",
+    "split_rate",
+    "stops_stats",
+]
+
 
 def _count_customer_visits(solution: FleetmixSolution) -> Dict[str, int]:
     """Helper function to count visits per physical customer across all clusters."""

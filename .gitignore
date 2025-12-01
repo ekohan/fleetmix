@@ -41,3 +41,4 @@ fleet-comparision-metrics.ipynb
 *-pulp.sol
 gurobi.log
 experiments/*/results/*
+dist/

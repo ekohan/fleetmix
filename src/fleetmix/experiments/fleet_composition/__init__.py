@@ -1,4 +1,4 @@
-"""Init for alpha_analysis subpackage.
+"""Init for fleet_composition subpackage.
 
 This is an internal experiment module - not part of the public API.
 """

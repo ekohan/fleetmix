@@ -120,14 +120,23 @@ def get_demand_files(
         for day in specific_days:
             if not day.endswith(".csv"):
                 day = f"{day}.csv"
+
+            # Try exact match first
             demand_path = demand_dir / day
+            if not demand_path.exists():
+                # Try with synthetic_sales_ prefix
+                if not day.startswith("synthetic_sales_"):
+                    day_prefixed = f"synthetic_sales_{day}"
+                    if (demand_dir / day_prefixed).exists():
+                        demand_path = demand_dir / day_prefixed
+
             if demand_path.exists():
                 files.append(demand_path)
             else:
                 log_error(f"Demand file not found: {demand_path}")
         return files
     else:
-        return sorted(demand_dir.glob("sales_*.csv"))
+        return sorted(demand_dir.glob("synthetic_sales_*.csv"))
 
 
 def run_config_on_demand_day(
@@ -297,6 +306,7 @@ def run_sensitivity_analysis(
         for param, config_name, config_path in configs:
             # Create subdirectory for this parameter
             param_output_dir = output_dir / param / config_name
+            # Ensure the directory exists
             param_output_dir.mkdir(parents=True, exist_ok=True)
 
             for demand_path in demand_files:

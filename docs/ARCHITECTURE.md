@@ -263,7 +263,7 @@ FleetMix is designed for research extensibility:
 | Custom route time | Implement `RouteTimeEstimator` protocol | [specs/route_time_estimation.md](specs/route_time_estimation.md) |
 | Custom solver | Implement `SolverAdapter` protocol | [specs/optimization.md](specs/optimization.md) |
 | Fixed compartments | Modify configuration generation | [specs/vehicle_configurations.md](specs/vehicle_configurations.md) |
-| Problem variants | See paper §7 for extensions (TODO) | Paper §7 (future work) |
+| Problem variants | See paper §8 for extensions | Paper §8 (future work) |
 
 ---
 
@@ -309,7 +309,7 @@ See [specs/configuration.md](specs/configuration.md) for complete schema.
 
 - [mapping.md](mapping.md) - Detailed paper ↔ code cross-reference
 - [specs/](specs/) - Individual module specifications
-- Paper §7 - Discussion of future extensions (TODO)
+- Paper §8 - Discussion of future extensions
 - [REPRODUCIBILITY.md](REPRODUCIBILITY.md) - Reproduce paper experiments
 
 ---

@@ -23,11 +23,10 @@ This document enables readers of *Designing Multi-Compartment Last-Mile Vehicle 
 ## Paper Section → Code
 
 ### §3 Problem Definition
-**TODO** check the code here.
 
 | Concept | Notation | Implementation |
 |---------|----------|----------------|
-| Set of customers | $N = \\{1, ..., n\\}$ | `customers: list[CustomerBase]` |
+| Set of customers | $N = \{1, ..., n\}$ | `customers: list[CustomerBase]` |
 | Set of product types | $P$ | `params.problem.goods` |
 | Customer demand | $d_{ip}$ | `Customer.demands[good]` |
 | Vehicle configurations | $V$ | `list[VehicleConfiguration]` from `utils/vehicle_configurations.py` |
@@ -259,8 +258,9 @@ def convert_mcvrp_to_fsm(
 
 **Benchmark Runner**:
 ```bash
-# Reproduces Table 1 in paper
-fleetmix benchmark mcvrp
+# Reproduces Table 2 in paper (Comparison with Henke et al.)
+# Run this command and check the output JSON files
+fleetmix reproduce-paper mcvrp-instances
 ```
 
 **Spec**: [specs/benchmarking.md](specs/benchmarking.md)
@@ -273,9 +273,11 @@ fleetmix benchmark mcvrp
 
 **Implementation**:
 - **Data**: `src/fleetmix/benchmarking/datasets/case/*.csv`
-- **Runner**: 
+  > **Confidentiality Note**: The original proprietary dataset (70 days) has been replaced with 3 synthetic representative days.
+- **Runner (Table 3)**: 
 ```bash
-fleetmix benchmark case
+# Run sensitivity analysis using synthetic data
+fleetmix reproduce-paper sensitivity-analysis
 ```
 
 **Sensitivity Analysis**:
@@ -319,13 +321,13 @@ fleetmix benchmark case
 ---
 
 ## Figures → Code
-**TODO: check on final version of paper.**
+
 | Figure | Description | Code Implementation |
 |--------|-------------|---------------------|
 | Figure 1 | Matheuristic pipeline | `api.py` |
 | Algorithm 1 | Recursive cluster splitting | `clustering/heuristics.py:process_clusters_recursively()` |
-| Table 1 | Comparison with Henke et al. | `benchmarking/` results |
-| Table in §6 | Baseline parameters | Configuration files |
+| Table 2 | Comparison with Henke et al. | `benchmarking/` results |
+| Table 3 | Average operational metrics | `benchmarking/datasets/case/` |
 
 ---
 

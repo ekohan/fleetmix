@@ -14,16 +14,16 @@ from tqdm import tqdm
 
 from fleetmix.api import optimize
 from fleetmix.config import load_fleetmix_params
-from fleetmix.experiments.alpha_analysis.config import (
+from fleetmix.experiments.fleet_composition.config import (
     ALPHA_GRID,
     C_VALUES,
     DEMAND_FILES,
 )
-from fleetmix.experiments.alpha_analysis.fleet_templates import (
+from fleetmix.experiments.fleet_composition.fleet_templates import (
     make_mixed_fleet,
     make_scv_fleet,
 )
-from fleetmix.experiments.alpha_analysis.metrics import (
+from fleetmix.experiments.fleet_composition.metrics import (
     average_visits_per_customer,
     cost_per_drop,
     cost_per_kg,

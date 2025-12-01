@@ -5,7 +5,6 @@ Command-line interface for Fleetmix using Typer.
 import dataclasses
 import importlib
 import pathlib
-import pkgutil
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -1056,70 +1055,6 @@ def _setup_logging_from_flags(
         setup_logging()
 
 
-@app.command("exp")
-def experiments(
-    action: Annotated[str, typer.Argument(help="list | run | analyze")],
-    experiment: Annotated[str | None, typer.Option("-e", "--experiment")] = None,
-    config_path: Annotated[pathlib.Path | None, typer.Option("-c", "--config")] = None,
-) -> None:
-    """
-    Run experimental analyses.
-
-    Actions:
-    - list: Show available experiments
-    - run: Execute experiment grid runs
-    - analyze: Analyze experiment results
-    """
-    if action == "list":
-        import fleetmix.experiments as exp_pkg
-
-        available = [
-            name for _, name, is_pkg in pkgutil.iter_modules(exp_pkg.__path__) if is_pkg
-        ]
-        if available:
-            console.print("Available experiments:")
-            for exp_name in available:
-                console.print(f"  - {exp_name}")
-        else:
-            console.print("No experiments found")
-        return
-
-    if experiment is None:
-        log_error("Missing --experiment / -e")
-        raise typer.Exit(1)
-
-    # Import and run the appropriate module
-    try:
-        if action == "run":
-            if experiment == "alpha_analysis":
-                from fleetmix.experiments.alpha_analysis.run_grid import main
-
-                main(config_path)
-            else:
-                log_error(f"Unknown experiment '{experiment}' for action 'run'")
-                raise typer.Exit(1)
-
-        elif action == "analyze":
-            if experiment == "alpha_analysis":
-                from fleetmix.experiments.alpha_analysis.analyze import main
-
-                main(config_path)
-            else:
-                log_error(f"Unknown experiment '{experiment}' for action 'analyze'")
-                raise typer.Exit(1)
-
-        else:
-            log_error(f"Unknown action '{action}'. Use 'list', 'run', or 'analyze'")
-            raise typer.Exit(1)
-
-    except ImportError as e:
-        log_error(f"Failed to import experiment module: {e}")
-        raise typer.Exit(1)
-    except Exception as e:
-        log_error(f"Error running experiment: {e}")
-        raise typer.Exit(1)
-
-
 # ============================================================================
 # REPRODUCE PAPER COMMAND GROUP
 # ============================================================================
@@ -1235,7 +1170,7 @@ def reproduce_sensitivity_analysis(
     Run parameter sensitivity analysis (MCV vs SCV comparison).
 
     Reproduces results from paper Section: Benefits of Using Multi-Compartment Vehicles.
-    Total runs: 37 configs × 70 days = 2,590 experiments.
+    Total runs: 37 configs × 3 days = 111 experiments (using synthetic representative data).
 
     Examples:
 
@@ -1299,7 +1234,7 @@ def reproduce_fleet_composition(
     Run fleet composition analysis across alpha-C grid.
 
     Reproduces results from paper Section: Impact of Cost Structure on Fleet Composition.
-    Total runs: 11 alphas × 6 C values × 70 days = 4,620 mixed fleet + 70 SCV baselines.
+    Total runs: 11 alphas × 6 C values × 3 days = 198 mixed fleet + 3 SCV baselines (using synthetic representative data).
 
     Examples:
 

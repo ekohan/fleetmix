@@ -98,7 +98,7 @@ Each parameter is varied at ±50%, ±20%, and baseline (0%):
 ### Commands
 
 ```bash
-# Run all sensitivity experiments (2,590 runs, ~8 hours with 8 cores)
+# Run all sensitivity experiments (78 runs, ~20 minutes with 8 cores)
 fleetmix reproduce-paper sensitivity-analysis
 
 # Run only capacity variations
@@ -111,7 +111,7 @@ fleetmix reproduce-paper sensitivity-analysis --fleet-types mcv
 fleetmix reproduce-paper sensitivity-analysis --variations baseline
 
 # Run specific demand days
-fleetmix reproduce-paper sensitivity-analysis --demand-days "sales_2024-07-02_demand,sales_2024-07-03_demand"
+fleetmix reproduce-paper sensitivity-analysis --demand-days "synthetic_sales_2024-07-03_demand"
 
 # Run and skip existing results
 fleetmix reproduce-paper sensitivity-analysis --skip-existing
@@ -127,7 +127,7 @@ Each variation has separate YAML configs for MCV and SCV fleets.
 
 ### Demand Data
 
-70 real demand days from: `src/fleetmix/benchmarking/datasets/case/sales_*.csv`
+3 synthetic demand days from: `src/fleetmix/benchmarking/datasets/case/synthetic_sales_*.csv`
 
 ### Output
 
@@ -135,7 +135,7 @@ Each variation has separate YAML configs for MCV and SCV fleets.
 results/paper/sensitivity_analysis/
   capacity/
     mcv_capacity_minus_50/
-      sales_2024-06-01_demand.json
+      synthetic_sales_2024-06-04_demand.json
       ...
     scv_capacity_minus_50/
       ...
@@ -168,12 +168,12 @@ The summary includes:
 - **C**: Compartment setup cost [0 to 50, 6 values]
 - **Demand days**: 70 real demand instances
 
-Total runs: 11 × 6 × 70 = 4,620 mixed fleet + 70 SCV baselines = 4,690 runs
+Total runs: 11 × 6 × 3 = 198 mixed fleet + 3 SCV baselines = 201 runs
 
 ### Commands
 
 ```bash
-# Run full grid (4,690 runs, ~48 hours with 16 cores)
+# Run full grid (201 runs, ~1 hour with 16 cores)
 fleetmix reproduce-paper fleet-composition
 
 # Run with custom grid (smaller)
@@ -183,7 +183,7 @@ fleetmix reproduce-paper fleet-composition \
 
 # Run specific demand days
 fleetmix reproduce-paper fleet-composition \
-  --demand-days "sales_2024-07-02_demand,sales_2024-07-03_demand"
+  --demand-days "synthetic_sales_2024-07-03_demand"
 
 ```
 
@@ -192,16 +192,16 @@ fleetmix reproduce-paper fleet-composition \
 Base config: `src/fleetmix/config/experiments/fleet_composition/base_config.yaml`
 
 Fleet templates are dynamically generated using:
-- `src/fleetmix/experiments/alpha_analysis/fleet_templates.py`
+- `src/fleetmix/experiments/fleet_composition/fleet_templates.py`
 
 ### Output
 
 ```
 results/paper/fleet_composition/
   raw/
-    sales_2024-06-01_demand_SCV_BASE.json
-    sales_2024-06-01_demand_MIXED_1.00_0.json
-    sales_2024-06-01_demand_MIXED_1.10_0.json
+    synthetic_sales_2024-06-04_demand_SCV_BASE.json
+    synthetic_sales_2024-06-04_demand_MIXED_1.00_0.json
+    synthetic_sales_2024-06-04_demand_MIXED_1.10_0.json
     ...
   summary_mixed.parquet  # Aggregated results with deltas
 ```
@@ -213,13 +213,13 @@ Approximate runtimes on a standard workstation:
 | Experiment | Sequential |
 |------------|-----------|
 | MCVRP instances (198) | ~30 min |
-| Sensitivity analysis (1820) | ~30 hours |
-| Fleet composition (4,690) | ~80 hours |
+| Sensitivity analysis (78) | ~20 min |
+| Fleet composition (201) | ~1 hour |
 
 ## Computational Environment
 
 **Hardware** (paper experiments):
-- **Processor**: Apple Silicon M1 (2020)
+- **Processor**: Apple Silicon M3 (2024)
 - **Cores**: 8 CPU cores
 - **Memory**: 16 GB RAM
 

@@ -16,15 +16,15 @@ from rich.console import Console
 from tqdm import tqdm
 
 from fleetmix.config import load_fleetmix_params
-from fleetmix.experiments.alpha_analysis.config import (
+from fleetmix.experiments.fleet_composition.config import (
     ALPHA_GRID as DEFAULT_ALPHA_GRID,
 )
-from fleetmix.experiments.alpha_analysis.config import C_VALUES as DEFAULT_C_VALUES
-from fleetmix.experiments.alpha_analysis.fleet_templates import (
+from fleetmix.experiments.fleet_composition.config import C_VALUES as DEFAULT_C_VALUES
+from fleetmix.experiments.fleet_composition.fleet_templates import (
     make_mixed_fleet,
     make_scv_fleet,
 )
-from fleetmix.experiments.alpha_analysis.run_grid_mixed import (
+from fleetmix.experiments.fleet_composition.run_grid_mixed import (
     _collect_day_summary,
     convert_numpy_types,
 )
@@ -81,9 +81,9 @@ def get_demand_files(
             # Handle with or without .csv extension
             if not day.endswith(".csv"):
                 day = f"{day}.csv"
-            # Also try with sales_ prefix if not present
-            if not day.startswith("sales_"):
-                day = f"sales_{day}"
+            # Also try with synthetic_sales_ prefix if not present
+            if not day.startswith("synthetic_sales_") and not day.startswith("sales_"):
+                day = f"synthetic_sales_{day}"
             demand_path = demand_dir / day
             if demand_path.exists():
                 files.append(demand_path)
@@ -91,7 +91,7 @@ def get_demand_files(
                 log_error(f"Demand file not found: {demand_path}")
         return sorted(files)
     else:
-        return sorted(demand_dir.glob("sales_*.csv"))
+        return sorted(demand_dir.glob("synthetic_sales_*.csv"))
 
 
 def run_scv_baselines(

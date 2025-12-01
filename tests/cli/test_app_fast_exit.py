@@ -38,13 +38,13 @@ def base_env() -> dict[str, str]:
 
 
 MINIMAL_CONFIG = Path("tests/_assets/configs/test_config_minimal.yaml")
-MCVRP_INSTANCE = "2015_10_3_3_1_(09)"
+MCVRP_INSTANCE = "2015_10_3_3_1_(00)_dummy"
 CVRP_INSTANCE = "X-n129-k18"
 CASE_INSTANCE = "sales_2024-06-01_demand"
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[2]
 
 
 def test_optimize_fast_exit_creates_output_dir(
@@ -244,40 +244,6 @@ def test_version_command_outputs_version(runner: CliRunner) -> None:
     assert result.exit_code == 0
     assert __version__ in result.stdout
 
-
-def test_experiments_run_alpha_analysis_invokes_main(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    called: dict[str, bool] = {}
-
-    def fake_main(config_path: Path | None) -> None:
-        called["run"] = True
-        assert config_path is None
-
-    monkeypatch.setattr(
-        "fleetmix.experiments.alpha_analysis.run_grid.main", fake_main
-    )
-
-    result = runner.invoke(app, ["exp", "run", "--experiment", "alpha_analysis"])
-
-    assert result.exit_code == 0
-    assert called.get("run") is True
-
-
-def test_experiments_missing_experiment_errors(runner: CliRunner, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level("ERROR"):
-        result = runner.invoke(app, ["exp", "run"])
-
-    assert result.exit_code != 0
-    assert "Missing --experiment" in caplog.text
-
-
-def test_experiments_unknown_action_errors(runner: CliRunner, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level("ERROR"):
-        result = runner.invoke(app, ["exp", "unknown", "--experiment", "alpha_analysis"])
-
-    assert result.exit_code != 0
-    assert "Unknown action" in caplog.text
 
 
 def test_optimize_normal_flow_creates_results(

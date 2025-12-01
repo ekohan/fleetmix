@@ -39,7 +39,6 @@ def base_env() -> dict[str, str]:
 
 MINIMAL_CONFIG = Path("tests/_assets/configs/test_config_minimal.yaml")
 MCVRP_INSTANCE = "2015_10_3_3_1_(00)_dummy"
-CVRP_INSTANCE = "X-n129-k18"
 CASE_INSTANCE = "sales_2024-06-01_demand"
 
 
@@ -95,32 +94,6 @@ def test_optimize_invalid_format_errors(
     assert result.exit_code != 0
     assert "Invalid format" in result.stderr
 
-
-def test_benchmark_cvrp_fast_exit_creates_placeholder(
-    runner: CliRunner, base_env: dict[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(
-        "fleetmix.app._get_available_instances",
-        lambda suite: [CVRP_INSTANCE] if suite == "cvrp" else [],
-    )
-
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "cvrp",
-            "--instance",
-            CVRP_INSTANCE,
-            "--output",
-            str(tmp_path),
-        ],
-        env=base_env,
-    )
-
-    assert result.exit_code == 0
-    placeholder = tmp_path / f"cvrp_{CVRP_INSTANCE}_normal.json"
-    assert placeholder.exists()
-    assert placeholder.read_text() == "{}"
 
 
 def test_benchmark_mcvrp_fast_exit_creates_placeholder(
@@ -197,46 +170,6 @@ def test_benchmark_case_fast_exit_creates_placeholder(
     assert placeholder.read_text() == "{}"
 
 
-def test_convert_cvrp_fast_exit_creates_placeholder(
-    runner: CliRunner, base_env: dict[str, str], tmp_path: Path
-) -> None:
-    result = runner.invoke(
-        app,
-        [
-            "convert",
-            "--type",
-            "cvrp",
-            "--instance",
-            CVRP_INSTANCE,
-            "--benchmark-type",
-            "normal",
-            "--output",
-            str(tmp_path),
-        ],
-        env=base_env,
-    )
-
-    assert result.exit_code == 0
-    placeholder = tmp_path / f"vrp_cvrp_{CVRP_INSTANCE}_normal.json"
-    assert placeholder.exists()
-    assert placeholder.read_text() == "{}"
-
-
-def test_convert_invalid_type_errors(runner: CliRunner) -> None:
-    result = runner.invoke(
-        app,
-        [
-            "convert",
-            "--type",
-            "invalid",
-            "--instance",
-            "anything",
-        ],
-    )
-
-    assert result.exit_code != 0
-    assert "Invalid type" in result.stderr
-
 
 def test_version_command_outputs_version(runner: CliRunner) -> None:
     result = runner.invoke(app, ["version"])
@@ -296,86 +229,5 @@ def test_optimize_normal_flow_creates_results(
     assert (output_dir / "summary.json").exists()
 
 
-def test_benchmark_cvrp_normal_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PYTEST_CURRENT_TEST", "cli-normal")
-    monkeypatch.setenv("FLEETMIX_SKIP_OPTIMISE", "0")
 
-    captured: dict[str, tuple] = {}
-
-    def fake_run(suite, instance, output, format, verbose, allow_split_stops, config):
-        captured["call"] = (suite, instance, output, format, verbose, allow_split_stops, config)
-
-    monkeypatch.setattr("fleetmix.app._run_single_instance", fake_run)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "cvrp",
-            "--instance",
-            CVRP_INSTANCE,
-            "--output",
-            str(tmp_path),
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert captured["call"] == (
-        "cvrp",
-        CVRP_INSTANCE,
-        tmp_path,
-        "json",
-        False,
-        None,
-        None,
-    )
-
-
-def test_convert_cvrp_normal_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PYTEST_CURRENT_TEST", "cli-normal")
-    monkeypatch.setenv("FLEETMIX_SKIP_OPTIMISE", "0")
-
-    def fake_convert(*args, **kwargs):
-        return pd.DataFrame(), SimpleNamespace(apply=lambda params: params)
-
-    def fake_run_optimization(**kwargs):
-        return SimpleNamespace(
-            total_cost=1.0,
-            total_fixed_cost=0.5,
-            total_variable_cost=0.5,
-            total_penalties=0.0,
-            vehicles_used=1,
-            missing_customers=[],
-            solver_status="ok",
-            solver_runtime_sec=0.1,
-            selected_clusters=[],
-        )
-
-    saved: dict[str, str] = {}
-
-    monkeypatch.setattr("fleetmix.app.convert_to_fsm", fake_convert)
-    monkeypatch.setattr("fleetmix.app.api.optimize", lambda **kwargs: fake_run_optimization())
-    monkeypatch.setattr("fleetmix.app.save_optimization_results", lambda **kwargs: saved.setdefault("filename", kwargs["filename"]))
-    monkeypatch.setattr("fleetmix.app.FleetmixParams.apply_instance_spec", lambda self, spec: self)
-
-    runner = CliRunner()
-    result = runner.invoke(
-        app,
-        [
-            "convert",
-            "--type",
-            "cvrp",
-            "--instance",
-            CVRP_INSTANCE,
-            "--benchmark-type",
-            "normal",
-            "--output",
-            str(tmp_path),
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert "filename" in saved
-    assert saved["filename"].startswith(str(tmp_path))
 

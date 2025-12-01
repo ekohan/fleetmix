@@ -84,16 +84,6 @@ def test_get_available_instances_mcvrp(tmp_path, monkeypatch):
     assert _get_available_instances("mcvrp") == ["alpha", "beta"]
 
 
-def test_get_available_instances_cvrp(tmp_path, monkeypatch):
-    app_dir = tmp_path / "app_loc"
-    dataset_dir = app_dir / "benchmarking" / "datasets" / "cvrp"
-    dataset_dir.mkdir(parents=True)
-    (dataset_dir / "X-n10-k3.vrp").write_text("data")
-
-    monkeypatch.setattr("fleetmix.app.__file__", str(app_dir / "app.py"), raising=False)
-
-    assert _get_available_instances("cvrp") == ["X-n10-k3"]
-
 
 def test_get_available_instances_invalid_suite():
     assert _get_available_instances("invalid") == []
@@ -140,7 +130,6 @@ def test_setup_logging_priority(mock_setup_logging):
     "suite,instance,expected_file",
     [
         ("mcvrp", "ut_temp_mcvrp", "mcvrp_ut_temp_mcvrp.json"),
-        ("cvrp", "ut_temp_cvrp", "cvrp_ut_temp_cvrp_normal.json"),
         ("case", "ut_temp_case", "case_ut_temp_case.json"),
     ],
 )

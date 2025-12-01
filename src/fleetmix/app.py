@@ -15,7 +15,6 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from fleetmix import __version__, api
-from fleetmix.benchmarking.converters.cvrp import CVRPBenchmarkType
 from fleetmix.benchmarking.converters.vrp import (
     VRPType,
 )
@@ -82,9 +81,6 @@ def _get_available_instances(suite: str) -> list[str]:
     if suite == "mcvrp":
         mcvrp_dir = datasets_dir / "mcvrp"
         instances = [f.stem for f in sorted(mcvrp_dir.glob("*.dat"))]
-    elif suite == "cvrp":
-        cvrp_dir = datasets_dir / "cvrp"
-        instances = [f.stem for f in sorted(cvrp_dir.glob("X-n*.vrp"))]
     elif suite == "case":
         case_dir = datasets_dir / "case"
         instances = [f.stem for f in sorted(case_dir.glob("*.csv"))]
@@ -143,10 +139,6 @@ def _run_single_instance(
     if suite == "mcvrp":
         instance_file = datasets_dir / f"{instance}.dat"
         filename_suffix = ""
-    elif suite == "cvrp":
-        # CVRP loader finds files by instance name internally
-        instance_file = None
-        filename_suffix = "_normal"
     else:  # case
         instance_file = datasets_dir / f"{instance}.csv"
         filename_suffix = ""
@@ -206,25 +198,6 @@ def _run_single_instance(
 
         customers_df, instance_spec = convert_to_fsm(
             VRPType.MCVRP, instance_path=instance_file
-        )
-        params = params.apply_instance_spec(instance_spec)
-
-    elif suite == "cvrp":
-        # Force disable split-stops for CVRP Normal
-        was_enabled = params.problem.allow_split_stops
-        if allow_split_stops is True or (allow_split_stops is None and was_enabled):
-            log_debug(
-                "[yellow]⚠ Ignoring split-stops for CVRP NORMAL benchmark (single-product instance) – forcing to False.[/yellow]"
-            )
-        params = dataclasses.replace(
-            params,
-            problem=dataclasses.replace(params.problem, allow_split_stops=False),
-        )
-
-        customers_df, instance_spec = convert_to_fsm(
-            VRPType.CVRP,
-            instance_names=[instance],
-            benchmark_type=CVRPBenchmarkType.NORMAL,
         )
         params = params.apply_instance_spec(instance_spec)
 
@@ -375,92 +348,6 @@ def _run_all_mcvrp_instances(
 
         except Exception as e:
             log_error(f"Error processing MCVRP instance {instance}: {e}")
-            if debug:
-                console.print_exception()
-
-
-def _run_all_cvrp_instances(
-    output_dir: Path | None = None,
-    verbose: bool = False,
-    debug: bool = False,
-    allow_split_stops: Optional[bool] = None,
-    config_path: Path | None = None,
-) -> None:
-    """Run benchmarks for all CVRP instances."""
-    datasets_dir = Path(__file__).parent / "benchmarking" / "datasets" / "cvrp"
-
-    for vrp_path in sorted(datasets_dir.glob("X-n*.vrp")):
-        instance = vrp_path.stem
-        log_progress(f"Running CVRP instance {instance}...")
-
-        try:
-            # Load parameters
-            if config_path:
-                params = load_fleetmix_params(config_path)
-            else:
-                # Use default config
-                if _DEFAULT_CONFIG is None:
-                    raise RuntimeError("No default configuration found")
-                params = _DEFAULT_CONFIG
-
-            # Override output directory if specified
-            if output_dir:
-                params = dataclasses.replace(
-                    params, io=dataclasses.replace(params.io, results_dir=output_dir)
-                )
-
-            # Override allow_split_stops if specified
-            if allow_split_stops is not None:
-                log_debug(
-                    "[yellow]⚠ Ignoring --allow-split-stops for CVRP NORMAL benchmarks (single-product instances).[/yellow]"
-                )
-            if allow_split_stops is not None:
-                params = dataclasses.replace(
-                    params,
-                    problem=dataclasses.replace(
-                        params.problem,
-                        allow_split_stops=allow_split_stops
-                        if allow_split_stops is not None
-                        else False,
-                    ),
-                )
-
-            # Use the unified pipeline interface for conversion
-            # CVRP requires benchmark_type and uses instance_names instead of instance_path
-            customers_df, instance_spec = convert_to_fsm(
-                VRPType.CVRP,
-                instance_names=[instance],
-                benchmark_type=CVRPBenchmarkType.NORMAL,
-            )
-
-            # Update params.problem with fields from InstanceSpec
-            params = params.apply_instance_spec(instance_spec)
-
-            # Use the API for optimization (supports two-phase split-stop optimization)
-            solution = api.optimize(demand=customers_df, config=params)
-
-            # Save results with specified format
-            format = "json"
-            if config_path:
-                config_name = config_path.stem
-                output_path = (
-                    params.io.results_dir
-                    / f"cvrp_{config_name}-{instance}_normal.{format}"
-                )
-            else:
-                output_path = params.io.results_dir / f"cvrp_{instance}_normal.{format}"
-            save_optimization_results(
-                solution=solution,
-                parameters=params,
-                filename=str(output_path),
-                format=format,
-                is_benchmark=True,
-                expected_vehicles=params.problem.expected_vehicles,
-            )
-            log_success(f"Saved results to {output_path.name}")
-
-        except Exception as e:
-            log_error(f"Error processing CVRP instance {instance}: {e}")
             if debug:
                 console.print_exception()
 
@@ -702,9 +589,7 @@ def optimize(
 
 @app.command()
 def benchmark(
-    suite: str = typer.Argument(
-        ..., help="Benchmark suite to run: 'mcvrp', 'cvrp', or 'case'"
-    ),
+    suite: str = typer.Argument(..., help="Benchmark suite to run: 'mcvrp' or 'case'"),
     output: Path | None = typer.Option(None, "--output", "-o", help="Output directory"),
     instance: str | None = typer.Option(
         None,
@@ -757,8 +642,8 @@ def benchmark(
 
         ModelDebugger.enable(debug_milp)
 
-    if suite not in ["mcvrp", "cvrp", "case"]:
-        log_error(f"Invalid suite '{suite}'. Choose 'mcvrp', 'cvrp', or 'case'")
+    if suite not in ["mcvrp", "case"]:
+        log_error(f"Invalid suite '{suite}'. Choose 'mcvrp' or 'case'")
         raise typer.Exit(1)
 
     if format not in ["xlsx", "json", "csv"]:
@@ -789,12 +674,6 @@ def benchmark(
                     output, verbose, debug, allow_split_stops, config
                 )
 
-            elif suite == "cvrp":
-                # Implement batch CVRP processing using pipeline interface
-                _run_all_cvrp_instances(
-                    output, verbose, debug, allow_split_stops, config
-                )
-
             else:  # case
                 # Implement batch case processing
                 _run_all_case_instances(
@@ -808,179 +687,6 @@ def benchmark(
             if debug:
                 console.print_exception()
             raise typer.Exit(1)
-
-
-@app.command()
-def convert(
-    type: str = typer.Option(..., "--type", "-t", help="VRP type: 'cvrp' or 'mcvrp'"),
-    instance: str = typer.Option(..., "--instance", "-i", help="Instance name"),
-    benchmark_type: str | None = typer.Option(
-        None,
-        "--benchmark-type",
-        "-b",
-        help="Benchmark type for CVRP: normal, split, scaled, combined",
-    ),
-    num_goods: int = typer.Option(
-        3, "--num-goods", help="Number of goods for CVRP (2 or 3)"
-    ),
-    output: Path | None = typer.Option(None, "--output", "-o", help="Output directory"),
-    format: str = typer.Option(
-        _DEFAULT_CONFIG.io.format if _DEFAULT_CONFIG else "json",
-        "--format",
-        "-f",
-        help="Output format (xlsx, json, csv)",
-    ),
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
-    quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Minimal output (errors only)"
-    ),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug output"),
-    allow_split_stops: Optional[bool] = typer.Option(
-        None,
-        "--allow-split-stops/--no-split-stops",
-        help="Allow customers to be served by multiple vehicles",
-    ),
-    debug_milp: Path | None = typer.Option(
-        None,
-        "--debug-milp",
-        help="Enable MILP debugging and save artifacts to specified directory",
-    ),
-) -> None:
-    """
-    Convert VRP instances to FSM format and optimize.
-    """
-    # Setup logging based on flags
-    _setup_logging_from_flags(verbose, quiet, debug)
-
-    # Enable MILP debugging if requested
-    if debug_milp:
-        from fleetmix.utils.debug import ModelDebugger
-
-        ModelDebugger.enable(debug_milp)
-
-    if type not in ["cvrp", "mcvrp"]:
-        log_error(f"Invalid type '{type}'. Choose 'cvrp' or 'mcvrp'")
-        raise typer.Exit(1)
-
-    vrp_type = VRPType(type)
-
-    # Validate CVRP-specific options
-    if vrp_type == VRPType.CVRP:
-        if not benchmark_type:
-            log_error("--benchmark-type is required for CVRP")
-            raise typer.Exit(1)
-        if benchmark_type not in ["normal", "split", "scaled", "combined"]:
-            log_error(f"Invalid benchmark type '{benchmark_type}'")
-            raise typer.Exit(1)
-        if num_goods not in [2, 3]:
-            log_error("num_goods must be 2 or 3")
-            raise typer.Exit(1)
-
-    # ------------------------------------------------------
-    # CI fast-exit stub (only after validation)
-    # ------------------------------------------------------
-    import os as _os
-
-    if (
-        _os.getenv("PYTEST_CURRENT_TEST") is not None
-        and _os.getenv("FLEETMIX_SKIP_OPTIMISE", "1") == "1"
-    ):
-        target_dir: Path = output if output else Path("results")
-        target_dir.mkdir(parents=True, exist_ok=True)
-        suffix = "" if (vrp_type == VRPType.MCVRP) else f"_{benchmark_type}"
-        placeholder_file = target_dir / f"vrp_{type}_{instance}{suffix}.json"
-        placeholder_file.write_text("{}")
-        if not quiet:
-            log_info(
-                "Detected Pytest run – stubbed convert execution to avoid heavy compute"
-            )
-        raise typer.Exit(0)
-
-    try:
-        if not quiet:
-            log_progress(f"Converting {type.upper()} instance '{instance}'...")
-
-        if vrp_type == VRPType.CVRP:
-            bench_type = CVRPBenchmarkType(benchmark_type)
-            customers_df, instance_spec = convert_to_fsm(
-                vrp_type,
-                instance_names=[instance],
-                benchmark_type=bench_type,
-                num_goods=num_goods,
-            )
-            filename_stub = f"vrp_{type}_{instance}_{benchmark_type}"
-        else:  # MCVRP
-            instance_path = (
-                Path(__file__).parent
-                / "benchmarking"
-                / "datasets"
-                / "mcvrp"
-                / f"{instance}.dat"
-            )
-            if not instance_path.exists():
-                log_error(f"MCVRP instance file not found: {instance_path}")
-                raise typer.Exit(1)
-
-            customers_df, instance_spec = convert_to_fsm(
-                vrp_type,
-                instance_path=instance_path,
-            )
-            filename_stub = f"vrp_{type}_{instance}"
-
-        # Create params from default config and update with fields from InstanceSpec
-        if _DEFAULT_CONFIG is None:
-            raise RuntimeError("No default configuration found")
-
-        params = _DEFAULT_CONFIG.apply_instance_spec(instance_spec)
-
-        # Override output directory if specified
-        if output:
-            params = dataclasses.replace(
-                params, io=dataclasses.replace(params.io, results_dir=output)
-            )
-
-        # Override allow_split_stops if specified
-        if allow_split_stops is not None:
-            params = dataclasses.replace(
-                params,
-                problem=dataclasses.replace(
-                    params.problem, allow_split_stops=allow_split_stops
-                ),
-            )
-
-        # Run optimization
-        if not quiet:
-            log_progress("Running optimization on converted instance...")
-
-        # Use the API for optimization (supports two-phase split-stop optimization)
-        solution = api.optimize(demand=customers_df, config=params)
-
-        # Save results
-        ext = "xlsx" if format == "xlsx" else "json"
-        results_path = params.io.results_dir / f"{filename_stub}.{ext}"
-
-        save_optimization_results(
-            solution=solution,
-            parameters=params,
-            filename=str(results_path),
-            format=format,
-            is_benchmark=True,
-            expected_vehicles=params.problem.expected_vehicles,
-        )
-
-        log_success("Conversion and optimization completed!")
-        log_success(f"Results saved to {results_path}")
-
-    except FileNotFoundError as e:
-        log_error(str(e))
-        raise typer.Exit(1)
-    except Exception as e:
-        log_error(f"Error during conversion: {e}")
-        if debug:
-            console.print_exception()
-        raise typer.Exit(1)
 
 
 @app.command()

@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "src" / "fleetmix" / "benchmarking" / "datasets"
 
 
-def test_cvrp_dispatch(monkeypatch):
+def test_cvrp_dispatch(monkeypatch, tmp_path):
     captured = {}
 
     def fake_convert_cvrp_to_fsm(**kwargs):
@@ -17,7 +17,8 @@ def test_cvrp_dispatch(monkeypatch):
 
     monkeypatch.setattr(vrp_module, "_cvrp", types.SimpleNamespace(convert_cvrp_to_fsm=fake_convert_cvrp_to_fsm))
 
-    dummy_path = DATA_DIR / "cvrp" / "dummy.vrp"
+    dummy_path = tmp_path / "dummy.vrp"
+    dummy_path.write_text("DATA")
 
     out = vrp_module.convert_vrp_to_fsm(
         vrp_type="cvrp",

@@ -79,9 +79,6 @@ pre_nearest_merge_candidates: 50
 # IO params
 # ---------------------------------------------------------------------------
 
-# Data Files
-# See options in src/fleetmix/benchmarking/datasets/case/
-demand_file: "sales_2024-07-02_demand.csv"
 
 # Output format
 format: 'json'  # Output format (excel or json)

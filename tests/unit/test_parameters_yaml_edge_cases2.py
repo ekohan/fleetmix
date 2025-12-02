@@ -64,7 +64,7 @@ def test_from_yaml_happy_path(tmp_path):
 # Validation error branches
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("missing_field", ["vehicles", "goods", "demand_file"])
+@pytest.mark.parametrize("missing_field", ["vehicles", "goods"])
 def test_missing_required_fields(tmp_path, missing_field):
     """Ensure that omitting any required top-level key raises a ValueError."""
     bad_yaml = MINIMAL_YAML.replace(f"{missing_field}:", f"# {missing_field}:")

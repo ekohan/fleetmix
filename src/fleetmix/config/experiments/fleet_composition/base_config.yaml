@@ -62,9 +62,6 @@ pre_nearest_merge_candidates: 50
 # IO params
 # ---------------------------------------------------------------------------
 
-# Data Files
-# See options in data/demand_profiles/
-demand_file: "sales_2024_avg_day_demand.csv"
 
 # Output format
 format: 'json'  # Output format (excel or json)

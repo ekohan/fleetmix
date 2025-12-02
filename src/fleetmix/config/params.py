@@ -123,8 +123,8 @@ class AlgorithmParams:
 class IOParams:
     """Settings for data input and output pathways."""
 
-    demand_file: str
     results_dir: Path
+    demand_file: str | None = None
     format: str = "json"  # One of: xlsx, json, csv
 
     def __post_init__(self) -> None:

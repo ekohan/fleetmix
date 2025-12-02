@@ -49,9 +49,6 @@ clustering:
 prune_tsp: false  # Skip TSP based on BHH estimate
 
 
-# Data Files
-# See options in data/demand_profiles/
-demand_file: "sales_2024_avg_day_demand.csv"
 
 # Math model Parameters
 light_load_penalty: 0  # Adjust penalty value as needed -- 0 == don't penalize

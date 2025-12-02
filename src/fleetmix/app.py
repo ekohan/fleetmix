@@ -207,7 +207,19 @@ def optimize(
         table.add_row("Vehicles Used", str(solution.total_vehicles))
         table.add_row("Missing Customers", str(len(solution.missing_customers)))
         table.add_row("Solver Status", solution.solver_status)
-        table.add_row("Solver Time", f"{solution.solver_runtime_sec:.1f}s")
+
+        # Get total execution time from time_measurements (global span)
+        execution_time = None
+        if solution.time_measurements:
+            for tm in solution.time_measurements:
+                if tm.span_name == "global":
+                    execution_time = tm.wall_time
+                    break
+
+        execution_time_str = (
+            f"{execution_time:.1f}s" if execution_time is not None else "N/A"
+        )
+        table.add_row("Execution Time", execution_time_str)
 
         console.print(table)
         log_success(f"Results saved to {output}/")

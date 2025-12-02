@@ -99,6 +99,11 @@ def generate_feasible_clusters(
             for clustering_context, _ in context_and_methods
         )
         if tsp_needed:
+            FleetmixLogger.warning(
+                "Using TSP for route time estimation (will be slower than BHH). "
+                "If using 'combine' method, consider switching to a single method (e.g. 'minibatch_kmeans') to speed up TSP computations. "
+                "Alternatively, set route_time_estimation: 'BHH' in config for faster results."
+            )
             logger.debug(
                 "TSP route estimation detected. Building distance/duration matrices per vehicle configuration..."
             )

@@ -112,8 +112,8 @@ def test_optimize_normal_flow_creates_results(
 ) -> None:
     demand = tmp_path / "demand.csv"
     demand.write_text(
-        "Customer_ID,Latitude,Longitude,Dry_Demand\n"
-        "1,0.0,0.0,5\n"
+        "Customer_ID,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand\n"
+        "1,0.0,0.0,5,0,0\n"
     )
     output_dir = tmp_path / "results"
 
@@ -133,9 +133,10 @@ def test_optimize_normal_flow_creates_results(
             missing_customers=[],
             solver_status="ok",
             solver_runtime_sec=0.1,
+            time_measurements=[],
         )
 
-    monkeypatch.setattr("fleetmix.app.api.optimize", fake_optimize)
+    monkeypatch.setattr("fleetmix.api.optimize", fake_optimize)
 
     runner = CliRunner()
     result = runner.invoke(

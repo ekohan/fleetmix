@@ -391,7 +391,7 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
         # Should return slightly over max route time
         self.assertAlmostEqual(time, 8.08, places=2)
         self.assertEqual(sequence, [])
-        mock_logger.warning.assert_called()
+        mock_logger.debug.assert_called()
 
     def test_tsp_estimation_missing_customer_in_cache(self):
         """Test TSP estimation when customer is missing from cache."""

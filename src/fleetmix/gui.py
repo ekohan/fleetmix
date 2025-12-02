@@ -22,7 +22,7 @@ import streamlit as st
 
 from fleetmix import api
 from fleetmix.config import FleetmixParams, load_fleetmix_params
-from fleetmix.core_types import FleetmixSolution, VehicleSpec
+from fleetmix.core_types import DepotLocation, FleetmixSolution, VehicleSpec
 
 # Page configuration
 st.set_page_config(
@@ -234,6 +234,17 @@ def collect_parameters_from_ui() -> FleetmixParams:
                 )
         new_problem = dataclasses.replace(new_problem, vehicles=new_vehicles)
 
+    # Depot location
+    if (
+        "param_depot_latitude" in st.session_state
+        and "param_depot_longitude" in st.session_state
+    ):
+        new_depot = DepotLocation(
+            latitude=st.session_state["param_depot_latitude"],
+            longitude=st.session_state["param_depot_longitude"],
+        )
+        new_problem = dataclasses.replace(new_problem, depot=new_depot)
+
     # Other problem params
     problem_fields = {
         "param_variable_cost_per_hour": "variable_cost_per_hour",
@@ -293,6 +304,16 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
         + solution.get("total_penalties", 0)
     )
 
+    # Get total execution time from time_measurements if available
+    # time_measurements is a list of TimeMeasurement dicts with span_name field
+    total_time = solution.get("solver_runtime_sec", 0)
+    time_measurements = solution.get("time_measurements")
+    if time_measurements and isinstance(time_measurements, list):
+        for tm in time_measurements:
+            if isinstance(tm, dict) and tm.get("span_name") == "global":
+                total_time = tm.get("wall_time", total_time)
+                break
+
     # Display key metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -305,7 +326,7 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
     with col3:
         st.metric("Missing Customers", len(solution.get("missing_customers", [])))
     with col4:
-        st.metric("Solver Time", f"{solution.get('solver_runtime_sec', 0):.1f}s")
+        st.metric("Total Time", f"{total_time:.1f}s")
 
     # Cost breakdown
     st.subheader("📊 Cost Breakdown")
@@ -316,6 +337,60 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
         st.metric("Variable Cost", f"${solution.get('total_variable_cost', 0):,.2f}")
     with col3:
         st.metric("Penalties", f"${solution.get('total_penalties', 0):,.2f}")
+
+    # Fleet efficiency metrics
+    selected_clusters = solution.get("selected_clusters", [])
+    total_vehicles = solution.get("total_vehicles", 0)
+    configurations = solution.get("configurations", [])
+
+    # Build a lookup for vehicle capacities by config_id
+    config_capacity = {}
+    for cfg in configurations:
+        if isinstance(cfg, dict):
+            cfg_id = str(cfg.get("config_id", ""))
+            capacity = cfg.get("capacity", 0)
+            if cfg_id and capacity:
+                config_capacity[cfg_id] = capacity
+
+    if selected_clusters and total_vehicles > 0:
+        # Calculate metrics from cluster data
+        load_percentages = []
+        total_customers = 0
+
+        for cluster in selected_clusters:
+            if isinstance(cluster, dict):
+                # Count customers from the customers list
+                customers_list = cluster.get("customers", [])
+                num_customers = len(customers_list) if isinstance(customers_list, list) else 0
+                total_customers += num_customers
+
+                # Calculate load percentage from total_demand and vehicle capacity
+                total_demand = cluster.get("total_demand", {})
+                config_id = str(cluster.get("config_id", ""))
+                capacity = config_capacity.get(config_id, 0)
+
+                if isinstance(total_demand, dict) and capacity > 0:
+                    demand_sum = sum(total_demand.values())
+                    load_pct = (demand_sum / capacity) * 100
+                    load_percentages.append(load_pct)
+
+        st.subheader("📈 Fleet Efficiency")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if load_percentages:
+                avg_load = sum(load_percentages) / len(load_percentages)
+                st.metric("Avg Truck Load", f"{avg_load:.1f}%")
+            else:
+                st.metric("Avg Truck Load", "N/A")
+        with col2:
+            customers_per_vehicle = total_customers / total_vehicles
+            st.metric("Customers per Vehicle", f"{customers_per_vehicle:.1f}")
+        with col3:
+            optimality_gap = solution.get("optimality_gap")
+            if optimality_gap is not None and optimality_gap > 0:
+                st.metric("Optimality Gap", f"{optimality_gap:.2f}%")
+            else:
+                st.metric("Solution Quality", "Optimal")
 
     # Vehicle usage details
     if solution.get("vehicles_used"):
@@ -507,16 +582,27 @@ def main() -> None:
             st.session_state.param_vehicles = edited_vehicles
 
         with st.expander("⚙️ Operations", expanded=False):
+            st.markdown("**Depot Location**")
+            col1, col2 = st.columns(2)
+            col1.number_input(
+                "Latitude",
+                value=float(params.problem.depot.latitude),
+                format="%.4f",
+                key="param_depot_latitude",
+            )
+            col2.number_input(
+                "Longitude",
+                value=float(params.problem.depot.longitude),
+                format="%.4f",
+                key="param_depot_longitude",
+            )
+
+            st.markdown("**Costs**")
             st.number_input(
                 "Variable Cost ($/hr)",
                 value=float(params.problem.variable_cost_per_hour),
                 step=1.0,
                 key="param_variable_cost_per_hour",
-            )
-            st.checkbox(
-                "Allow Split Stops",
-                value=params.problem.allow_split_stops,
-                key="param_allow_split_stops",
             )
             st.number_input(
                 "Light Load Penalty ($)",
@@ -536,6 +622,13 @@ def main() -> None:
                 value=float(params.problem.compartment_setup_cost),
                 step=10.0,
                 key="param_compartment_setup_cost",
+            )
+
+            st.markdown("**Delivery Policy**")
+            st.checkbox(
+                "Allow Split Stops",
+                value=params.problem.allow_split_stops,
+                key="param_allow_split_stops",
             )
 
         with st.expander("🔧 Clustering", expanded=False):

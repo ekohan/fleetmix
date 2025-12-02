@@ -91,7 +91,7 @@ clustering:
   demand_weight: 0.3  # Weight for demand distance (composite-only)
   route_time_estimation: 'BHH'  # Options: TSP, BHH, Legacy
 
-prune_tsp: false  # Skip TSP based on BHH estimate
+prune_tsp: true  # Skip TSP based on BHH estimate
 
 
 

@@ -463,11 +463,14 @@ class TSPEstimator:
             cluster_customer_ids = cluster_customers["Customer_ID"].tolist()
             for customer_id in cluster_customer_ids:
                 idx = customer_id_to_idx.get(customer_id)
+                if idx is None and "::" in str(customer_id):
+                    # Pseudo customer ID (e.g., "C_143::Frozen") - extract origin ID
+                    # Pseudo customers share the same location as their parent
+                    origin_id = str(customer_id).split("::")[0]
+                    idx = customer_id_to_idx.get(origin_id)
                 if idx is not None:
                     cluster_indices.append(idx)
                 else:
-                    # This case should ideally not happen if build_distance_duration_matrices
-                    # was called with the full customer set. Log a warning if it does.
                     missing_ids.append(customer_id)
 
             if missing_ids:

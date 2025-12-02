@@ -10,7 +10,6 @@ import shutil
 import tempfile
 import time
 import traceback
-import yaml
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -19,6 +18,7 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 import streamlit as st
+import yaml
 
 from fleetmix import api
 from fleetmix.config import FleetmixParams, load_fleetmix_params
@@ -361,7 +361,9 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
             if isinstance(cluster, dict):
                 # Count customers from the customers list
                 customers_list = cluster.get("customers", [])
-                num_customers = len(customers_list) if isinstance(customers_list, list) else 0
+                num_customers = (
+                    len(customers_list) if isinstance(customers_list, list) else 0
+                )
                 total_customers += num_customers
 
                 # Calculate load percentage from total_demand and vehicle capacity

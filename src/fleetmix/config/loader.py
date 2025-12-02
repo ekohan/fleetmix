@@ -159,6 +159,9 @@ def load_yaml(path: str | Path) -> FleetmixParams:
 
     demand_file = data.pop("demand_file", None)
     # demand_file is optional in config as it's typically provided at runtime via CLI/API
+    if demand_file is None:
+        # Default to empty string if not provided; validation will happen at runtime if needed
+        demand_file = ""
 
     results_dir_path = Path(data.pop("results_dir", "results"))
     fmt = data.pop("format", "json")

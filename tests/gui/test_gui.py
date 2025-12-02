@@ -301,9 +301,10 @@ class TestCollectParametersFromUI(unittest.TestCase):
             "param_compartment_setup_cost": 75,
         }
 
-        # Mock iteration and getitem
+        # Mock iteration, getitem, and contains
         mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
         mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
+        mock_state.__contains__ = MagicMock(side_effect=lambda key: key in session_items)
 
         with patch("streamlit.session_state", mock_state):
             result = gui.collect_parameters_from_ui()
@@ -325,12 +326,13 @@ class TestCollectParametersFromUI(unittest.TestCase):
         # Define items with nested parameter
         session_items = {
             "parameters": mock_params,
-            "param_clustering.method": "kmedoids",
+            "param_clustering_method": "kmedoids",
         }
 
-        # Mock iteration and getitem
+        # Mock iteration, getitem, and contains
         mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
         mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
+        mock_state.__contains__ = MagicMock(side_effect=lambda key: key in session_items)
 
         with patch("streamlit.session_state", mock_state):
             result = gui.collect_parameters_from_ui()
@@ -368,6 +370,7 @@ class TestCollectParametersFromUI(unittest.TestCase):
 
         mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
         mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
+        mock_state.__contains__ = MagicMock(side_effect=lambda key: key in session_items)
         # __setitem__ should update the underlying mapping to allow persistence check
         def setitem_side_effect(key, value):
             session_items[key] = value
@@ -425,7 +428,8 @@ class TestCollectParametersFromUI(unittest.TestCase):
 
         mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
         mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
-        
+        mock_state.__contains__ = MagicMock(side_effect=lambda key: key in session_items)
+    
         def setitem_side_effect(key, value):
             session_items[key] = value
             setattr(mock_state, key, value)
@@ -465,7 +469,8 @@ class TestCollectParametersFromUI(unittest.TestCase):
 
         mock_state.__iter__ = MagicMock(return_value=iter(session_items.keys()))
         mock_state.__getitem__ = MagicMock(side_effect=lambda key: session_items[key])
-        
+        mock_state.__contains__ = MagicMock(side_effect=lambda key: key in session_items)
+    
         def setitem_side_effect(key, value):
             session_items[key] = value
             setattr(mock_state, key, value)

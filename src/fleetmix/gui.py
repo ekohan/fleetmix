@@ -10,19 +10,19 @@ import shutil
 import tempfile
 import time
 import traceback
+import yaml
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 from fleetmix import api
-from fleetmix.config import load_fleetmix_params
-from fleetmix.config.params import FleetmixParams
-from fleetmix.core_types import FleetmixSolution
+from fleetmix.config import FleetmixParams, load_fleetmix_params
+from fleetmix.core_types import FleetmixSolution, VehicleSpec
 
 # Page configuration
 st.set_page_config(
@@ -93,9 +93,14 @@ def init_session_state() -> None:
     if "optimization_running" not in st.session_state:
         st.session_state.optimization_running = False
     if "parameters" not in st.session_state:
-        st.session_state.parameters = load_fleetmix_params(
-            "src/fleetmix/config/default_config.yaml"
-        )
+        # Try to load default config
+        default_config_path = Path("src/fleetmix/config/default_config.yaml")
+        if default_config_path.exists():
+            st.session_state.parameters = load_fleetmix_params(default_config_path)
+        else:
+            # Fallback logic or error if critical
+            st.error("Default configuration not found.")
+            st.session_state.parameters = None
     if "error_info" not in st.session_state:
         st.session_state.error_info = None
 
@@ -127,9 +132,7 @@ def convert_numpy_types(obj: Any) -> Any:
 
 def run_optimization_in_process(
     demand_path: str,
-    params_source: Union[
-        FleetmixParams, str, Path
-    ],  # FleetmixParams instance or YAML file path
+    params_source: Union[FleetmixParams, str, Path],
     output_dir: str,
     status_file: str,
 ) -> FleetmixSolution | None:
@@ -139,20 +142,17 @@ def run_optimization_in_process(
         with open(status_file, "w") as f:
             json.dump({"stage": "Initializing...", "progress": 0}, f)
 
-        # Obtain FleetmixParams either directly or by loading from a YAML file path
+        # Obtain FleetmixParams
         if isinstance(params_source, (str, Path)):
             params = load_fleetmix_params(str(params_source))
         else:
-            # Assume a FleetmixParams instance
             params = params_source
 
         # Update status - generating clusters
         with open(status_file, "w") as f:
             json.dump({"stage": "Generating clusters...", "progress": 25}, f)
 
-        # Set output directory
-        import dataclasses
-
+        # Set output directory in params
         params = dataclasses.replace(
             params, io=dataclasses.replace(params.io, results_dir=Path(output_dir))
         )
@@ -167,7 +167,10 @@ def run_optimization_in_process(
         )
 
         # Update status - optimization complete
-        with open(status_file, "w") as f:
+        # Use atomic write (write to temp then rename) to prevent read race conditions
+        status_path = Path(status_file)
+        temp_status_path = status_path.with_suffix(".tmp")
+        with open(temp_status_path, "w") as f:
             json.dump(
                 {
                     "stage": "Optimization complete!",
@@ -176,198 +179,106 @@ def run_optimization_in_process(
                 },
                 f,
             )
+        temp_status_path.replace(status_path)
 
         return solution
 
     except Exception as e:
         # Write error to status file
-        with open(status_file, "w") as f:
+        status_path = Path(status_file)
+        temp_status_path = status_path.with_suffix(".tmp")
+        with open(temp_status_path, "w") as f:
             json.dump({"error": str(e), "traceback": traceback.format_exc()}, f)
+        temp_status_path.replace(status_path)
         raise
 
 
 def collect_parameters_from_ui() -> FleetmixParams:
     """Build FleetmixParams object from Streamlit widgets."""
-    import dataclasses
 
-    # Start with defaults
+    # Start with current parameters in session state
     params: FleetmixParams = st.session_state.parameters
 
-    # Collect UI overrides
-    ui_overrides = {}
-    for key in st.session_state:
-        if key.startswith("param_"):
-            param_name = key[6:]  # Remove 'param_' prefix
-            ui_overrides[param_name] = st.session_state[key]
+    # Collect UI overrides from session_state keys
+    # (We manually handle updates below, assuming st.session_state.parameters is the source of truth
+    # and widgets update directly or we read widget values)
 
-    # Convert vehicle dictionaries to VehicleSpec objects if needed
-    from typing import Dict
+    # Ideally, we read values from the widgets which have keys.
+    # However, Streamlit widgets with keys automatically update session_state[key].
+    # We can iterate over relevant keys and update 'params'.
 
-    from fleetmix.core_types import VehicleSpec
+    # Problem Updates
+    new_problem = params.problem
 
-    vehicles: Dict[str, VehicleSpec] = params.problem.vehicles
-    if "vehicles" in ui_overrides and isinstance(ui_overrides["vehicles"], dict):
-        vehicles_converted: Dict[str, VehicleSpec] = {}
-        for vtype, vdata in ui_overrides["vehicles"].items():
-            if (
-                isinstance(vdata, dict)
-                and "capacity" in vdata
-                and "fixed_cost" in vdata
-            ):
-                # Convert dict to VehicleSpec
-                vehicles_converted[vtype] = VehicleSpec(
-                    capacity=vdata["capacity"],
-                    fixed_cost=vdata["fixed_cost"],
-                    compartments=vdata.get("compartments", {}),
-                    avg_speed=vdata.get("avg_speed", 30.0),
-                    service_time=vdata.get("service_time", 25.0),
-                    max_route_time=vdata.get("max_route_time", 10.0),
-                    allowed_goods=vdata.get("allowed_goods"),
-                    extra={
-                        k: v
-                        for k, v in vdata.items()
-                        if k
-                        not in [
-                            "capacity",
-                            "fixed_cost",
-                            "compartments",
-                            "avg_speed",
-                            "service_time",
-                            "max_route_time",
-                            "allowed_goods",
-                        ]
-                    },
+    # Vehicles
+    if "param_vehicles" in st.session_state:
+        # This is a bit tricky as param_vehicles is a dict of VehicleSpecs or dicts
+        # We need to ensure we have VehicleSpecs
+        vehicles_data = st.session_state["param_vehicles"]
+        new_vehicles = {}
+        for name, data in vehicles_data.items():
+            if isinstance(data, VehicleSpec):
+                new_vehicles[name] = data
+            elif isinstance(data, dict):
+                # Reconstruct VehicleSpec
+                # Important: handle allowed_goods correctly
+                new_vehicles[name] = VehicleSpec(
+                    capacity=data["capacity"],
+                    fixed_cost=data["fixed_cost"],
+                    avg_speed=data["avg_speed"],
+                    service_time=data["service_time"],
+                    max_route_time=data["max_route_time"],
+                    allowed_goods=data.get("allowed_goods"),
+                    compartments=data.get("compartments", {}),
+                    extra=data.get("extra", {}),
                 )
-            else:
-                # Already a VehicleSpec object
-                vehicles_converted[vtype] = vdata
-        vehicles = vehicles_converted
+        new_problem = dataclasses.replace(new_problem, vehicles=new_vehicles)
 
-    # Build updates for each section
-    from typing import Any
+    # Other problem params
+    problem_fields = {
+        "param_variable_cost_per_hour": "variable_cost_per_hour",
+        "param_light_load_penalty": "light_load_penalty",
+        "param_light_load_threshold": "light_load_threshold",
+        "param_compartment_setup_cost": "compartment_setup_cost",
+        "param_allow_split_stops": "allow_split_stops",
+    }
 
-    problem_updates: Dict[str, Any] = {}
-    algorithm_updates: Dict[str, Any] = {}
-    io_updates: Dict[str, Any] = {}
+    problem_updates = {}
+    for key, field in problem_fields.items():
+        if key in st.session_state:
+            problem_updates[field] = st.session_state[key]
 
-    # Problem section updates
-    if "vehicles" in ui_overrides:
-        problem_updates["vehicles"] = vehicles
-    if "goods" in ui_overrides:
-        problem_updates["goods"] = ui_overrides["goods"]
-    if "depot" in ui_overrides:
-        problem_updates["depot"] = ui_overrides["depot"]
-    if "variable_cost_per_hour" in ui_overrides:
-        problem_updates["variable_cost_per_hour"] = ui_overrides[
-            "variable_cost_per_hour"
-        ]
-    if "light_load_penalty" in ui_overrides:
-        problem_updates["light_load_penalty"] = ui_overrides["light_load_penalty"]
-    if "light_load_threshold" in ui_overrides:
-        problem_updates["light_load_threshold"] = ui_overrides["light_load_threshold"]
-    if "compartment_setup_cost" in ui_overrides:
-        problem_updates["compartment_setup_cost"] = ui_overrides[
-            "compartment_setup_cost"
-        ]
-    if "allow_split_stops" in ui_overrides:
-        problem_updates["allow_split_stops"] = ui_overrides["allow_split_stops"]
-
-    # Algorithm section updates
-    if "post_optimization" in ui_overrides:
-        algorithm_updates["post_optimization"] = ui_overrides["post_optimization"]
-    if "small_cluster_size" in ui_overrides:
-        algorithm_updates["small_cluster_size"] = ui_overrides["small_cluster_size"]
-    if "nearest_merge_candidates" in ui_overrides:
-        algorithm_updates["nearest_merge_candidates"] = ui_overrides[
-            "nearest_merge_candidates"
-        ]
-    if "max_improvement_iterations" in ui_overrides:
-        algorithm_updates["max_improvement_iterations"] = ui_overrides[
-            "max_improvement_iterations"
-        ]
-    if "prune_tsp" in ui_overrides:
-        algorithm_updates["prune_tsp"] = ui_overrides["prune_tsp"]
-
-    # Handle nested clustering parameters
-    for key, value in ui_overrides.items():
-        if "." in key:
-            parts = key.split(".")
-            if parts[0] == "clustering":
-                if parts[1] == "method":
-                    algorithm_updates["clustering_method"] = value
-                elif parts[1] == "distance":
-                    algorithm_updates["clustering_distance"] = value
-                elif parts[1] == "geo_weight":
-                    algorithm_updates["geo_weight"] = value
-                elif parts[1] == "demand_weight":
-                    algorithm_updates["demand_weight"] = value
-                elif parts[1] == "route_time_estimation":
-                    algorithm_updates["route_time_estimation"] = value
-
-    # IO section updates
-    if "demand_file" in ui_overrides:
-        io_updates["demand_file"] = ui_overrides["demand_file"]
-    if "format" in ui_overrides:
-        io_updates["format"] = ui_overrides["format"]
-
-    # Apply updates using dataclasses.replace
     if problem_updates:
-        # Update problem parameters directly to avoid mypy type issues
-        new_problem = params.problem
-        if "vehicles" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem, vehicles=problem_updates["vehicles"]
-            )
-        if "goods" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem, goods=problem_updates["goods"]
-            )
-        if "depot" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem, depot=problem_updates["depot"]
-            )
-        if "variable_cost_per_hour" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem,
-                variable_cost_per_hour=problem_updates["variable_cost_per_hour"],
-            )
-        if "light_load_penalty" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem, light_load_penalty=problem_updates["light_load_penalty"]
-            )
-        if "light_load_threshold" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem,
-                light_load_threshold=problem_updates["light_load_threshold"],
-            )
-        if "compartment_setup_cost" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem,
-                compartment_setup_cost=problem_updates["compartment_setup_cost"],
-            )
-        if "allow_split_stops" in problem_updates:
-            new_problem = dataclasses.replace(
-                new_problem, allow_split_stops=problem_updates["allow_split_stops"]
-            )
+        new_problem = dataclasses.replace(new_problem, **problem_updates)
 
-        params = dataclasses.replace(params, problem=new_problem)
+    # Always update problem in params
+    params = dataclasses.replace(params, problem=new_problem)
+
+    # Algorithm Updates
+    new_algorithm = params.algorithm
+    algorithm_fields = {
+        "param_clustering_method": "clustering_method",
+        "param_route_time_estimation": "route_time_estimation",
+        "param_clustering_max_depth": "clustering_max_depth",
+        "param_post_optimization": "post_optimization",
+        "param_small_cluster_size": "small_cluster_size",
+        "param_nearest_merge_candidates": "nearest_merge_candidates",
+        "param_max_improvement_iterations": "max_improvement_iterations",
+    }
+
+    algorithm_updates = {}
+    for key, field in algorithm_fields.items():
+        if key in st.session_state:
+            algorithm_updates[field] = st.session_state[key]
+
     if algorithm_updates:
-        params = dataclasses.replace(
-            params, algorithm=dataclasses.replace(params.algorithm, **algorithm_updates)
-        )
-    if io_updates:
-        params = dataclasses.replace(
-            params, io=dataclasses.replace(params.io, **io_updates)
-        )
+        new_algorithm = dataclasses.replace(new_algorithm, **algorithm_updates)
+        params = dataclasses.replace(params, algorithm=new_algorithm)
 
-    # Persist the updated parameters in the session state so that subsequent
-    # reruns (triggered automatically by Streamlit) remember the user's
-    # selections instead of reverting to the original defaults.  This solves
-    # issues where some changes – e.g. per-vehicle average speed – appeared to
-    # have no effect because the old configuration was silently restored on
-    # rerun.
+    # IO params are mostly handled by file uploads / defaults,
+    # but we update demand file path in the main loop before running.
+
     st.session_state.parameters = params
-
     return params
 
 
@@ -377,80 +288,62 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
 
     # Calculate total cost
     total_cost = (
-        solution["total_fixed_cost"]
-        + solution["total_variable_cost"]
-        + solution["total_penalties"]
+        solution.get("total_fixed_cost", 0)
+        + solution.get("total_variable_cost", 0)
+        + solution.get("total_penalties", 0)
     )
 
     # Display key metrics
     col1, col2, col3, col4 = st.columns(4)
-
     with col1:
         st.metric("Total Cost", f"${total_cost:,.2f}")
-
     with col2:
         st.metric(
             "Vehicles Used",
-            solution.get("total_vehicles", len(solution["vehicles_used"])),
+            solution.get("total_vehicles", len(solution.get("vehicles_used", {}))),
         )
-
     with col3:
-        st.metric("Missing Customers", len(solution["missing_customers"]))
-
+        st.metric("Missing Customers", len(solution.get("missing_customers", [])))
     with col4:
-        st.metric("Solver Time", f"{solution['solver_runtime_sec']:.1f}s")
+        st.metric("Solver Time", f"{solution.get('solver_runtime_sec', 0):.1f}s")
 
     # Cost breakdown
     st.subheader("📊 Cost Breakdown")
     col1, col2, col3 = st.columns(3)
-
     with col1:
-        st.metric("Fixed Cost", f"${solution['total_fixed_cost']:,.2f}")
-
+        st.metric("Fixed Cost", f"${solution.get('total_fixed_cost', 0):,.2f}")
     with col2:
-        st.metric("Variable Cost", f"${solution['total_variable_cost']:,.2f}")
-
+        st.metric("Variable Cost", f"${solution.get('total_variable_cost', 0):,.2f}")
     with col3:
-        st.metric("Penalties", f"${solution['total_penalties']:,.2f}")
+        st.metric("Penalties", f"${solution.get('total_penalties', 0):,.2f}")
 
     # Vehicle usage details
     if solution.get("vehicles_used"):
         st.subheader("🚚 Vehicle Usage")
         vehicle_list_for_df = []
-        if isinstance(solution["vehicles_used"], dict):
+        usage_data = solution["vehicles_used"]
+
+        if isinstance(usage_data, dict):
             vehicle_list_for_df = [
-                {"Vehicle Type": veh_type, "Count": veh_count}
-                for veh_type, veh_count in solution["vehicles_used"].items()
+                {"Vehicle Type": k, "Count": v} for k, v in usage_data.items()
             ]
-        # The error message suggests the above `dict` case is what's happening.
-        # If it could also be a list of dicts like [{'type': 'A', 'count':10}] or [{'vehicle_type': 'A', 'count':10}]:
-        elif isinstance(solution["vehicles_used"], list):
-            for item_dict in solution["vehicles_used"]:
-                if isinstance(item_dict, dict):
-                    # Accommodate common key names for vehicle type
-                    veh_type = item_dict.get("vehicle_type", item_dict.get("type"))
-                    veh_count = item_dict.get("count")
-                    if veh_type is not None and veh_count is not None:
+        elif isinstance(usage_data, list):
+            for item in usage_data:
+                if isinstance(item, dict):
+                    vtype = item.get("vehicle_type") or item.get("type")
+                    count = item.get("count")
+                    if vtype is not None:
                         vehicle_list_for_df.append(
-                            {"Vehicle Type": veh_type, "Count": veh_count}
+                            {"Vehicle Type": vtype, "Count": count}
                         )
 
         if vehicle_list_for_df:
-            vehicle_df = pd.DataFrame(vehicle_list_for_df)
-            st.dataframe(vehicle_df, use_container_width=True)
-        elif solution[
-            "vehicles_used"
-        ]:  # Data was present but not in a recognized format above
-            st.markdown(
-                f"Vehicle usage data found, but its format was not fully recognized for table display. Data: `{solution['vehicles_used']!s}`"
-            )
-        # If solution['vehicles_used'] was present but empty (e.g., {} or []), no specific message needed here, subheader is enough.
+            st.dataframe(pd.DataFrame(vehicle_list_for_df), use_container_width=True)
 
     # Download section
     st.subheader("📥 Download Results")
     col1, col2 = st.columns(2)
 
-    # Find result files
     excel_files = list(output_dir.glob("optimization_results_*.xlsx"))
     json_files = list(output_dir.glob("optimization_results_*.json"))
 
@@ -463,7 +356,6 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
                     file_name=excel_files[0].name,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
-
     with col2:
         if json_files:
             with open(json_files[0], "rb") as f:
@@ -478,8 +370,11 @@ def display_results(solution: dict[str, Any], output_dir: Path) -> None:
     html_files = list(output_dir.glob("optimization_results_*_clusters.html"))
     if html_files:
         st.subheader("🗺️ Cluster Visualization")
-        with open(html_files[0]) as f:
-            st.components.v1.html(f.read(), height=600)
+        try:
+            with open(html_files[0]) as f:
+                st.components.v1.html(f.read(), height=600)
+        except Exception as e:
+            st.error(f"Could not load map: {e}")
 
 
 def main() -> None:
@@ -490,184 +385,159 @@ def main() -> None:
     st.markdown("Optimize your fleet size and mix for heterogeneous vehicle routing")
 
     # --- Sidebar ---
-    # Logic for run_button_pressed will be determined within the sidebar context
-    _run_button_ui_element_pressed = (
-        False  # Placeholder for the actual button press state
-    )
-
     with st.sidebar:
         st.header("📋 Configuration")
 
-        # File upload
+        # 1. Upload Demand Data
         st.subheader("1. Upload Demand Data")
-        uploaded_file = st.file_uploader(
+        uploaded_demand = st.file_uploader(
             "Choose CSV file",
             type=["csv"],
             help="Upload a CSV file with customer demand data",
+            key="demand_uploader",
+        )
+        if uploaded_demand is not None:
+            st.session_state.uploaded_data = pd.read_csv(uploaded_demand)
+            st.success(f"✓ Loaded {len(st.session_state.uploaded_data)} customers")
+
+        # 2. Upload Config (Optional)
+        st.subheader("2. Upload Config (Optional)")
+        uploaded_config = st.file_uploader(
+            "Choose YAML file",
+            type=["yaml", "yml"],
+            help="Upload a YAML configuration file",
+            key="config_uploader",
         )
 
-        if uploaded_file is not None:
-            df_upload = pd.read_csv(
-                uploaded_file
-            )  # Use a different variable name to avoid conflict if needed
-            st.session_state.uploaded_data = df_upload
-            st.success(f"✓ Loaded {len(df_upload)} customers")
+        if uploaded_config is not None:
+            # Load config from uploaded file
+            try:
+                # Save to temp file to use load_fleetmix_params
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".yaml") as tmp:
+                    tmp.write(uploaded_config.getvalue())
+                    tmp_path = Path(tmp.name)
 
-        # Parameters
-        st.subheader("2. Configure Parameters")
+                loaded_params = load_fleetmix_params(tmp_path)
+                st.session_state.parameters = loaded_params
+                st.success("✓ Configuration loaded!")
+                Path(tmp.name).unlink()
+            except Exception as e:
+                st.error(f"Error loading config: {e}")
 
-        # Vehicle configuration
+        # 3. Parameters Editing
+        st.subheader("3. Configure Parameters")
+
+        params = st.session_state.parameters
+        if params is None:
+            st.error("No configuration loaded.")
+            return
+
         with st.expander("🚚 Vehicles", expanded=False):
-            st.markdown("Configure vehicle types and costs")
-            st.info(
-                "💡 **Tip**: Use 'Allowed Goods' to create specialized vehicles (e.g., refrigerated trucks for chilled/frozen goods only)"
-            )
-            vehicles = st.session_state.parameters.vehicles.copy()  # Work with a copy
+            st.markdown("**Configure Vehicle Types**")
 
-            # Get available goods from parameters
-            available_goods = st.session_state.parameters.goods
+            # Access vehicles from problem params
+            current_vehicles = params.problem.vehicles
 
-            for vehicle_type, vehicle_data in vehicles.items():
-                st.markdown(f"**Vehicle Type {vehicle_type}**")
-                col1_v, col2_v = st.columns(2)  # Unique var names for columns
-                with col1_v:
-                    capacity = st.number_input(
-                        "Capacity",
-                        min_value=100,
-                        max_value=1000000,
-                        value=int(
-                            vehicle_data.capacity
-                            if hasattr(vehicle_data, "capacity")
-                            else vehicle_data["capacity"]
-                        ),
-                        step=100,
-                        key=f"vehicle_{vehicle_type}_capacity",
-                    )
-                with col2_v:
-                    fixed_cost = st.number_input(
-                        "Fixed Cost",
-                        min_value=0,
-                        max_value=1000000,
-                        value=int(
-                            vehicle_data.fixed_cost
-                            if hasattr(vehicle_data, "fixed_cost")
-                            else vehicle_data["fixed_cost"]
-                        ),
-                        step=25,
-                        key=f"vehicle_{vehicle_type}_fixed_cost",
-                    )
+            # We need to keep track of edited vehicles.
+            # We'll create a copy for editing.
+            edited_vehicles = {}
 
-                # Add timing parameters
-                col1_t, col2_t, col3_t = st.columns(3)
-                with col1_t:
-                    avg_speed = st.number_input(
-                        "Avg Speed (km/h)",
-                        min_value=10,
-                        max_value=100,
-                        value=int(
-                            vehicle_data.avg_speed
-                            if hasattr(vehicle_data, "avg_speed")
-                            else 30
-                        ),
-                        step=5,
-                        key=f"vehicle_{vehicle_type}_avg_speed",
-                    )
-                with col2_t:
-                    service_time = st.number_input(
-                        "Service Time (min)",
-                        min_value=5,
-                        max_value=12000,
-                        value=int(
-                            vehicle_data.service_time
-                            if hasattr(vehicle_data, "service_time")
-                            else 25
-                        ),
-                        step=5,
-                        key=f"vehicle_{vehicle_type}_service_time",
-                    )
-                with col3_t:
-                    max_route_time = st.number_input(
-                        "Max Route Time (h)",
-                        min_value=4,
-                        max_value=240,
-                        value=int(
-                            vehicle_data.max_route_time
-                            if hasattr(vehicle_data, "max_route_time")
-                            else 10
-                        ),
-                        step=1,
-                        key=f"vehicle_{vehicle_type}_max_route_time",
-                    )
+            available_goods = params.problem.goods
 
-                # Add allowed goods selection
-                st.markdown("**Allowed Goods**")
-
-                # Get current allowed goods for this vehicle
-                current_allowed_goods = None
-                if hasattr(vehicle_data, "allowed_goods"):
-                    current_allowed_goods = vehicle_data.allowed_goods
-                elif isinstance(vehicle_data, dict) and "allowed_goods" in vehicle_data:
-                    current_allowed_goods = vehicle_data["allowed_goods"]
-
-                # If no allowed goods specified, default to all goods
-                if current_allowed_goods is None:
-                    current_allowed_goods = available_goods
-
-                allowed_goods: list[str] = st.multiselect(
-                    f"Select goods that {vehicle_type} can carry",
-                    options=available_goods,
-                    default=current_allowed_goods,
-                    key=f"vehicle_{vehicle_type}_allowed_goods",
-                    help="Leave empty to allow all goods. Select specific goods to restrict this vehicle type.",
+            for v_name, v_spec in current_vehicles.items():
+                st.markdown(f"**{v_name}**")
+                col1, col2 = st.columns(2)
+                cap = col1.number_input(
+                    f"Capacity ({v_name})",
+                    value=int(v_spec.capacity),
+                    step=100,
+                    key=f"v_cap_{v_name}",
+                )
+                cost = col2.number_input(
+                    f"Fixed Cost ({v_name})",
+                    value=int(v_spec.fixed_cost),
+                    step=10,
+                    key=f"v_cost_{v_name}",
                 )
 
-                # If no goods selected, default to all goods
-                if not allowed_goods:
-                    allowed_goods = available_goods
-                    st.info(
-                        f"No goods selected - {vehicle_type} will be able to carry all goods"
-                    )
+                col3, col4, col5 = st.columns(3)
+                speed = col3.number_input(
+                    f"Speed ({v_name})",
+                    value=float(v_spec.avg_speed),
+                    step=5.0,
+                    key=f"v_speed_{v_name}",
+                )
+                service = col4.number_input(
+                    f"Service Time ({v_name})",
+                    value=float(v_spec.service_time),
+                    step=5.0,
+                    key=f"v_service_{v_name}",
+                )
+                route_time = col5.number_input(
+                    f"Max Time ({v_name})",
+                    value=float(v_spec.max_route_time),
+                    step=1.0,
+                    key=f"v_time_{v_name}",
+                )
 
-                vehicles[vehicle_type] = {
-                    "capacity": capacity,
-                    "fixed_cost": fixed_cost,
-                    "avg_speed": float(avg_speed),
-                    "service_time": float(service_time),
-                    "max_route_time": float(max_route_time),
-                    "allowed_goods": allowed_goods,
-                    # Preserve any existing compartment layout so downstream logic is unaffected
-                    "compartments": (
-                        vehicle_data.compartments
-                        if hasattr(vehicle_data, "compartments")
-                        else vehicle_data.get("compartments", {})
-                    ),
-                }
-            st.session_state["param_vehicles"] = vehicles
+                default_goods = (
+                    v_spec.allowed_goods if v_spec.allowed_goods else available_goods
+                )
+                goods = st.multiselect(
+                    f"Allowed Goods ({v_name})",
+                    options=available_goods,
+                    default=default_goods,
+                    key=f"v_goods_{v_name}",
+                )
+                if not goods:
+                    goods = available_goods  # Default to all if empty
 
-        # Operations parameters
+                # Reconstruct spec
+                edited_vehicles[v_name] = dataclasses.replace(
+                    v_spec,
+                    capacity=cap,
+                    fixed_cost=cost,
+                    avg_speed=speed,
+                    service_time=service,
+                    max_route_time=route_time,
+                    allowed_goods=goods,
+                )
+
+            # Save to session state to be picked up by collect_parameters
+            st.session_state.param_vehicles = edited_vehicles
+
         with st.expander("⚙️ Operations", expanded=False):
-            st.markdown(
-                "**Note:** Vehicle-specific parameters (speed, service time, route time) are now configured per vehicle type in the config file."
-            )
             st.number_input(
-                "Variable Cost per Hour ($)",
-                min_value=0.0,
-                max_value=10000.0,
-                value=float(st.session_state.parameters.variable_cost_per_hour),
+                "Variable Cost ($/hr)",
+                value=float(params.problem.variable_cost_per_hour),
                 step=1.0,
                 key="param_variable_cost_per_hour",
             )
-
-            # Split-stop capability
-            st.markdown("**Split-Stop Configuration**")
             st.checkbox(
                 "Allow Split Stops",
-                value=getattr(st.session_state.parameters, "allow_split_stops", False),
+                value=params.problem.allow_split_stops,
                 key="param_allow_split_stops",
-                help="Allow customers to be served by multiple vehicles. Useful for large customers with diverse goods requirements.",
+            )
+            st.number_input(
+                "Light Load Penalty ($)",
+                value=float(params.problem.light_load_penalty),
+                step=10.0,
+                key="param_light_load_penalty",
+            )
+            st.slider(
+                "Light Load Threshold",
+                0.0,
+                1.0,
+                value=float(params.problem.light_load_threshold),
+                key="param_light_load_threshold",
+            )
+            st.number_input(
+                "Compartment Setup Cost",
+                value=float(params.problem.compartment_setup_cost),
+                step=10.0,
+                key="param_compartment_setup_cost",
             )
 
-        # Clustering parameters
         with st.expander("🔧 Clustering", expanded=False):
             st.selectbox(
                 "Clustering Method",
@@ -677,315 +547,190 @@ def main() -> None:
                     "minibatch_kmeans",
                     "kmedoids",
                     "agglomerative",
-                ].index(st.session_state.parameters.clustering["method"]),
-                key="param_clustering.method",
+                ].index(params.algorithm.clustering_method),
+                key="param_clustering_method",
             )
             st.selectbox(
                 "Route Time Estimation",
                 options=["BHH", "TSP"],
-                index=["BHH", "TSP"].index(
-                    st.session_state.parameters.clustering.get(
-                        "route_time_estimation", "BHH"
-                    )
-                ),
-                key="param_clustering.route_time_estimation",
+                index=["BHH", "TSP"].index(params.algorithm.route_time_estimation),
+                key="param_route_time_estimation",
             )
             st.number_input(
                 "Max Cluster Depth",
-                min_value=5,
-                max_value=50,
-                value=int(st.session_state.parameters.clustering.get("max_depth", 20)),
-                key="param_clustering.max_depth",
-            )
-            # No need to manually rebuild 'param_clustering' dict if keys directly map like 'param_clustering.method'
-
-        # Cost penalties
-        with st.expander("💰 Cost Penalties", expanded=False):
-            st.number_input(
-                "Light Load Penalty ($)",
-                min_value=0.0,
-                max_value=1000.0,
-                value=float(st.session_state.parameters.light_load_penalty),
-                step=10.0,
-                key="param_light_load_penalty",
-            )
-            st.slider(
-                "Light Load Threshold",
-                min_value=0.0,
-                max_value=1.0,
-                value=float(st.session_state.parameters.light_load_threshold),
-                step=0.05,
-                format="%.2f",
-                key="param_light_load_threshold",
-                help="Threshold for considering a vehicle lightly loaded (0.2 = 20%)",
-            )
-            st.number_input(
-                "Compartment Setup Cost ($)",
-                min_value=0.0,
-                max_value=100000.0,
-                value=float(st.session_state.parameters.compartment_setup_cost),
-                step=10.0,
-                key="param_compartment_setup_cost",
+                value=int(params.algorithm.clustering_max_depth),
+                min_value=1,
+                key="param_clustering_max_depth",
             )
 
-        # Post-optimization
         with st.expander("🔄 Post-Optimization", expanded=False):
-            post_opt_enabled = st.checkbox(
+            st.checkbox(
                 "Enable Post-Optimization",
-                value=st.session_state.parameters.post_optimization,
+                value=params.algorithm.post_optimization,
                 key="param_post_optimization",
             )
-            if post_opt_enabled:
+            if st.session_state.get(
+                "param_post_optimization", params.algorithm.post_optimization
+            ):
                 st.number_input(
                     "Small Cluster Size",
-                    min_value=1,
-                    max_value=1000000,
-                    value=int(st.session_state.parameters.small_cluster_size),
+                    value=int(params.algorithm.small_cluster_size),
                     key="param_small_cluster_size",
                 )
                 st.number_input(
                     "Nearest Merge Candidates",
-                    min_value=1,
-                    max_value=1000000,
-                    value=int(st.session_state.parameters.nearest_merge_candidates),
+                    value=int(params.algorithm.nearest_merge_candidates),
                     key="param_nearest_merge_candidates",
                 )
                 st.number_input(
                     "Max Improvement Iterations",
-                    min_value=0,
-                    max_value=1000000,
-                    value=int(st.session_state.parameters.max_improvement_iterations),
+                    value=int(params.algorithm.max_improvement_iterations),
                     key="param_max_improvement_iterations",
                 )
 
         st.divider()
-        _run_button_ui_element_pressed = st.button(
+
+        run_pressed = st.button(
             "🚀 Start Optimization",
             type="primary",
             use_container_width=True,
             disabled=(
                 st.session_state.uploaded_data is None
-                or st.session_state.get("optimization_running", False)
+                or st.session_state.optimization_running
             ),
-            key="start_optimization_btn",
+            key="start_opt_btn",
         )
 
-    if _run_button_ui_element_pressed and st.session_state.uploaded_data is not None:
-        st.session_state.optimization_running = True
-        st.session_state.optimization_results = None  # Clear previous results
-        st.session_state.error_info = None  # Clear previous errors
-        st.rerun()
-
-    # --- Main Content Area ---
-    main_area_container = st.container()
-
-    with main_area_container:
-        if st.session_state.get("optimization_running", False):
-            # Create temporary directory for this run
-            temp_dir = Path(tempfile.mkdtemp(prefix="fleetmix_gui_"))
-            demand_path = temp_dir / "demand.csv"
-            status_file = temp_dir / "status.json"
-
-            st.session_state.uploaded_data.to_csv(demand_path, index=False)
-
-            params = collect_parameters_from_ui()
-            params = dataclasses.replace(
-                params, io=dataclasses.replace(params.io, demand_file=str(demand_path))
-            )
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir = Path("results") / f"gui_run_{timestamp}"
-            output_dir.mkdir(parents=True, exist_ok=True)
-
-            st.info("🔄 Optimization in progress...")
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            status_text.text("Initializing optimization process...")  # Initial message
-
-            if (
-                "optimization_process" not in st.session_state
-                or not st.session_state.optimization_process.is_alive()
-            ):
-                st.session_state.error_info = None  # Reset error info for new run
-                process = multiprocessing.Process(
-                    target=run_optimization_in_process,
-                    args=(
-                        str(demand_path),
-                        params,
-                        str(output_dir),
-                        str(status_file),
-                    ),
-                )
-                process.start()
-                st.session_state.optimization_process = process
-
-            process = st.session_state.optimization_process
-            optimization_failed_flag = False
-
-            while process.is_alive():
-                time.sleep(0.1)  # Check status more frequently
-                if status_file.exists():
-                    try:
-                        with open(status_file) as f:
-                            current_status = json.load(f)  # Use a different var name
-
-                        if "error" in current_status:
-                            st.session_state.error_info = {
-                                "message": current_status["error"],
-                                "traceback": current_status.get(
-                                    "traceback", "No traceback available"
-                                ),
-                            }
-                            optimization_failed_flag = True
-                            if process.is_alive():
-                                process.terminate()
-                                process.join(timeout=1)
-                            break
-
-                        stage = current_status.get("stage", "Processing...")
-                        progress = current_status.get("progress", 0)
-                        status_text.text(stage)
-                        progress_bar.progress(progress / 100)
-
-                        if "solution" in current_status:
-                            st.session_state.optimization_results = current_status[
-                                "solution"
-                            ]
-                            if st.session_state.optimization_results is not None:
-                                # Ensure output_dir is stored as string, as Path might not be ideal for session state across reruns
-                                st.session_state.optimization_results["output_dir"] = (
-                                    str(output_dir)
-                                )
-                                status_text.text(
-                                    f"Solution received with keys: {list(st.session_state.optimization_results.keys()) if isinstance(st.session_state.optimization_results, dict) else 'NOT A DICT'}"
-                                )
-
-                                # If we have a complete solution (progress 100), break out of monitoring loop
-                                if progress >= 100:
-                                    status_text.text(
-                                        "Optimization complete! Preparing results..."
-                                    )
-                                    break
-                            else:
-                                status_text.text("Solution received but it's None!")
-                    except json.JSONDecodeError:
-                        time.sleep(0.2)  # Wait if file is being written
-                        continue
-                    except Exception as e_mon:  # Catch other monitoring errors
-                        st.session_state.error_info = {
-                            "message": f"Error monitoring optimization: {e_mon!s}",
-                            "traceback": traceback.format_exc(),
-                        }
-                        optimization_failed_flag = True
-                        if process.is_alive():
-                            process.terminate()
-                            process.join(timeout=1)
-                        break
-
-            if process.is_alive():  # Ensure process has finished or timeout joining
-                process.join(timeout=2)
-
-            # Final check for error or missing solution if process ended without explicit flags
-            if (
-                not optimization_failed_flag
-                and st.session_state.get("optimization_results") is None
-            ):
-                final_error_message = (
-                    "Optimization process completed without providing a solution."
-                )
-                final_traceback = "No solution found in status file or process ended unexpectedly. Check logs."
-                if status_file.exists():
-                    try:
-                        with open(status_file) as f:
-                            current_status = json.load(f)
-                            if "error" in current_status:
-                                final_error_message = current_status["error"]
-                                final_traceback = current_status.get(
-                                    "traceback", final_traceback
-                                )
-                    except Exception:
-                        pass  # Ignore error reading final status for this specific check
-
-                st.session_state.error_info = {
-                    "message": final_error_message,
-                    "traceback": final_traceback,
-                }
-                # optimization_failed_flag = True # Not strictly needed as error_info is set
-
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir)
-            if "optimization_process" in st.session_state:
-                del st.session_state.optimization_process
-
-            st.session_state.optimization_running = False  # Critical: set before rerun
+        if run_pressed:
+            st.session_state.optimization_running = True
+            st.session_state.optimization_results = None
+            st.session_state.error_info = None
             st.rerun()
 
-        elif st.session_state.get("error_info") is not None:
-            error_details = st.session_state.error_info
-            st.error(f"❌ Optimization failed: {error_details['message']}")
-            show_traceback = st.checkbox(
-                "Show detailed error", key="show_traceback_checkbox_main"
-            )
-            if show_traceback:
-                st.code(error_details.get("traceback", "No traceback available."))
-            if st.button("Acknowledge Error and Reset", key="ack_error_btn_main"):
-                st.session_state.error_info = None
-                st.session_state.optimization_results = (
-                    None  # Ensure results are cleared too
-                )
-                # optimization_running should be False already
-                st.rerun()
+    # --- Main Content ---
+    if st.session_state.optimization_running:
+        # Run Logic
+        temp_dir = Path(tempfile.mkdtemp(prefix="fleetmix_gui_"))
+        demand_path = temp_dir / "demand.csv"
+        status_file = temp_dir / "status.json"
 
-        elif st.session_state.get("optimization_results") is not None:
-            results_data = st.session_state.optimization_results
-            # Ensure 'output_dir' is a Path object for display_results
-            if "output_dir" in results_data and isinstance(
-                results_data["output_dir"], str
-            ):
-                output_dir_for_display = Path(results_data["output_dir"])
+        st.session_state.uploaded_data.to_csv(demand_path, index=False)
+
+        # Collect latest params
+        params = collect_parameters_from_ui()
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("results") / f"gui_run_{timestamp}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        st.info("🔄 Optimization in progress...")
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        # Start Process
+        if (
+            "optimization_process" not in st.session_state
+            or not st.session_state.optimization_process.is_alive()
+        ):
+            p = multiprocessing.Process(
+                target=run_optimization_in_process,
+                args=(str(demand_path), params, str(output_dir), str(status_file)),
+            )
+            p.start()
+            st.session_state.optimization_process = p
+
+        # Monitor
+        process = st.session_state.optimization_process
+        failed = False
+
+        while process.is_alive():
+            time.sleep(0.5)
+            if status_file.exists():
                 try:
-                    display_results(results_data, output_dir_for_display)
-                except Exception as e:
-                    st.error(f"Error displaying results: {e!s}")
-                    st.code(traceback.format_exc())
-                    if st.button("Clear Results and Reset", key="clear_results_btn"):
-                        st.session_state.optimization_results = None
-                        st.rerun()
-            else:
-                st.error(
-                    "Output directory information is missing or invalid in results."
-                )
-                st.write(
-                    f"Results data keys: {list(results_data.keys()) if isinstance(results_data, dict) else 'NOT A DICT'}"
-                )
-                if st.button(
-                    "Clear Results and Reset", key="clear_invalid_results_btn"
-                ):
-                    st.session_state.optimization_results = None
-                    st.rerun()
+                    with open(status_file) as f:
+                        status = json.load(f)
 
-        elif st.session_state.uploaded_data is not None:
-            st.subheader("📊 Data Preview")
-            df_preview = st.session_state.uploaded_data
-            col1_dp, col2_dp, col3_dp = st.columns(3)  # Unique var names for columns
-            with col1_dp:
-                st.metric("Total Customers", len(df_preview))
-            demand_cols = [
-                col
-                for col in df_preview.columns
-                if "demand" in col.lower() or col in ["Dry", "Chilled", "Frozen"]
-            ]
-            if demand_cols:
-                total_demand = df_preview[demand_cols].sum().sum()
-                with col2_dp:
-                    st.metric("Total Demand", f"{total_demand:,.0f}")
-            with col3_dp:
-                st.metric("Data Columns", len(df_preview.columns))
-                st.dataframe(df_preview.head(10), use_container_width=True)
-        else:
-            st.info(
-                "👈 Please upload demand data and configure parameters in the sidebar to begin."
-            )
+                    if "error" in status:
+                        st.session_state.error_info = status
+                        failed = True
+                        process.terminate()
+                        break
+
+                    progress = status.get("progress", 0)
+                    stage = status.get("stage", "")
+                    status_text.text(stage)
+                    progress_bar.progress(min(progress / 100, 1.0))
+
+                    if "solution" in status:
+                        st.session_state.optimization_results = status["solution"]
+                        st.session_state.optimization_results["output_dir"] = str(
+                            output_dir
+                        )
+                        break
+
+                except Exception:
+                    pass
+
+        process.join(timeout=2)
+        if process.is_alive():
+            # Force terminate if join times out (e.g. stuck threads)
+            process.terminate()
+            process.join()
+
+        # Final check for solution if not yet found
+        if not st.session_state.optimization_results and not failed:
+            if status_file.exists():
+                try:
+                    with open(status_file) as f:
+                        status = json.load(f)
+                    if "solution" in status:
+                        st.session_state.optimization_results = status["solution"]
+                        st.session_state.optimization_results["output_dir"] = str(
+                            output_dir
+                        )
+                except Exception:
+                    pass
+
+        # Cleanup
+        if temp_dir.exists():
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception:
+                pass  # Ignore cleanup errors to avoid crashing the UI flow
+
+        if "optimization_process" in st.session_state:
+            del st.session_state.optimization_process
+
+        st.session_state.optimization_running = False
+        st.rerun()
+
+    elif st.session_state.error_info:
+        st.error(
+            f"❌ Optimization Failed: {st.session_state.error_info.get('error', 'Unknown error')}"
+        )
+        with st.expander("Details"):
+            st.code(st.session_state.error_info.get("traceback", ""))
+        if st.button("Reset"):
+            st.session_state.error_info = None
+            st.rerun()
+
+    elif st.session_state.optimization_results:
+        res = st.session_state.optimization_results
+        out_dir = Path(res["output_dir"])
+        display_results(res, out_dir)
+
+        if st.button("Start New Optimization"):
+            st.session_state.optimization_results = None
+            st.rerun()
+
+    elif st.session_state.uploaded_data is not None:
+        st.subheader("📊 Data Preview")
+        df = st.session_state.uploaded_data
+        st.dataframe(df.head(), use_container_width=True)
+        st.info("Configure parameters in the sidebar and click 'Start Optimization'")
+
+    else:
+        st.info("👈 Please upload demand data to begin.")
 
 
 if __name__ == "__main__":

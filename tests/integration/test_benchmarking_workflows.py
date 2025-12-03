@@ -18,7 +18,8 @@ from fleetmix.benchmarking.parsers.cvrp import CVRPParser
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
 from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, VRPSolution
-from fleetmix.pipeline.vrp_interface import VRPType, convert_to_fsm, run_optimization
+from fleetmix.benchmarking.converters.vrp import VRPType, convert_vrp_to_fsm as convert_to_fsm
+from fleetmix import api
 from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams
 
 
@@ -205,7 +206,12 @@ EOF
             runtime=RuntimeParams(config="test_config.yaml"),
         )
 
-        solution = run_optimization(customers_df=customers_df, params=params)
+        solution = api.optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
+        )
 
         # Verify solution structure - solution is FleetmixSolution
         assert solution.solver_status is not None  # Attribute access
@@ -242,7 +248,12 @@ EOF
             runtime=RuntimeParams(config="test_config.yaml"),
         )
 
-        solution = run_optimization(customers_df=customers_df, params=params)
+        solution = api.optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
+        )
 
         # Verify solution structure - solution is FleetmixSolution
         assert solution.solver_status is not None  # Attribute access
@@ -373,7 +384,12 @@ EOF
 
         start_optimization = time.time()
 
-        solution = run_optimization(customers_df=customers_df, params=params)
+        solution = api.optimize(
+            demand=customers_df,
+            config=params,
+            output_dir=None,  # Don't save during test
+            verbose=False,
+        )
 
         optimization_time = time.time() - start_optimization
 

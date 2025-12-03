@@ -1,7 +1,7 @@
 import math
 
 from fleetmix.core_types import Cluster, FleetmixSolution
-from fleetmix.experiments.alpha_analysis.metrics import (
+from fleetmix.experiments.fleet_composition.metrics import (
     _count_customer_visits,
     average_visits_per_customer,
     split_rate,

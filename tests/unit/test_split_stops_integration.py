@@ -165,15 +165,14 @@ class TestSplitStopsIntegration:
         assert has_pseudo_customers
 
         # Verify that each physical customer's goods are properly covered
-        # Import helper functions to validate coverage
-        from fleetmix.preprocess.demand import get_origin_id, get_subset_from_id
-
         # Build coverage map: physical_customer -> set of goods covered
         coverage_map = {}
         for customer_id in served_pseudo_customers:
             if "::" in customer_id:  # It's a pseudo-customer
-                origin = get_origin_id(customer_id)
-                goods_subset = get_subset_from_id(customer_id)
+                # Parse pseudo-customer ID format: "C001::dry" or "C001::dry-chilled"
+                origin = customer_id.split("::")[0]
+                subset_str = customer_id.split("::")[1]
+                goods_subset = tuple(subset_str.split("-"))
                 if origin not in coverage_map:
                     coverage_map[origin] = set()
                 coverage_map[origin].update(goods_subset)

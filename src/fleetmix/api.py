@@ -124,8 +124,7 @@ def _two_phase_solve(
 
             if (
                 phase2_solution.total_cost < baseline_solution.total_cost
-                # TODO: saco esto por comparacion con scv baseline
-                # and phase2_vehicles <= baseline_vehicles
+                and phase2_vehicles <= baseline_vehicles
             ):
                 FleetmixLogger.detail(
                     "Using Phase 2 solution (better cost and no more vehicles)"
@@ -142,12 +141,41 @@ def _two_phase_solve(
         return baseline_solution
 
 
-# TODO: config solo string o path, no se puede pasar un objeto, despues simplificar
-# handling de config
+def _load_config(config: str | FleetmixParams | None) -> FleetmixParams:
+    """Load configuration from path, object, or defaults."""
+    if isinstance(config, FleetmixParams):
+        return config
+
+    if config is None:
+        for p in [
+            Path.cwd() / "config.yaml",
+            Path(__file__).parent / "config" / "default_config.yaml",
+        ]:
+            if p.exists():
+                return load_fleetmix_params(p)
+        raise FileNotFoundError(
+            "No configuration file provided and no default config found."
+        )
+
+    config_path = Path(config)
+    if not config_path.exists():
+        raise FileNotFoundError(
+            f"Configuration file not found: {config_path}\n"
+            "Please check the file path and ensure it exists."
+        )
+    try:
+        return load_fleetmix_params(config_path)
+    except Exception as e:
+        raise ValueError(
+            f"Error loading configuration from {config_path}:\n{e!s}\n"
+            "Please check the YAML syntax and required fields."
+        )
+
+
 def optimize(
     demand: str | Path | pd.DataFrame,
     config: str | FleetmixParams | None = None,
-    output_dir: str = "results",
+    output_dir: str | None = "results",
     format: str = "json",
     verbose: Optional[bool] = None,
     allow_split_stops: Optional[bool] = None,
@@ -163,7 +191,7 @@ def optimize(
             - String path to YAML configuration file
             - Parameters object
             - None (uses default configuration)
-        output_dir: Directory to save results (default: "results")
+        output_dir: Directory to save results (default: "results"). Pass None to skip saving.
         format: Output format - "xlsx" or "json" (default: "json")
         verbose: Enable verbose logging (default: False)
         allow_split_stops: Allow customers to be served by multiple vehicles (default: False)
@@ -230,36 +258,7 @@ def optimize(
             )
 
         # Step 2: Load parameters
-        if config is None:
-            # Search default locations
-            default_paths = [
-                Path.cwd() / "config.yaml",
-                Path(__file__).parent / "config" / "default_config.yaml",
-            ]
-            for p in default_paths:
-                if p.exists():
-                    params = load_fleetmix_params(p)
-                    break
-            else:
-                raise FileNotFoundError(
-                    "No configuration file provided and no default config found."
-                )
-        elif isinstance(config, FleetmixParams):
-            params = config
-        else:
-            config_path = Path(config)
-            if not config_path.exists():
-                raise FileNotFoundError(
-                    f"Configuration file not found: {config_path}\n"
-                    f"Please check the file path and ensure it exists."
-                )
-            try:
-                params = load_fleetmix_params(config_path)
-            except Exception as e:
-                raise ValueError(
-                    f"Error loading configuration from {config_path}:\n{e!s}\n"
-                    f"Please check the YAML syntax and required fields."
-                )
+        params = _load_config(config)
 
         # Override runtime params based on function parameters
         if verbose is not None:

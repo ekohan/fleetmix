@@ -1,51 +1,225 @@
-# Reproducibility Guide
+# Reproducing Paper Experiments
 
-> **Status**: TODO - To be completed upon paper acceptance  
-> **Last Updated**: 2025-10-05
-
----
+This guide explains how to reproduce all experiments from the FleetMix paper using the `fleetmix reproduce-paper` command.
 
 ## Overview
 
-This guide will enable complete reproduction of results from *Designing Multi-Compartment Last-Mile Vehicle Fleets: An Open-Source Matheuristic* (submitted to *Computers and Industrial Engineering*).
+The FleetMix paper presents three main experimental sections:
 
-**Paper Version**: Will be tagged as `paper-1.0.0` in the repository upon acceptance
+1. **MCVRP Benchmark Instances** - Validates the matheuristic approach on synthetic instances (Section §6. Effectiveness of the Matheuristic Approach)
+2. **Sensitivity Analysis** - Analyzes the impact of operational parameters on fleet performance (Section §7.2. Benefits of Using Multi-Compartment Vehicles)
+3. **Fleet Composition Analysis** - Studies how cost structure affects fleet composition decisions (Section §7.3. Impact of Cost Structure on Fleet Composition)
+
+Each experiment can be reproduced using dedicated CLI commands with full control over execution parameters.
 
 ## Quick Start
 
 ```bash
-# Install FleetMix
-git clone https://github.com/ekohan/fleetmix.git
-cd fleetmix
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source "$HOME/.local/bin/env"
-uv venv fleetmix-env
-source fleetmix-env/bin/activate
-uv sync --all-extras
+# View all available reproduce-paper commands
+fleetmix reproduce-paper --help
 
-# Run benchmarks (commands TBD upon paper finalization)
-fleetmix benchmark mcvrp
-fleetmix benchmark case
+# List available MCVRP instances
+fleetmix reproduce-paper mcvrp-instances --list
+
+# Run all experiments (warning: this will take many hours)
+fleetmix reproduce-paper mcvrp-instances
+fleetmix reproduce-paper sensitivity-analysis
+fleetmix reproduce-paper fleet-composition
 ```
 
-## Experiments
+## Experiment 1: MCVRP Benchmark Instances
 
-### Section 5: Effectiveness of Matheuristic
+**Paper Section:** 6. Effectiveness of the Matheuristic Approach (Table 2)
 
-**TODO**: Document commands to reproduce Table 1 and benchmark comparisons with Henke et al. (2015, 2019)
+**Purpose:** Validate the matheuristic by comparing against published results from Henke (2015, 2019).
 
-**Instances**: Located in `src/fleetmix/benchmarking/datasets/mcvrp/`
+### Available Instances
 
-### Section 6: Case Study
+- 150 instances from Henke (2015): 10 customers with supply parameters s ∈ {1,2,3}
+- 3 larger instances from Henke (2015): 50 customers
+- 48 instances from Henke (2019): 10-50 customers with s=3
 
-**TODO**: Document commands to reproduce baseline scenario and sensitivity analysis
+Total: ~198 instances
 
-**Data**: Located in `src/fleetmix/benchmarking/datasets/case/`
+### Commands
+
+```bash
+# List all available instances
+fleetmix reproduce-paper mcvrp-instances --list
+
+# Run all instances (takes ~20 minutes)
+fleetmix reproduce-paper mcvrp-instances
+
+# Run specific instances
+fleetmix reproduce-paper mcvrp-instances --instances "2015_10_3_3_1_(01),2015_10_3_3_1_(02)"
+
+# Run and skip existing results
+fleetmix reproduce-paper mcvrp-instances --skip-existing
+```
+
+### Configuration
+
+- Default config: `src/fleetmix/config/experiments/synthetic_test_instances/base_config.yaml`
+- Homogeneous fleet (single vehicle type)
+- No route duration constraints (to match Henke benchmark)
+- Multi-stop delivery policy enabled
+
+### Output
+
+Results are saved as JSON files with statistics on the instance run:
+
+```
+results/paper/mcvrp_instances/
+  mcvrp_2015_10_3_3_1_(01).json
+  mcvrp_2015_10_3_3_1_(02).json
+  ...
+```
+
+## Experiment 2: Sensitivity Analysis
+
+**Paper Section:** 7.2. Benefits of Using Multi-Compartment Vehicles (Figure 3, Table 3)
+
+**Purpose:** Compare MCV vs SCV fleet performance across systematic parameter variations.
+
+### Parameters Tested
+
+Each parameter is varied at ±50%, ±20%, and baseline (0%):
+
+- **Capacity**: Vehicle load capacity
+- **Service Time**: Customer service duration
+- **Max Route Duration**: Driver shift length
+- **Variable Cost**: Hourly operating cost (optional)
+
+### Fleet Types
+
+- **MCV**: 3 vehicle types (A, B, C) with flexible compartments
+- **SCV**: 9 specialized vehicle types (one per product type)
+
+### Commands
+
+```bash
+# Run all sensitivity experiments (78 runs, ~20 minutes with 8 cores)
+fleetmix reproduce-paper sensitivity-analysis
+
+# Run only capacity variations
+fleetmix reproduce-paper sensitivity-analysis --parameters capacity
+
+# Run only MCV fleet
+fleetmix reproduce-paper sensitivity-analysis --fleet-types mcv
+
+# Run baseline only (for testing)
+fleetmix reproduce-paper sensitivity-analysis --variations baseline
+
+# Run specific demand days
+fleetmix reproduce-paper sensitivity-analysis --demand-days "synthetic_sales_2024-07-03_demand"
+
+# Run and skip existing results
+fleetmix reproduce-paper sensitivity-analysis --skip-existing
+```
+
+### Configuration
+
+Base configurations are in:
+- `src/fleetmix/config/experiments/sensitivity_analysis/baselines/`
+- `src/fleetmix/config/experiments/sensitivity_analysis/{parameter}/`
+
+Each variation has separate YAML configs for MCV and SCV fleets.
+
+### Demand Data
+
+3 synthetic demand days from: `src/fleetmix/benchmarking/datasets/case/synthetic_sales_*.csv`
+
+### Output
+
+```
+results/paper/sensitivity_analysis/
+  capacity/
+    mcv_capacity_minus_50/
+      synthetic_sales_2024-06-04_demand.json
+      ...
+    scv_capacity_minus_50/
+      ...
+  service_time/
+    ...
+  max_route_duration/
+    ...
+  summary.parquet  # Aggregated results
+```
+
+### Key Metrics
+
+The summary includes:
+- Total cost (fixed + variable)
+- Fleet size
+- Vehicle utilization
+- Customers per vehicle
+- Route duration
+- Fleet composition by vehicle type
+
+## Experiment 3: Fleet Composition Analysis
+
+**Paper Section:** 7.3. Impact of Cost Structure on Fleet Composition (Figure 4, Table 4)
+
+**Purpose:** Analyze how MCV adoption varies across different cost structures.
+
+### Parameter Grid
+
+- **Alpha (α)**: MCV fixed cost multiplier [1.0 to 2.0, 11 values]
+- **C**: Compartment setup cost [0 to 50, 6 values]
+- **Demand days**: 70 real demand instances
+
+Total runs: 11 × 6 × 3 = 198 mixed fleet + 3 SCV baselines = 201 runs
+
+### Commands
+
+```bash
+# Run full grid (201 runs, ~1 hour with 16 cores)
+fleetmix reproduce-paper fleet-composition
+
+# Run with custom grid (smaller)
+fleetmix reproduce-paper fleet-composition \
+  --alpha-grid "1.0,1.2,1.4,1.6" \
+  --c-values "0,10,20"
+
+# Run specific demand days
+fleetmix reproduce-paper fleet-composition \
+  --demand-days "synthetic_sales_2024-07-03_demand"
+
+```
+
+### Configuration
+
+Base config: `src/fleetmix/config/experiments/fleet_composition/base_config.yaml`
+
+Fleet templates are dynamically generated using:
+- `src/fleetmix/experiments/fleet_composition/fleet_templates.py`
+
+### Output
+
+```
+results/paper/fleet_composition/
+  raw/
+    synthetic_sales_2024-06-04_demand_SCV_BASE.json
+    synthetic_sales_2024-06-04_demand_MIXED_1.00_0.json
+    synthetic_sales_2024-06-04_demand_MIXED_1.10_0.json
+    ...
+  summary_mixed.parquet  # Aggregated results with deltas
+```
+
+## Expected Runtimes
+
+Approximate runtimes on a standard workstation:
+
+| Experiment | Sequential |
+|------------|-----------|
+| MCVRP instances (198) | ~30 min |
+| Sensitivity analysis (78) | ~20 min |
+| Fleet composition (201) | ~1 hour |
 
 ## Computational Environment
 
 **Hardware** (paper experiments):
-- **Processor**: Apple Silicon M1 (2020)
+- **Processor**: Apple Silicon M3 (2024)
 - **Cores**: 8 CPU cores
 - **Memory**: 16 GB RAM
 
@@ -53,28 +227,3 @@ fleetmix benchmark case
 - **Python**: 3.12
 - **Gurobi**: (version TBD)
 - **PyVRP**: (version TBD)
-
-## Citation
-
-If using FleetMix in research:
-
-```bibtex
-@article{Kohan2025FleetMix,
-  author  = {Eric Kohan and Fabricio Torres and Victor Silva-Febre and J.C. Pina-Pardo},
-  title   = {Designing Multi-Compartment Last-Mile Vehicle Fleets: An Open-Source Matheuristic},
-  journal = {Computers and Industrial Engineering},
-  year    = {2025},
-  note    = {Submitted}
-}
-```
-
-## Support
-
-- **Issues**: [github.com/ekohan/fleetmix/issues](https://github.com/ekohan/fleetmix/issues)
-- **Contact**: See paper for author contact information
-
----
-
-**Last Updated**: 2025-10-05
-
-**Navigation**: [← Docs Home](README.md) | [Architecture](ARCHITECTURE.md)

@@ -74,7 +74,7 @@
 \usepackage[left=1in,right=1in,top=1in,bottom=1in,margin=1in]{geometry} % Consolidated geometry options
 \usepackage{etoc} % For the Appendices mini TOC
 \usepackage[colorlinks = true, linkcolor=CITE, citecolor=CITE, urlcolor=CITE]{hyperref}
-\usepackage{microtype}
+\usepackage[expansion=false]{microtype}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Subsection}
 \renewcommand{\subsubsectionautorefname}{Subsubsection}
@@ -154,7 +154,8 @@ Our main methodological and practical contributions can be summarized as follows
     \item \textbf{Numerical Validation and Managerial Insights.} We test our matheuristic approach using both synthetic instances from the literature and a real-world dataset from a food distributor operating in Bogotá, Colombia, which serves hundreds of customers daily. Our results show the effectiveness of our matheuristic approach compared to benchmark solution approaches, generating high-quality fleet designs in seconds. For real-world instances, we illustrate the benefits of using \acp{MCV} to reduce both total costs and the number of vehicles compared to traditional \ac{SCV} fleets.
 \end{enumerate}
 
-The rest of the manuscript is structured as follows. We review the relevant literature in Section~\ref{sec:literature}, highlighting the research gaps we address and the main contributions of our work. Section~\ref{sec:problem_definition} defines the problem under investigation. In Section~\ref{sec:solution_approach}, we describe our cluster-first, fleet design-second solution approach. Section~\ref{sec:synthetic_results} shows the effectiveness of our matheuristic approach over synthetic instances from the literature, while Section \ref{sec:case_study} presents the results and managerial insights obtained using the real-world case study. Lastly, Section \ref{sec:conclusions} outlines our conclusions and describe several research avenues for future research.
+The rest of the manuscript is structured as follows. We review the relevant literature in Section~\ref{sec:literature}, highlighting the research gaps we address and the main contributions of our work. Section \ref{sec:problem_definition} defines the problem under investigation. In Section \ref{sec:solution_approach}, we describe our matheuristic approach, and Section \ref{sec:fleetmix} presents \textsc{FleetMix}, our open-source Python package.
+Section \ref{sec:synthetic_results} shows the effectiveness of our matheuristic approach over synthetic instances from the literature, while Section \ref{sec:case_study} reports the results and managerial insights obtained using the real-world case study. Lastly, Section \ref{sec:conclusions} outlines our conclusions and describe several research avenues for future research.
 
 \section{Literature Review} \label{sec:literature}
 
@@ -228,7 +229,7 @@ Given our interest in designing \ac{MCV} fleets for practical food distribution 
 \begin{figure}[H]
     \centering
     \vspace{2.5mm}
-    \includegraphics[width=1.0\textwidth]{Generic Paper/Imagens/methodology_iterative.pdf}
+    \includegraphics[width=1.0\textwidth]{Imagens/methodology_iterative.pdf}
     \vspace{2.5mm}
     \caption{High-level overview of the matheuristic approach.}
     \label{fig:methodology}
@@ -258,9 +259,11 @@ To ensure the creation of feasible customer clusters, we perform both capacity a
 
 Depending on the application context, our matheuristic allows decision-makers to verify maximum route duration constraints using one of two methods: \ac{CA} or a state-of-the-art routing solver. \ac{CA} is a widely used technique to approximate vehicle routing costs in large-scale integrated decision-making problems where operational routing decisions play a subordinate role, such as location-routing \citep{winkenbach2016, Pina2022}, workforce sizing and routing \citep{mandal2025tactical}, and fleet design and routing problems \citep{franceschetti2017strategic, zinnenlauf_2024}. In this work, we consider the seminal \ac{CA} formula proposed by \cite{beardwood1959shortest}, extended to incorporate vehicle setup times, customer service times, and depot-to-cluster travel times. Specifically, for a given cluster $k \in K_v$ with $n$ customers distributed over a service area $A$, we approximate the total routing time of serving the cluster using vehicle configuration $v \in V$ as
 \begin{equation}
-    t_{vk} \approx \alpha_{vk} + 2 \cdot \delta_{vk} + \beta \cdot \sqrt{n \cdot A} + \gamma \cdot n,
+    t_{vk} \approx 2 \cdot \delta_{vk} + \beta \cdot \sqrt{n \cdot A} + \gamma \cdot n,
 \end{equation}
-where $\alpha_{vk}$ is the setup time to dispatch the vehicle configuration, $\delta_{vk}$ the line-haul travel time between the depot and the centroid of the cluster, $\gamma$ the customer service time, and $\beta$ is a non-negative constant. The third term corresponds to the well-known \ac{BHH} approximation presented by \cite{beardwood1959shortest} (see \cite{silva2022demand} for a recent work showing the quality of this approximation to produce near-optimal estimates). 
+where 
+% $\alpha_{vk}$ is the setup time to dispatch the vehicle configuration, 
+$\delta_{vk}$ the line-haul travel time between the depot and the centroid of the cluster, $\gamma$ the customer service time, and $\beta$ is a non-negative constant. The third term corresponds to the well-known \ac{BHH} approximation presented by \cite{beardwood1959shortest} (see \cite{silva2022demand} for a recent work showing the quality of this approximation to produce near-optimal estimates). 
 
 Note that an alternative method for computing vehicle route durations is to employ an existing routing solver. In our matheuristic implementation (see our GitHub repository), decision-makers can also use the \textsc{PyVRP} library developed by \cite{wouda_pyvrp_2024}, which is recognized as a state-of-the-art vehicle routing solver. While this approach might enhance vehicle routing time estimations, it often requires substantially more computational time than the \ac{CA}-based approach, especially when dealing with large instances.
 
@@ -336,7 +339,7 @@ Specifically, after solving Problem \eqref{P} for a given set of clusters $K$, w
 
 \section{\textsc{FleetMix}: A Spec-Driven Python Package} \label{sec:fleetmix}
 
-\textsc{FleetMix} is the executable companion to our matheuristic: a Python package that implements all algorithms and models presented in Section \ref{sec:solution_approach}. Available on \href{https://pypi.org/project/fleetmix/}{\texttt{PyPI}} and at \url{https://github.com/ekohan/fleetmix} under the MIT license, \textsc{FleetMix} serves two audiences. Researchers can reproduce our results with a single command and extend the algorithms by swapping components, and practitioners can deploy our matheuristic directly in production. The version used for this paper (\texttt{paper-1.0.0}) is permanently archived to ensure reproducibility.
+\textsc{FleetMix} is the executable companion to our matheuristic: a Python package that implements all algorithms and models presented in Section \ref{sec:solution_approach}. Available on \href{https://pypi.org/project/fleetmix/}{\texttt{PyPI}} and at \url{https://github.com/ekohan/fleetmix} under the MIT license, \textsc{FleetMix} serves two audiences. Researchers can reproduce our results of Section \ref{sec:synthetic_results} with a single command and extend the algorithms by swapping components, and practitioners can deploy our matheuristic directly in production. The version used for this paper (\texttt{paper-1.0.0}) is permanently archived to ensure reproducibility.
 
 \subsection{Architecture and Design}
 
@@ -374,7 +377,7 @@ Table \ref{tab:spec_traceability} illustrates this traceability, mapping key ele
 
 \section{Effectiveness of the Matheuristic Approach} \label{sec:synthetic_results}
 
-In this section, we present a detailed computational study to test the effectiveness of our matheuristic. We run all experiments on a standard workstation (Apple Silicon M1, 2020) with 8 CPU cores and 16 GB of RAM. The implementation was developed in Python 3.12, using Gurobi 12.0.2 as a \ac{MILP} solver. Throughout this section, and based on preliminary experiments, we set $\eta = 5$ customers and $\Delta = 50$ to define neighboring clusters when applying our merging procedure described in Section \ref{sec:generate_feasible_clusters}.
+In this section, we present a detailed computational study to test the effectiveness of our matheuristic. We run all experiments on a standard workstation (Apple Silicon M3, 2024) with 8 CPU cores and 24 GB of RAM. The implementation was developed in Python 3.12, using Gurobi 12.0.2 as a \ac{MILP} solver. Throughout this section, and based on preliminary experiments, we set $\eta = 5$ customers and $\Delta = 50$ to define neighboring clusters when applying our merging procedure described in Section \ref{sec:generate_feasible_clusters}.
 
 \subsection{Test Instances}
 
@@ -399,22 +402,22 @@ Table \ref{tab:comparison_vehicles} summarizes the comparison between the number
     \toprule
     Benchmark & Category & \multicolumn{1}{c}{Instances} & \multicolumn{1}{c}{\# Same vehicles} & \multicolumn{1}{c}{\# Fewer vehicles} & \multicolumn{1}{c}{Run time (s)} \\
     \midrule
-    \multirow{6}[2]{*}{\cite{henke2015multi}} & 10\_3\_3\_1 & 50    & 24    & 26    & 3.9 \\
-          & 10\_3\_3\_2 & 50    & 28    & 22    & 3.8 \\
-          & 10\_3\_3\_3 & 50    & 35    & 15    & 3.9 \\
-          & 50\_3\_3\_1 & 1     & 1     & 0     & 5.1 \\
-          & 50\_3\_3\_2 & 1     & 1     & 0     & 6.1 \\
-          & 50\_3\_3\_3 & 1     & 1     & 0     & 6.8 \\
+    \multirow{6}[2]{*}{\cite{henke2015multi}} & 10\_3\_3\_1 & 50    & 24    & 26    & 5.0 \\
+          & 10\_3\_3\_2 & 50    & 28    & 22    & 5.0 \\
+          & 10\_3\_3\_3 & 50    & 35    & 15    & 5.1 \\
+          & 50\_3\_3\_1 & 1     & 1     & 0     & 7.3 \\
+          & 50\_3\_3\_2 & 1     & 1     & 0     & 8.1 \\
+          & 50\_3\_3\_3 & 1     & 1     & 0     & 8.4 \\
     \midrule
-    \multirow{9}[2]{*}{\cite{henke2019branch}} & 10\_3\_3\_3 & 5     & 5     & 0     & 3.7 \\
-          & 15\_3\_3\_3 & 5     & 5     & 0     & 3.9 \\
-          & 20\_3\_3\_3 & 5     & 5     & 0     & 3.9 \\
-          & 25\_3\_3\_3 & 5     & 5     & 0     & 4.5 \\
-          & 30\_3\_3\_3 & 5     & 5     & 0     & 3.9 \\
-          & 35\_3\_3\_3 & 5     & 5     & 0     & 4.3 \\
-          & 40\_3\_3\_3 & 5     & 5     & 0     & 4.3 \\
-          & 45\_3\_3\_3 & 5     & 5     & 0     & 4.4 \\
-          & 50\_3\_3\_3 & 5     & 5     & 0     & 5.0 \\
+    \multirow{9}[2]{*}{\cite{henke2019branch}} & 10\_3\_3\_3 & 5     & 5     & 0     & 5.2 \\
+          & 15\_3\_3\_3 & 5     & 5     & 0     & 5.3 \\
+          & 20\_3\_3\_3 & 5     & 5     & 0     & 5.3 \\
+          & 25\_3\_3\_3 & 5     & 5     & 0     & 5.5 \\
+          & 30\_3\_3\_3 & 5     & 5     & 0     & 5.4 \\
+          & 35\_3\_3\_3 & 5     & 5     & 0     & 5.7 \\
+          & 40\_3\_3\_3 & 5     & 5     & 0     & 5.8 \\
+          & 45\_3\_3\_3 & 5     & 5     & 0     & 5.8 \\
+          & 50\_3\_3\_3 & 5     & 5     & 0     & 6.5 \\
     \bottomrule
     \end{tabular}%
     }
@@ -423,7 +426,7 @@ Table \ref{tab:comparison_vehicles} summarizes the comparison between the number
 
 Table \ref{tab:comparison_vehicles} shows the effectiveness of our matheuristic in reducing or maintaining the number of vehicles needed compared to the number of vehicles found by \cite{henke2015multi}. For instances with 10 customers, our matheuristic finds solutions with exactly one fewer vehicle in 52\%, 44\%, and 30\% of the instances with supply parameters $s$ equals to 1, 2, and 3, respectively. For larger instances with 50 customers, our matheuristic finds the same number of vehicles as \cite{henke2015multi}.
 When compared with \cite{henke2019branch}, Table \ref{tab:comparison_vehicles} reports that our matheuristic consistently finds the same number of vehicles, regardless of the problem size.
-Note that, regardless of the instance category, our matheuristic (from generating vehicle configurations to returning the best solution found; see Figure \ref{fig:methodology}) takes less than eight seconds on average.
+Note that, regardless of the instance category, our matheuristic (from generating vehicle configurations to returning the best solution found; see Figure \ref{fig:methodology}) takes less than nine seconds on average.
 
 In summary, these results validate the effectiveness of our matheuristic in finding high-quality solutions while maintaining short computational times.
 
@@ -431,18 +434,18 @@ In summary, these results validate the effectiveness of our matheuristic in find
 
 After showing the computational performance of our matheuristic approach, we now present and discuss results from a real-world case study based on the current operations of our industry partner, a leading food distributor based in Bogotá, Colombia. We begin this section by describing our real-world problem instances. We then present and discuss managerial insights regarding the benefits of adopting \acp{MCV}. Lastly, we analyze the resulting fleet composition under different cost structures. 
 
-Throughout this section, we employ the same parameters and computational environment described in Section \ref{sec:synthetic_results}. For transparency and reproducibly, our instances and \red{detailed computational results (including run times, which are under X minutes across all instances and parameter combinations tested)} are publicly available at \url{https://github.com/ekohan/fleetmix/tree/main/src/fleetmix/benchmarking/datasets/case}.
+Throughout this section, we employ the same parameters and computational environment described in Section \ref{sec:synthetic_results}. For transparency, detailed computational results (including run times, which are under 1 minute across all instances and parameter combinations tested) are publicly available at \url{https://github.com/ekohan/fleetmix/paper/results}.
 
 \subsection{Real-World Problem Instances} \label{sec:real_world_instances}
 
-Our industry partner provided us with a rich dataset containing 70 days of real-world demand information. Each day (i.e., problem instance) provides detailed information about customer locations and the quantities of products requested by product type (frozen, refrigerated, and dry). Over the 70 days, the number of customers served by the company ranges from 208 to 691, with an average of 379 customers. Below, we explain the main characteristics of the service area and vehicle fleet, as well as the parameter values used.
+Our industry partner provided us with a rich dataset containing 70 days of real-world demand information. Each day (i.e., problem instance) provides detailed information about customer locations and the quantities of products requested by product type (frozen, chilled, and dry). Over the 70 days, the number of customers served by the company ranges from 208 to 691, with an average of 379 customers. Below, we explain the main characteristics of the service area and vehicle fleet, as well as the parameter values used.
 
 \paragraph{Service area} 
 The service area is located in Bogotá, Colombia, the country's most populous city. Geographically, the service area spans around 1,226 km$^2$. The company serves an average of 379 customers per day from a single depot located on the outskirts of the city. Figure \ref{fig:CaseStudyArea} shows the spatial distribution of customers for a representative day (to protect confidentiality, the node locations have been slightly perturbed).
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.7\textwidth]{Generic Paper/Imagens/service_area.pdf}
+    \includegraphics[width=0.7\textwidth]{Imagens/service_area.pdf}
     \caption{Service area and customer distribution.}
     \label{fig:CaseStudyArea}
 \end{figure}
@@ -463,7 +466,7 @@ Figure \ref{fig:mean_fleet_and_cost_reduction} illustrates how the average fleet
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=1.0\linewidth]{Generic Paper/Imagens/enhanced_fleet_cost_comparison_latex.pdf}
+    \includegraphics[width=1.0\linewidth]{Imagens/enhanced_fleet_cost_comparison_latex.pdf}
     \vspace{0.1mm}
     \caption{Average fleet size and total cost (over 70 instances) achieved by the \ac{MCV} and \ac{SCV} fleet for each parameter combination.}
     \label{fig:mean_fleet_and_cost_reduction}
@@ -524,15 +527,13 @@ For this analysis, we establish a baseline fixed cost of $100$ units for using o
 
  \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\linewidth]{Generic Paper/Imagens/heatmap_mcv_adoption_landscape.pdf}
+    \includegraphics[width=0.85\linewidth]{Imagens/heatmap_mcv_adoption_landscape.pdf}
     \vspace{0.4mm}
     \caption{Effect of premium factor ($\alpha$) and compartment setup factor ($c$) on fleet composition.}
     \label{fig:heatmap}
 \end{figure}
 
 Figure \ref{fig:heatmap} presents the combined effect of the premium factor ($\alpha$) and compartment setup factor ($c$) on fleet composition. The horizontal axis represents the compartment setup factor, which increases from 0\% to 50\% in increments of 10\%. The vertical axis corresponds to the $\alpha$ multiplier, which scales the fixed cost of using one \ac{MCV} from 1.0 to 2.0 in increments of 0.1. Each cell in Figure \ref{fig:heatmap} displays three values: the average \ac{MCV} share in percentage, the number of days (out of 70) in which at least one \ac{MCV} is used, and the number of days in which all vehicles in the fleet are \acp{MCV}, marked with a star.
-
-
 
 Figure \ref{fig:heatmap} shows a clear nonlinear decline in \ac{MCV} adoption as both cost factors increase. When \acp{MCV} are relatively inexpensive compared to \acp{SCV} (e.g., when $\alpha \leq 1.4$ and $c \leq 0.1$, or $\alpha \leq 1.2$ and $c \leq 0.2$), their share consistently represents 90\% or more, indicating that \acp{MCV} dominate the fleet composition and achieve full adoption across all days. However, even modest increases in either parameter rapidly reduce their utilization. Beyond $\alpha = 1.5$ and $c \geq 0.3$, the average share of \acp{MCV} falls below 50\%, suggesting that their fixed cost quickly outweighs the operational flexibility offered by compartmentalization. Overall, Figure \ref{fig:heatmap} highlights that \ac{MCV} adoption is highly sensitive to the underlying cost structure, indicating that only specific cost parameters make \acp{MCV} an operationally dominant option for fleet composition.
 
@@ -559,30 +560,18 @@ In summary, these results confirm that compartment setup costs have a strong eff
 
 \subsection{Managerial Insights} \label{sec:discussion}
 
-The results of our real-world case study provide valuable insights for food distributors and fleet managers considering adopting \acp{MCV}. Below, we summarize the key managerial implications of our analysis.
+The results of our real-world case study provide valuable insights for food distributors and fleet managers considering the adoption of \acp{MCV}. 
+% The outcomes presented in this chapter reflect the characteristics of the demand data used in the case study, where customers place frequent orders of relatively small volume, leading to recurring delivery visits throughout the week. 
+Below, we summarize the key managerial implications derived from our analysis.
 
-% Structure:
-\blue{\paragraph{Summarize the insight} Explain the insight based on the results. Provide practical implications.}
+\paragraph{Multi-compartment vehicles reduce both total costs and fleet size}
+Our results show that adopting \acp{MCV} can lead to substantial performance gains compared with traditional last-mile fleets based on \acp{SCV}. Under the current operating conditions of our industry partner (i.e., our baseline scenario), we find that total costs decrease by 14.7\% and that the total number of required vehicles decreases by an average of 7.5. This improvement comes from the ability of \acp{MCV} to consolidate incompatible product types, allowing vehicles to depart with fuller loads, make fewer stops, and spend less time distributing.
 
-%%%% COMMENTS SO FAR: %%%%%
+\paragraph{Prioritize reducing service time to boost performance}
+Our sensitivity analysis shows that service time is the most practical and effective lever for improving performance, since even small reductions produce clear gains in fleet size and total cost. In contrast, increasing vehicle capacity or extending working hours (i.e., maximum route duration limits) requires additional investment and offers only limited benefits. Changes in capacity have minimal impact on the number of vehicles required, and longer route durations yield only modest improvements. Because shorter customer service times translate almost directly into operational efficiencies, efforts should focus on streamlining delivery and unloading processes (e.g., by improving coordination with customers) rather than investing in larger vehicles or extending working hours.
 
-% Mention that the outcomes in this chapter come from the demand data that was used, in which customers make frequent purchase orders with smaller volume and therefore require frequent visits to deliver goods.
-
-% Vehicles are constrained by physical load capacity and maximum route duration. Our results show that there is a modest effect in reducing vehicle size (which can help cities as there is a move towards smaller vehicles) but a strong effect in reducing the maximum time vehicles are allowed to operate.
-    
-% \acfp{MCV} with flexible compartment capacity achieves higher average load utilization than \acfp{SCV}, as they can carry incompatible products requested by different customers, enabling better product allocation per vehicle.
-    
-% \acp{MCV} routes are generally shorter than \acp{SCV} routes because \acp{MCV} can satisfy multi-product demands, serving fewer customers per route while maximizing vehicle load. \acp{SCV}, restricted to one product type, requires more stops and longer route times to justify their deployment.
-    
-% Mixed fleets combining \acp{MCV} and \acp{SCV} operate with fewer vehicles compared to heterogeneous fleets composed only of \acp{SCV} fleets, since \acp{MCV} can consolidate multiple product types in a single trip. As fewer vehicles are needed, routes are shorter, and load utilization is improved, total costs in mixed fleets are consistently lower than \acp{SCV} fleets.
-    
-% Reducing customer service time is the most effective strategy to improve service levels and vehicle utilization, while simultaneously decreasing the required fleet size and total operational costs for both \acp{SCV} and \acp{MCV} fleets.
-
-% Incentives for customers to consolidade purchases would also be beneficial along the month, reducing the number of visits to a single customer. %Increasing maximum route duration, also changes the time variable, but does not bring the same level of benefits as reducing the stop times, thefore this should not be the main driver to bring benefits.
-
-% Compartment setup cost is a key variable when defining the fleet. The experiment shows that the compartment setup cost is very important when defining the ideal fleet. The real costs should be as precise as possible to guarantee the optimality when deciding the fleet.
-
-% If there is a reasonable demand fluctuation is present, as in our dataset, the number of vehicles on each day can change substantially from peak to lower demand days. Some strategies must be in place to accomodate for this variation withou incurring in high costs of stopped vehicles on low demand days or unserved customers on high demand days. Some strategies may be sharing fleet with other business or having contractors available to cover for higher demand days.
+\paragraph{Deploy multi-compartment vehicles when cost structure supports their flexibility}
+Our findings show that fleet size and mix decisions with \acp{MCV} are sensitive to their underlying cost structure. \acp{MCV} are only an operationally dominant option when their fixed-cost structure stays within a favorable range; once premiums or compartment setup costs increase, the fleet composition shifts toward \acp{SCV}. This shift forces more vehicles onto the road and increases how often customers are visited by multiple vehicles, thereby increasing total costs.
 
 \section{Conclusions} \label{sec:conclusions}
 
@@ -590,13 +579,12 @@ The results of our real-world case study provide valuable insights for food dist
 
 To solve this problem, we propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme. Our matheuristic can accommodate several real-world characteristics of modern food distribution operations, including homogeneous and heterogeneous vehicles with fixed or flexible compartment sizes; a comprehensive cost structure that allows including fixed costs, compartment-dependent costs, and variable (distance or time-dependent) costs; and single- and multiple-stop delivery policies. To facilitate the application of our matheuristic, we create \textsc{FleetMix}, an open-source Python package (MIT license, PyPI). Its implementation follows specifications linking the paper's methodology to its software realization, uses defined interfaces to allow for systematic adaptation of its components, and includes a benchmarking tool to ensure verifiable replication of our results.
 
-Using established synthetic instances from the literature, we show that \textsc{FleetMix} achieves high-quality fleet designs compared to existing solution approaches. Through a real-world case study informed by real data from our partner industry company, we derive several managerial insights into the value of using \acp{MCV} to reduce total logistics costs and the number of vehicles needed to deliver multiple product types. We show that \red{[summarize main insights.]}
+Using established synthetic instances from the literature, we show that \textsc{FleetMix} achieves high-quality fleet designs compared to existing solution approaches. Through a real-world case study informed by real data from our partner industry company, we derive several managerial insights into the value of using \acp{MCV}. Our results show that, due to their ability to consolidate multiple product types, \acp{MCV} can substantially reduce total logistics costs and fleet size by enabling vehicles to depart with fuller loads and perform more efficient routes. We also find that reducing customer service time is the most reliable lever for improving performance compared with increasing vehicle capacity or extending operating hours.
 
 Since our work is among the first to address the tactical design of last-mile delivery fleets with \acp{MCV}, there are several opportunities for future work. 
 First, while this is a challenging optimization problem, future research could focus on developing exact solution approaches that can solve practical problem instances to proven optimality. Here, one could develop a column generation-based scheme and use our set covering formulation presented in Section \ref{sec:solution_approach}.
 Second, future work can also extend \textsc{FleetMix} to accommodate other real-world characteristics, such as other cost components (e.g., loading and unloading costs, as in \cite{hubner2019multi}) and time windows.
 Lastly, a stochastic version of the problem, where tactical fleet size and mix decisions are made before customer demand is known, will be a challenge to address.
-
 
 \bibliographystyle{apalike}
 \biboptions{authoryear}
@@ -628,8 +616,6 @@ Combine & $\lambda \in \{0, 0.2, ..., 1\}$ & All above parameters & Ensemble app
 \end{table}
 
 \end{appendix}
-
-% Use the following to create acronyms: In the text, you can then write \ac{VRP} for singular or \acp{VRP} for plural.
 
 \acrodef{VRP}{Vehicle Routing Problem}
 \acrodef{TSP}{Traveling Salesman Problem}

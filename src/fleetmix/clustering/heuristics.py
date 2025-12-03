@@ -6,12 +6,14 @@ It contains the lower-level implementation details of the clustering algorithms,
 and recursive splitting logic.
 """
 
+import warnings
 from typing import Any
 
 import numpy as np
 import pandas as pd
 from kmedoids import KMedoids
 from sklearn.cluster import AgglomerativeClustering, MiniBatchKMeans
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import pairwise_distances
 from sklearn.mixture import GaussianMixture
 
@@ -56,7 +58,9 @@ class MiniBatchKMeansClusterer:
         """Cluster customers using MiniBatch KMeans."""
         data = compute_cluster_metric_input(customers, context, "minibatch_kmeans")
         model = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
-        labels = model.fit_predict(data)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            labels = model.fit_predict(data)
         # Convert numpy array to list of ints
         return [int(label) for label in labels]
 
@@ -125,7 +129,9 @@ class GaussianMixtureClusterer:
         model = GaussianMixture(
             n_components=n_clusters, random_state=42, covariance_type="full"
         )
-        labels = model.fit_predict(data)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            labels = model.fit_predict(data)
         # Convert numpy array to list of ints
         return [int(label) for label in labels]
 
@@ -399,7 +405,6 @@ def create_normal_dataset_clusters(
 
 
 def generate_cluster_id_base(config_id: str | int) -> int:
-    # TODO: fix this hack, set a type.
     """Generate a base cluster ID from the configuration ID."""
     return int(str(config_id) + "000")
 

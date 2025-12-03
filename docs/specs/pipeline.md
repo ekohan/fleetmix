@@ -43,30 +43,34 @@ Output: Fleet Design Solution
 
 ### Phase Execution
 
+**Standard Mode** (`allow_split_stops=False`):
 1. Generate vehicle configurations
-2. Apply split-stop preprocessing (if enabled)
-3. Generate feasible clusters
-4. Solve optimization (MILP)
-5. Apply post-optimization improvement (if enabled)
+2. Generate feasible clusters
+3. Solve optimization (MILP)
+4. Apply post-optimization improvement (if enabled)
 
-## Implementation Notes
+**Two-Phase Split-Stop Mode** (`allow_split_stops=True`):
+1. **Phase 1 (Baseline)**: Run standard optimization without split stops
+2. **Phase 2 (Split-Stop)**: 
+   - Apply split-stop preprocessing (explode customers with multiple goods)
+   - Generate feasible clusters with split customers
+   - Solve optimization with warm start from Phase 1
+   - Apply post-optimization improvement
+3. **Comparison**: Return Phase 2 solution only if it has better cost AND doesn't use more vehicles than Phase 1
 
-- **Primary Module**: `src/fleetmix/pipeline/vrp_interface.py`
-- **API Entry**: `src/fleetmix/api.py` 
-- **CLI Entry**: `src/fleetmix/app.py`
-
-### Entry Points
+## Entry Points
 
 - **Python API**: `import fleetmix; solution = fleetmix.optimize(demand="data.csv", config="config.yaml")`
 - **CLI**: `fleetmix optimize` 
 - **GUI**: `fleetmix gui`
 
-### Features
+## Features
 
 - Validates input data at each stage
 - Times each phase (via `TimeRecorder`)
 - Logs progress and warnings
 - Returns self-contained `FleetmixSolution` with configurations and time measurements
+- **Two-Phase Split-Stop Optimization**: When `allow_split_stops=True`, runs both baseline (Phase 1) and split-stop (Phase 2) optimizations, returning the better solution
 
 ## References
 

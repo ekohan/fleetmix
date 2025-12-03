@@ -150,7 +150,7 @@ omit = [
     "src/fleetmix_example_plugins/*",
     "*/tests/*",
     "*/__pycache__/*",
-    "src/fleetmix/experiments/alpha_analysis/*",
+    "src/fleetmix/experiments/fleet_composition/*",
     "src/fleetmix/benchmarking/solvers/vrp_solver.py",
 ]
 

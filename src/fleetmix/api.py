@@ -14,7 +14,7 @@ from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization import optimize_fleet
 from fleetmix.post_optimization import improve_solution
-from fleetmix.preprocess.demand import maybe_explode
+from fleetmix.preprocess.split_stop import maybe_explode
 from fleetmix.utils.common import baseline_is_valid
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.logging import FleetmixLogger, log_warning

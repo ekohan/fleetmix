@@ -6,35 +6,20 @@
 
 ## Getting Started
 
-### Installation
-
-```bash
-uv pip install fleetmix
-```
-
-Or from source:
-```bash
-git clone https://github.com/ekohan/fleetmix.git
-cd fleetmix
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source "$HOME/.local/bin/env"
-uv venv fleetmix-env
-source fleetmix-env/bin/activate
-uv sync --all-extras
-```
+See [quickstart.md](quickstart.md) for installation instructions.
 
 ### Your First Fleet Size & Mix (FSM) Optimization
 
-**TODO**: be more clear here on data layout. after Pydantic improvements.
 **Step 1**: Prepare your customer demand data (CSV format)
 
 ```csv
-customer_id,Latitude,Longitude,demand_Dry,demand_Chilled,demand_Frozen
+Customer_ID,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand
 C001,4.6097,-74.0817,150,80,40
 C002,4.6512,-74.1120,200,100,50
 C003,4.7234,-74.0654,100,60,30
-...
 ```
+
+> **Note**: FleetMix also accepts long-format CSVs (`ClientID,Lat,Lon,Kg,ProductType`) which are auto-converted internally.
 
 **Step 2**: Create a configuration file
 
@@ -113,7 +98,6 @@ Example configurations for one truck:
 
 ## Common Scenarios
 
-**TODO** check scenario code is valid.
 ### Scenario 1: Cost Reduction Analysis
 
 **Question**: "Should I invest in multi-compartment vehicles?"
@@ -153,15 +137,16 @@ import pandas as pd
 results = []
 for demand_multiplier in [0.8, 0.9, 1.0, 1.1, 1.2]:
     # Scale demand
-    customers = load_customers()
-    customers[['demand_Dry', 'demand_Chilled', 'demand_Frozen']] *= demand_multiplier
+    customers = pd.read_csv("customers.csv")
+    demand_cols = ['Dry_Demand', 'Chilled_Demand', 'Frozen_Demand']
+    customers[demand_cols] *= demand_multiplier
     
     # Optimize
     solution = fm.optimize(demand=customers, config="config.yaml")
     
     results.append({
         'demand_level': demand_multiplier,
-        'vehicles_needed': sum(solution.vehicles_used.values()),
+        'vehicles_needed': solution.total_vehicles,
         'total_cost': solution.total_cost,
     })
 
@@ -176,13 +161,25 @@ df.plot(x='demand_level', y='vehicles_needed')
 
 **Approach**: Vary `max_route_time` parameter
 ```python
+import fleetmix as fm
+from fleetmix.config import load_fleetmix_params
+import dataclasses
+
 for max_time in [6, 7, 8, 9, 10, 11, 12]:
-    config = load_config()
-    for vehicle in config['vehicles'].values():
-        vehicle['max_route_time'] = max_time
+    params = load_fleetmix_params("config.yaml")
     
-    solution = fm.optimize(demand=customers, config=config)
-    print(f"{max_time}h: {sum(solution.vehicles_used.values())} vehicles")
+    # Update max_route_time for all vehicles
+    updated_vehicles = {
+        name: dataclasses.replace(spec, max_route_time=max_time)
+        for name, spec in params.problem.vehicles.items()
+    }
+    params = dataclasses.replace(
+        params, 
+        problem=dataclasses.replace(params.problem, vehicles=updated_vehicles)
+    )
+    
+    solution = fm.optimize(demand="customers.csv", config=params)
+    print(f"{max_time}h: {solution.total_vehicles} vehicles")
 ```
 
 **Expected**: Tighter time limits require more vehicles
@@ -196,39 +193,19 @@ for max_time in [6, 7, 8, 9, 10, 11, 12]:
 1. **Use fewer clustering methods**:
 ```yaml
 clustering:
-  methods:
-    - minibatch_kmeans  # Fastest
+  method: minibatch_kmeans  # Fastest
 ```
 
-2. **Reduce cluster variants**:
+2. **Use BHH route time (default)**:
 ```yaml
 clustering:
-  geo_weight: [1.0]  # Just one value
-  n_clusters_range: [auto]  # Skip manual values
+  route_time_estimation: 'BHH'  # Much faster than 'TSP'
 ```
 
-3. **Use BHH route time (default)**:
+3. **Set solver time limit**:
 ```yaml
-route_time:
-  method: bhh  # Much faster than 'tsp'
-```
-
-4. **Set solver time limit**:
-```yaml
-optimization:
-  time_limit: 60  # Acceptable for approximate solution
-  mip_gap: 0.005  # 0.5% gap OK for large problems
-```
-
-5. **Tune merging aggressiveness**:
-```yaml
-# Conservative (faster): merge only very small clusters
-small_cluster_size: 3
-nearest_merge_candidates: 5
-
-# Aggressive (slower, better quality): merge more clusters  
-small_cluster_size: 15
-nearest_merge_candidates: 20
+time_limit: 60  # Acceptable for approximate solution
+gap_rel: 0.005  # 0.5% gap OK for large problems
 ```
 
 ---
@@ -272,7 +249,4 @@ nearest_merge_candidates: 20
 
 ---
 
-**Last Updated**: 2025-10-05
-
 **Navigation**: [← Docs Home](README.md) | [Quickstart](quickstart.md) | [Architecture](ARCHITECTURE.md)
-

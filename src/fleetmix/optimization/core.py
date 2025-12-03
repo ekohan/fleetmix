@@ -496,8 +496,6 @@ def _create_model(
     # Warm-start: Apply warm start from Phase 1 baseline solution or
     # existing baseline cluster warm start logic
     # ------------------------------------------------------------------
-
-    # TODO: check warm-start logic, flags, etc.
     if parameters.problem.allow_split_stops:
         # Identify baseline clusters (those without "::" pseudo-customers)
         baseline_cluster_ids = []

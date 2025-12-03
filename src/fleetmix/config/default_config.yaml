@@ -63,7 +63,7 @@ clustering:
   demand_weight: 0.3  # Weight for demand distance (composite-only)
   route_time_estimation: 'BHH'  # Options: TSP, BHH
 
-prune_tsp: false  # Skip TSP based on BHH estimate
+prune_tsp: true  # Skip TSP based on BHH estimate
 
 # Post-optimization
 post_optimization: true         # Enable iterative improvement phase
@@ -79,12 +79,9 @@ pre_nearest_merge_candidates: 50
 # IO params
 # ---------------------------------------------------------------------------
 
-# Data Files
-# See options in src/fleetmix/benchmarking/datasets/case/
-demand_file: "sales_2024-07-02_demand.csv"
 
 # Output format
-format: 'json'  # Output format (excel or json)
+format: 'json'  # Output format (xlsx or json)
 
 # ---------------------------------------------------------------------------
 # RUNTIME params

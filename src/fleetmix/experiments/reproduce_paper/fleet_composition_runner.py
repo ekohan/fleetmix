@@ -36,6 +36,15 @@ from fleetmix.experiments.reproduce_paper.utils import (
 )
 from fleetmix.utils.logging import LogLevel, log_error, log_info, setup_logging
 
+__all__ = [
+    "aggregate_results",
+    "get_demand_files",
+    "parse_grid_values",
+    "run_fleet_composition",
+    "run_mixed_grid",
+    "run_scv_baselines",
+]
+
 console = Console()
 
 
@@ -332,18 +341,27 @@ def run_fleet_composition(
     # Aggregate results
     final_df = aggregate_results(scv_results, mixed_results, output_dir)
 
-    # Print summary statistics
+    # Print summary statistics aligned with Paper Section 6.3 (Heatmap & Cost Structure)
     console.print("\n[bold green]✓ Fleet composition analysis completed[/bold green]\n")
 
     mixed_only = final_df[final_df["fleet_type"] == "MIXED"]
-    if not mixed_only.empty and "delta_cost_pct_vs_scv" in mixed_only.columns:
+    if not mixed_only.empty:
+        # Calculate metrics consistent with Figure 7 (Heatmap)
+        mean_mcv_share = mixed_only["mcv_share"].mean()
+
+        # Count adoption days (share > 0)
+        adoption_rate = (mixed_only["mcv_share"] > 0).mean()
+
+        # Count pure MCV days (share >= 0.99) - "Star" metric in heatmap
+        pure_mcv_rate = (mixed_only["mcv_share"] >= 0.99).mean()
+
         stats = {
             "Total experiments": len(final_df),
             "SCV baselines": len(scv_results),
             "Mixed fleet runs": len(mixed_results),
-            "Mean MCV share": f"{mixed_only['mcv_share'].mean():.1%}",
-            "Mean cost vs SCV": f"{mixed_only['delta_cost_pct_vs_scv'].mean():.1f}%",
-            "Mixed beats SCV": f"{(mixed_only['delta_cost_pct_vs_scv'] < 0).mean():.1%} of cases",
+            "Mean MCV Share": f"{mean_mcv_share:.1%}",
+            "Adoption Rate (>0% MCV)": f"{adoption_rate:.1%}",
+            "Pure MCV Rate (≥99% MCV)": f"{pure_mcv_rate:.1%}",
         }
         print_summary_stats("Fleet Composition Summary", stats)
 

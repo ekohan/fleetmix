@@ -2,7 +2,7 @@
 
 Builds a **mixed fleet** (drones → refrigerated trucks) entirely in-memory – no YAML editing required.
 
-Run it: $ python examples/heterogeneous_fleet.py
+Run it: $ uv run python examples/heterogeneous_fleet.py
 
 """
 
@@ -17,7 +17,7 @@ from fleetmix import VehicleSpec
 from fleetmix.config import FleetmixParams, load_fleetmix_params
 
 
-def build_demo_parameters() -> FleetmixParams:
+def build_demo_parameters_heterogeneous_fleet() -> FleetmixParams:
     """Return a :class:`FleetmixParams` instance with a heterogeneous fleet."""
 
     # Start with default config
@@ -62,11 +62,14 @@ def build_demo_parameters() -> FleetmixParams:
 
 
 def main() -> None:  # pragma: no cover – example script
-    demand_file = Path("tests/_assets/smoke/mini_demand.csv")
+    # Use the custom Bogotá demand file we just created
+    demand_file = Path("examples/bogota_demand.csv")
 
-    params_with_heterogeneous_fleet = build_demo_parameters()
+    params = build_demo_parameters_heterogeneous_fleet()
 
-    solution = fm.optimize(demand=demand_file, config=params_with_heterogeneous_fleet)
+    print(f"Depot location: {params.problem.depot}")
+
+    solution = fm.optimize(demand=demand_file, config=params)
 
     print("\n=== Fleet Composition ===")
     for vehicle, count in solution.vehicles_used.items():
@@ -75,7 +78,9 @@ def main() -> None:  # pragma: no cover – example script
     print("\n=== Cost Breakdown ===")
     print(f"Total cost: ${solution.total_cost:,.2f}")
 
-    print("\nOptimisation complete – run `fleetmix gui` to visualise routes!")
+    print(
+        f"\nOptimisation complete – review the generated JSON and HTML results in {params.io.results_dir}"
+    )
 
 
 if __name__ == "__main__":

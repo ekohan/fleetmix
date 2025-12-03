@@ -212,6 +212,11 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
         print("Error: No metrics to plot.")
         return
 
+    # Use STIX fonts (closely matches LaTeX Computer Modern) for surrounding text
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = ["STIX Two Text", "STIXGeneral", "DejaVu Serif"]
+    plt.rcParams["mathtext.fontset"] = "stix"
+
     fig, ax = plt.subplots(figsize=(12, 10))
 
     # Prepare pivot tables
@@ -243,8 +248,8 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
             # Determine text color for readability
             text_color = "white" if share_pct > 50 else "black"
 
-            # Multi-line annotation
-            text = f"{share_pct:.0f}%\n{adoption_days} days\n({pure_days}★)"
+            # Multi-line annotation (use default sans-serif font for cell contents)
+            text = f"{share_pct:.0f}%\n{adoption_days}/70\n({pure_days}*)"
             ax.text(
                 j,
                 i,
@@ -254,6 +259,7 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
                 color=text_color,
                 fontsize=9,
                 weight="bold",
+                fontfamily="sans-serif",
             )
 
     # Formatting
@@ -264,15 +270,12 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
         [f"{a:.1f}" if a != int(a) else f"{int(a)}.0" for a in pivot_share.index]
     )
 
-    ax.set_xlabel(
-        "C: Compartment Setup Cost (% of SCV fixed cost)", fontsize=12, weight="bold"
-    )
-    ax.set_ylabel("α: MCV Fixed Cost Multiplier", fontsize=12, weight="bold")
+    ax.set_xlabel("Compartment Setup Factor (c, % of SCV fixed cost)", fontsize=12)
+    ax.set_ylabel(r"Premium Factor ($\alpha$)", fontsize=12)
     ax.set_title(
-        "MCV Adoption Landscape\nValues: MCV Share% | Adoption Days | (Pure MCV Days★)",
-        fontsize=14,
-        weight="bold",
-        pad=20,
+        "Values: MCV Share% | Adoption Days/70 | (Pure MCV Days*)",
+        fontsize=11,
+        pad=12,
     )
 
     # Colorbar
@@ -287,10 +290,16 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
 
     plt.tight_layout()
 
-    # Save
-    output_path = output_dir / "mcv_adoption_heatmap.png"
-    fig.savefig(output_path, dpi=300, bbox_inches="tight")
-    print(f"\n✓ Heatmap saved: {output_path}")
+    # Save as PDF (primary format for paper)
+    output_path_pdf = output_dir / "mcv_adoption_heatmap.pdf"
+    fig.savefig(output_path_pdf, format="pdf", bbox_inches="tight")
+    print(f"\n✓ Heatmap saved: {output_path_pdf}")
+
+    # Save as PNG (for README display)
+    output_path_png = output_dir / "mcv_adoption_heatmap.png"
+    fig.savefig(output_path_png, dpi=300, bbox_inches="tight")
+    print(f"✓ Heatmap saved: {output_path_png}")
+
     plt.close(fig)
 
 

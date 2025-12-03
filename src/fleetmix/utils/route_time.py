@@ -293,8 +293,24 @@ class BHHEstimator:
         customers = _unique_physical_stops(cluster_customers)
         n_phys = len(customers)
 
-        if n_phys <= 1:
-            return calculate_total_service_time_hours(n_phys, context.service_time), []
+        if n_phys == 0:
+            return 0.0, []
+
+        if n_phys == 1:
+            # For a single customer, BHH reduces to:
+            # Travel time = 2 * distance(Depot, Customer) / speed
+            # + Service time
+            lat = customers["Latitude"].iloc[0]
+            lon = customers["Longitude"].iloc[0]
+            depot_dist_km = haversine(
+                (context.depot.latitude, context.depot.longitude),
+                (lat, lon),
+            )
+            travel_time = 2 * depot_dist_km / context.avg_speed
+            service_time = calculate_total_service_time_hours(
+                n_phys, context.service_time
+            )
+            return travel_time + service_time, []
 
         # Service-time component uses *all* pseudo-customers
         service_time_total = calculate_total_service_time_hours(
@@ -333,15 +349,30 @@ class TSPEstimator:
         context: RouteTimeContext,
     ) -> tuple[float, list[str]]:
         customers = _unique_physical_stops(cluster_customers)
+        num_customers = len(customers)
 
-        # TODO: tsp estimation, with & withoouth pseudo-customers logic
-        # --- Optional pruning ------------------------------------------------
+        # --- Quick service time feasibility check (O(1)) ---
+        # If service time alone exceeds max_route_time, cluster is infeasible
+        # (no need to run expensive TSP)
+        if context.max_route_time is not None:
+            service_time_hours = calculate_total_service_time_hours(
+                num_customers, context.service_time
+            )
+            if service_time_hours > context.max_route_time:
+                logger.debug(
+                    f"Service time alone ({service_time_hours:.2f}h) exceeds max route time "
+                    f"({context.max_route_time}h). Skipping TSP for {num_customers} customers."
+                )
+                return context.max_route_time * 1.01, []
+
+        # --- Optional BHH pruning ------------------------------------------------
         if context.prune_tsp and context.max_route_time is not None:
             bhh_estimator = BHHEstimator()
             # Pass *full* cluster_customers so BHH counts service time for all
             bhh_time, _ = bhh_estimator.estimate_route_time(cluster_customers, context)
-            # Add a 20% margin to account for BHH underestimation
-            if bhh_time > context.max_route_time * 1.2:
+            # Use 5% margin - BHH underestimates actual route time, so if BHH
+            # is already close to max_route_time, TSP will almost certainly exceed it
+            if bhh_time > context.max_route_time * 1.05:
                 return context.max_route_time * 1.01, []
 
         # Solve TSP on physical stops only
@@ -448,11 +479,14 @@ class TSPEstimator:
             cluster_customer_ids = cluster_customers["Customer_ID"].tolist()
             for customer_id in cluster_customer_ids:
                 idx = customer_id_to_idx.get(customer_id)
+                if idx is None and "::" in str(customer_id):
+                    # Pseudo customer ID (e.g., "C_143::Frozen") - extract origin ID
+                    # Pseudo customers share the same location as their parent
+                    origin_id = str(customer_id).split("::")[0]
+                    idx = customer_id_to_idx.get(origin_id)
                 if idx is not None:
                     cluster_indices.append(idx)
                 else:
-                    # This case should ideally not happen if build_distance_duration_matrices
-                    # was called with the full customer set. Log a warning if it does.
                     missing_ids.append(customer_id)
 
             if missing_ids:
@@ -617,7 +651,7 @@ class TSPEstimator:
             # Convert total duration to hours
             return total_duration_seconds / 3600.0, sequence
         else:
-            logger.warning(
+            logger.debug(
                 f"TSP solution infeasible for cluster. Returning max time. Num customers: {num_customers}"
             )
             # Return the max route time from context (or slightly higher)

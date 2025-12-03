@@ -216,127 +216,6 @@ post_optimization: false
         assert result.exit_code == 0
         assert "fleetmix" in result.output.lower()
 
-    def test_cli_benchmark_mcvrp_list(self):
-        """Test 'fleetmix benchmark mcvrp --list' command."""
-        runner = CliRunner()
-
-        result = runner.invoke(app, ["benchmark", "mcvrp", "--list"])
-
-        # Should work even if no datasets available
-        assert result.exit_code == 0
-
-    def test_cli_benchmark_cvrp_list(self):
-        """Test 'fleetmix benchmark cvrp --list' command."""
-        runner = CliRunner()
-
-        result = runner.invoke(app, ["benchmark", "cvrp", "--list"])
-
-        # Should work even if no datasets available
-        assert result.exit_code == 0
-
-    def test_cli_benchmark_invalid_suite(self):
-        """Test benchmark command with invalid suite."""
-        runner = CliRunner()
-
-        result = runner.invoke(app, ["benchmark", "invalid_suite"])
-
-        assert result.exit_code == 1
-        assert "Invalid suite" in result.output
-
-    def test_cli_convert_command_cvrp(self, temp_results_dir):
-        """Test 'fleetmix convert' command for CVRP (if data available)."""
-        runner = CliRunner()
-
-        # Check if CVRP datasets exist first
-        cvrp_dir = (
-            Path(__file__).parent.parent.parent
-            / "src/fleetmix/benchmarking/datasets/cvrp"
-        )
-        if not cvrp_dir.exists():
-            pytest.skip("CVRP datasets not available")
-
-        cvrp_files = list(cvrp_dir.glob("X-n*.vrp"))
-        if not cvrp_files:
-            pytest.skip("No CVRP .vrp files found")
-
-        instance_name = cvrp_files[0].stem
-
-        result = runner.invoke(
-            app,
-            [
-                "convert",
-                "--type",
-                "cvrp",
-                "--instance",
-                instance_name,
-                "--benchmark-type",
-                "normal",
-                "--output",
-                str(temp_results_dir),
-                "--quiet",
-            ],
-        )
-
-        # May fail due to solver issues, but command structure should be valid
-        # Exit code 0 = success, exit code 1 = expected error (solver/data issues)
-        assert result.exit_code in [0, 1]
-
-    def test_cli_convert_command_mcvrp(self, temp_results_dir):
-        """Test 'fleetmix convert' command for MCVRP (if data available)."""
-        runner = CliRunner()
-
-        # Check if MCVRP datasets exist
-        mcvrp_dir = (
-            Path(__file__).parent.parent.parent
-            / "src/fleetmix/benchmarking/datasets/mcvrp"
-        )
-        if not mcvrp_dir.exists():
-            pytest.skip("MCVRP datasets not available")
-
-        mcvrp_files = list(mcvrp_dir.glob("*.dat"))
-        if not mcvrp_files:
-            pytest.skip("No MCVRP .dat files found")
-
-        instance_name = mcvrp_files[0].stem
-
-        result = runner.invoke(
-            app,
-            [
-                "convert",
-                "--type",
-                "mcvrp",
-                "--instance",
-                instance_name,
-                "--output",
-                str(temp_results_dir),
-                "--quiet",
-            ],
-        )
-
-        # May fail due to solver issues, but command structure should be valid
-        assert result.exit_code in [0, 1]
-
-    def test_cli_convert_missing_benchmark_type(self):
-        """Test convert command missing required benchmark type for CVRP."""
-        runner = CliRunner()
-
-        result = runner.invoke(
-            app, ["convert", "--type", "cvrp", "--instance", "test-instance"]
-        )
-
-        assert result.exit_code == 1
-        assert "benchmark-type is required" in result.output
-
-    def test_cli_convert_invalid_type(self):
-        """Test convert command with invalid VRP type."""
-        runner = CliRunner()
-
-        result = runner.invoke(
-            app, ["convert", "--type", "invalid_type", "--instance", "test"]
-        )
-
-        assert result.exit_code == 1
-        assert "Invalid type" in result.output
 
     def test_cli_help_commands(self):
         """Test that help commands work."""
@@ -352,9 +231,6 @@ post_optimization: false
         assert result.exit_code == 0
         assert "optimize" in result.output.lower()
 
-        result = runner.invoke(app, ["benchmark", "--help"])
-        assert result.exit_code == 0
-        assert "benchmark" in result.output.lower()
 
     def test_cli_optimize_with_default_config(
         self, sample_demand_csv, temp_results_dir

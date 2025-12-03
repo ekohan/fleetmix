@@ -10,7 +10,6 @@ import dataclasses
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 from rich.console import Console
 
 from fleetmix import api
@@ -19,14 +18,20 @@ from fleetmix.experiments.reproduce_paper.utils import (
     ProgressTracker,
     aggregate_results_to_dataframe,
     ensure_output_dir,
-    load_json_results,
     print_summary_stats,
     save_summary_table,
     skip_if_exists,
 )
 from fleetmix.utils.data_processing import load_customer_demand
-from fleetmix.utils.logging import log_error, log_info, log_success
+from fleetmix.utils.logging import log_error, log_success
 from fleetmix.utils.save_results import save_optimization_results
+
+__all__ = [
+    "get_demand_files",
+    "get_sensitivity_configs",
+    "run_config_on_demand_day",
+    "run_sensitivity_analysis",
+]
 
 console = Console()
 

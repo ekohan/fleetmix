@@ -86,8 +86,7 @@ clustering:
   geo_weight: 0.7
   demand_weight: 0.3
   route_time_estimation: BHH
-prune_tsp: false
-demand_file: sales_2024_avg_day_demand.csv
+prune_tsp: true  # Skip TSP based on BHH estimate
 light_load_penalty: 0
 light_load_threshold: 0
 compartment_setup_cost: 10

@@ -255,8 +255,8 @@ class TestBHHEstimation(unittest.TestCase):
             cluster, self.depot, self.service_time, self.avg_speed, method="BHH"
         )
 
-        # Should be just service time for single customer
-        self.assertEqual(time, 0.5)  # 30 minutes = 0.5 hours
+        self.assertGreater(time, 1.5)
+        self.assertLess(time, 1.6)
 
     def test_bhh_estimation_empty_cluster(self):
         """Test BHH estimation with empty cluster."""
@@ -391,7 +391,7 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
         # Should return slightly over max route time
         self.assertAlmostEqual(time, 8.08, places=2)
         self.assertEqual(sequence, [])
-        mock_logger.warning.assert_called()
+        mock_logger.debug.assert_called()
 
     def test_tsp_estimation_missing_customer_in_cache(self):
         """Test TSP estimation when customer is missing from cache."""

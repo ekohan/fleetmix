@@ -116,7 +116,7 @@ allow_split_stops: true  # Allow customers to be served by multiple vehicles (pe
 # IO 
 
 # Output format
-format: 'json'  # Output format (excel or json)
+format: 'json'  # Output format (xlsx or json)
 
 # Runtime parameters
 gap_rel: 0.005 # 0.5%

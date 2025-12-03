@@ -35,7 +35,7 @@ depot:
 
 goods: [dry]
 demand_file: some.csv
-format: csv
+format: json
 clustering:
   geo_weight: 0.7
   demand_weight: 0.3

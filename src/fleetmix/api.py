@@ -187,7 +187,7 @@ def optimize(
 
     Args:
         demand: Customer demand data - can be:
-            - Path to CSV/Excel file containing customer demand data
+            - Path to CSV file containing customer demand data
             - Pandas DataFrame with demand data
         config: Configuration parameters - can be:
             - String path to YAML configuration file

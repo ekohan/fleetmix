@@ -81,7 +81,7 @@ pre_nearest_merge_candidates: 50
 
 
 # Output format
-format: 'json'  # Output format (excel or json)
+format: 'json'  # Output format (xlsx or json)
 
 # ---------------------------------------------------------------------------
 # RUNTIME params

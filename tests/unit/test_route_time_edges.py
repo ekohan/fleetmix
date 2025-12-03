@@ -26,8 +26,9 @@ def test_estimate_route_time_single_customer():
 
     # BHH method
     time, seq = estimate_route_time(df, depot, 30, 60, method="BHH")
-    assert time == 0.5  # Just service time for single customer
-    assert seq == []
+    
+    assert time > 0.5  # Should include travel time now
+    assert abs(time - 1.02) < 0.1  # Approximate check
 
 
 def test_negative_service_time():

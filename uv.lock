@@ -625,6 +625,7 @@ dependencies = [
     { name = "seaborn" },
     { name = "streamlit" },
     { name = "streamlit-folium" },
+    { name = "tabulate" },
     { name = "tqdm" },
     { name = "typer" },
     { name = "vrplib" },
@@ -679,6 +680,7 @@ requires-dist = [
     { name = "seaborn" },
     { name = "streamlit" },
     { name = "streamlit-folium" },
+    { name = "tabulate" },
     { name = "tqdm" },
     { name = "typer", extras = ["all"], specifier = ">=0.9.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
@@ -1355,6 +1357,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/18/f3/dd4a3a597f8873a5f5d210347c91700120b2164bffe45a4447c19a0ee961/kmedoids-0.5.3.1-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:51aa773b0198247d0b7e4c34f46222c4171cce2f08350398a2114be75cf2fe88", size = 554955, upload-time = "2024-12-09T20:32:30.418Z" },
     { url = "https://files.pythonhosted.org/packages/13/00/db275119d948dfc0209ee0c553eb5563c1ea000222b34662ed732b8d1dc8/kmedoids-0.5.3.1-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:001653add88e79f657995ee0b45cf5499b259211f67639a7dbed4e0eeef23b28", size = 587849, upload-time = "2024-12-09T20:32:32.209Z" },
     { url = "https://files.pythonhosted.org/packages/35/61/4c0b98f0c220322e8ec07d7f0efa98bc2484dc841b073c688ca716149712/kmedoids-0.5.3.1-cp313-none-win_amd64.whl", hash = "sha256:310273843091960798f27dd2087e9f375dcd78db71e8cfb3ee0004e7b7d7a54c", size = 378713, upload-time = "2024-12-09T20:32:33.616Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/a8/904e8886c17aaa4abe90d4186a1bbcce46c4b97f94030f05005c6712493a/kmedoids-0.5.3.1-cp314-cp314-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:b4517725ce9d31c3b850b64827dfaf3775541d8c1c2ce6c1784a270ca4670792", size = 832331, upload-time = "2025-11-03T23:07:15.958Z" },
+    { url = "https://files.pythonhosted.org/packages/18/c4/8762854c1f102ac9a8d451526385826d185d63cd0e42b9d1b91a4c6e6599/kmedoids-0.5.3.1-cp314-cp314-manylinux_2_28_aarch64.whl", hash = "sha256:e6b471ab922c1ca7b085068a1fce637c944dc473cf9f81cbb6daae8392c3fac0", size = 435631, upload-time = "2025-11-03T23:07:18.205Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/68/7fdecc49594a5eeb74d9acfd2e672e25f72d0dc7bda18035a1dcdce16f15/kmedoids-0.5.3.1-cp314-cp314-manylinux_2_28_x86_64.whl", hash = "sha256:3bfb571b5670cbe8e87b88d23d76cf29dfe046d9dc86077efe5c2c53d49273e6", size = 476649, upload-time = "2025-11-03T23:07:20.395Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/f0/575af16554345a287fdca91ba63a1fa94707b46ade7b30c00a1bb9240a19/kmedoids-0.5.3.1-cp314-cp314-musllinux_1_2_aarch64.whl", hash = "sha256:3daf81ae7a8f602ee9f2855aad978a2d09be9d181eaf49ba65658a9ca756d197", size = 500634, upload-time = "2025-11-03T23:07:21.883Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/38/363c5387dd9cc8a5fa65fb7748dcf6ff6aea027f45351ae73048ed3806bc/kmedoids-0.5.3.1-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:f8e374c964b2560a90f0fa9289bee6ca28bbc821cf0e27440d698645298f6920", size = 553504, upload-time = "2025-11-03T23:07:23.277Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/07/5e860a7f4471c9ebd7fb7461b86e26f5e03000e35ae894310b606e7d8d47/kmedoids-0.5.3.1-cp314-none-win_amd64.whl", hash = "sha256:9410779e1d3379c615c104d2c3723188c6dede65ce718599bd95706eb1786c55", size = 390029, upload-time = "2025-11-03T23:07:25.06Z" },
 ]
 
 [[package]]
@@ -2765,6 +2773,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7f/2d/99571b9ac124a4382db1c10d03fd95f5c126a3cbe7191789b5b807890d2c/streamlit_folium-0.25.3.tar.gz", hash = "sha256:5ec11b3eff85ec0d6259e72e5597bd79ca7ad65b8837222220964b78428f415b", size = 522601, upload-time = "2025-09-30T22:45:36.325Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/72/35/d3cdab8cff94971714f866181abb1aa84ad976f6e7b6218a0499197465e4/streamlit_folium-0.25.3-py3-none-any.whl", hash = "sha256:cfdf085764da3f9b5e1e0668f6e4cc0385ff041c98133d023800983a875ca26c", size = 524601, upload-time = "2025-09-30T22:45:34.825Z" },
+]
+
+[[package]]
+name = "tabulate"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/fe/802052aecb21e3797b8f7902564ab6ea0d60ff8ca23952079064155d1ae1/tabulate-0.9.0.tar.gz", hash = "sha256:0095b12bf5966de529c0feb1fa08671671b3368eec77d7ef7ab114be2c068b3c", size = 81090, upload-time = "2022-10-06T17:21:48.54Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f", size = 35252, upload-time = "2022-10-06T17:21:44.262Z" },
 ]
 
 [[package]]

@@ -72,7 +72,7 @@ fleetmix optimize \
   --demand customers.csv \
   --config my_fleet_config.yaml \
   --output results/ \
-  --format excel
+  --format xlsx
 ```
 
 **Step 4**: Review results

@@ -123,13 +123,13 @@ class AlgorithmParams:
 class IOParams:
     """Settings for data input and output pathways."""
 
-    demand_file: str
     results_dir: Path
-    format: str = "json"  # One of: xlsx, json, csv
+    demand_file: str | None = None
+    format: str = "json"  # One of: xlsx, json
 
     def __post_init__(self) -> None:
-        if self.format not in {"xlsx", "json", "csv"}:
-            raise ValueError("IOParams.format must be 'xlsx', 'json' or 'csv'.")
+        if self.format not in {"xlsx", "json"}:
+            raise ValueError("IOParams.format must be 'xlsx' or 'json'.")
 
         # Ensure results_dir is absolute
         if not self.results_dir.is_absolute():

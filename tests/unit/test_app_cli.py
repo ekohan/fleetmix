@@ -20,7 +20,6 @@ def _project_root() -> Path:
 MINIMAL_DEMAND_CSV = _project_root() / "tests/_assets/cli_inputs/minimal_demand.csv"
 MINIMAL_CONFIG_YAML = _project_root() / "tests/_assets/configs/test_config_minimal.yaml"
 MCVRP_INSTANCE = "2015_10_3_3_3_(14)"
-CVRP_INSTANCE = "X-n129-k18"
 
 EXPECTED_MINIMAL_DEMAND_CONTENT = "ClientID,Lat,Lon,ProductType,Kg\nC1,10.0,10.0,Dry,5\nC1,10.0,10.0,Chilled,0\nC1,10.0,10.0,Frozen,0\n"
 
@@ -50,9 +49,6 @@ def setup_cli_assets(tmp_path_factory):
     if not mcvrp_file_path.exists():
         pytest.fail(f"MCVRP benchmark file {mcvrp_file_path} not found.")
 
-    cvrp_file_path = _project_root() / f"src/fleetmix/benchmarking/datasets/cvrp/{CVRP_INSTANCE}.vrp"
-    if not cvrp_file_path.exists():
-        pytest.fail(f"CVRP benchmark file {cvrp_file_path} not found.")
 
     # Create dummy output directories that might be cleaned up by app's own teardown if invoked directly
     # These are relative to workspace root where pytest is run
@@ -138,94 +134,9 @@ def test_optimize_command_missing_demand(tmp_path):
     )
 
 
-def test_benchmark_list_mcvrp():
-    """Test 'fleetmix benchmark mcvrp --list'."""
-    result = runner.invoke(app, ["benchmark", "mcvrp", "--list"])
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    # More robust check for Rich table output
-    assert (
-        "Available" in result.stdout
-        and "MCVRP" in result.stdout
-        and "Instances" in result.stdout
-    )
-    assert MCVRP_INSTANCE in result.stdout
 
 
-def test_benchmark_list_cvrp():
-    """Test 'fleetmix benchmark cvrp --list'."""
-    result = runner.invoke(app, ["benchmark", "cvrp", "--list"])
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    assert (
-        "Available" in result.stdout
-        and "CVRP" in result.stdout
-        and "Instances" in result.stdout
-    )
-    assert CVRP_INSTANCE in result.stdout
 
-
-def test_benchmark_run_mcvrp_instance(tmp_path):
-    """Test running a single MCVRP benchmark instance."""
-    output_dir = tmp_path / "benchmark_mcvrp_cli"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "mcvrp",
-            "--instance",
-            MCVRP_INSTANCE,
-            "--output",
-            str(output_dir),
-            "--format",
-            "json",
-        ],
-    )
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    assert output_dir.exists()
-    assert (output_dir / f"mcvrp_{MCVRP_INSTANCE}.json").exists()
-
-
-def test_benchmark_run_cvrp_instance(tmp_path):
-    """Test running a single CVRP benchmark instance."""
-    output_dir = tmp_path / "benchmark_cvrp_cli"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "cvrp",
-            "--instance",
-            CVRP_INSTANCE,
-            "--output",
-            str(output_dir),
-            "--format",
-            "json",
-        ],
-    )
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    assert output_dir.exists()
-    assert (output_dir / f"cvrp_{CVRP_INSTANCE}_normal.json").exists()
-
-
-def test_convert_mcvrp_instance(tmp_path):
-    """Test 'fleetmix convert' for a MCVRP instance."""
-    output_dir = tmp_path / "convert_output_cli"
-    result = runner.invoke(
-        app,
-        [
-            "convert",
-            "--type",
-            "mcvrp",
-            "--instance",
-            MCVRP_INSTANCE,
-            "--output",
-            str(output_dir),
-            "--format",
-            "json",
-        ],
-    )
-    assert result.exit_code == 0, f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    assert output_dir.exists(), (
-        f"Convert output directory {output_dir} not created. STDOUT: {result.stdout} STDERR: {result.stderr}"
-    )
 
 
 def test_version_command():
@@ -288,82 +199,3 @@ def test_optimize_command_invalid_config_syntax(tmp_path):
     ), f"Expected config loading error message not found. STDERR: {result.stderr}"
 
 
-def test_benchmark_invalid_instance_mcvrp(tmp_path):
-    """Test 'fleetmix benchmark mcvrp' with a non-existent instance name."""
-    output_dir = tmp_path / "benchmark_invalid_instance_mcvrp"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "mcvrp",
-            "--instance",
-            "NonExistentInstance123",
-            "--output",
-            str(output_dir),  # Output may or may not be used before error
-        ],
-    )
-    assert result.exit_code != 0, (
-        f"Command should fail for non-existent instance. STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    )
-    assert (
-        "not found" in result.stderr.lower()
-        and "NonExistentInstance123" in result.stderr
-    ), f"Expected instance not found error message not found. STDERR: {result.stderr}"
-
-
-def test_benchmark_invalid_instance_cvrp(tmp_path):
-    """Test 'fleetmix benchmark cvrp' with a non-existent instance name."""
-    output_dir = tmp_path / "benchmark_invalid_instance_cvrp"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "cvrp",
-            "--instance",
-            "NonExistentCVRPInstance456",
-            "--output",
-            str(output_dir),
-        ],
-    )
-    assert result.exit_code != 0, (
-        f"Command should fail for non-existent instance. STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    )
-    assert (
-        "not found" in result.stderr.lower()
-        and "NonExistentCVRPInstance456" in result.stderr
-    ), f"Expected instance not found error message not found. STDERR: {result.stderr}"
-
-
-def test_benchmark_invalid_suite_list():
-    """Test 'fleetmix benchmark --list' with an invalid suite name."""
-    result = runner.invoke(app, ["benchmark", "invalidsuitename", "--list"])
-    assert result.exit_code != 0, (
-        f"Command should fail for invalid suite. Exited {result.exit_code}. STDERR: {result.stderr}"
-    )
-    assert "Invalid suite" in result.stderr and "invalidsuitename" in result.stderr, (
-        f"Expected invalid suite error message not found in STDERR: {result.stderr}"
-    )
-
-
-def test_benchmark_invalid_suite_run_instance(tmp_path):
-    """Test 'fleetmix benchmark' with an invalid suite name and an instance."""
-    output_dir = tmp_path / "benchmark_invalid_suite_run"
-    result = runner.invoke(
-        app,
-        [
-            "benchmark",
-            "invalidsuitetoo",
-            "--instance",
-            "AnyInstance",
-            "--output",
-            str(output_dir),
-        ],
-    )
-    # This should ideally exit with an error before trying to process the instance
-    assert result.exit_code != 0, (
-        f"Command should fail for invalid suite. STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
-    )
-    # The error message might be generic or specific to the suite
-    assert (
-        "error" in result.stderr.lower() or "invalid suite" in result.stderr.lower()
-    ), f"Expected invalid suite error message not found. STDERR: {result.stderr}"

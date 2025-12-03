@@ -91,12 +91,9 @@ clustering:
   demand_weight: 0.3  # Weight for demand distance (composite-only)
   route_time_estimation: 'BHH'  # Options: TSP, BHH, Legacy
 
-prune_tsp: false  # Skip TSP based on BHH estimate
+prune_tsp: true  # Skip TSP based on BHH estimate
 
 
-# Data Files
-# See options in data/demand_profiles/
-demand_file: "sales_2024_avg_day_demand.csv"
 
 # Math model Parameters
 light_load_penalty: 0  # Adjust penalty value as needed -- 0 == don't penalize
@@ -119,7 +116,7 @@ allow_split_stops: true  # Allow customers to be served by multiple vehicles (pe
 # IO 
 
 # Output format
-format: 'json'  # Output format (excel or json)
+format: 'json'  # Output format (xlsx or json)
 
 # Runtime parameters
 gap_rel: 0.005 # 0.5%

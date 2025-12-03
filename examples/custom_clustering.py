@@ -4,7 +4,7 @@ Demonstrates how to register a user-defined clustering algorithm through the
 `fleetmix.registry` decorator, then run a small optimisation using it.
 
 Run with:
-    python examples/custom_clustering.py
+    uv run python examples/custom_clustering.py
 """
 
 from __future__ import annotations
@@ -12,43 +12,66 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Ensure the plugin is visible (serial mode) *before* FleetMix import, see docs/parallelism.md.
+# 1. Configure environment *before* importing fleetmix.
+# We force serial execution (N_JOBS=1) because our custom plugin is registered
+# at runtime in this script's process. Worker processes in parallel mode would
+# not see this registration unless the plugin was a properly installed package.
 os.environ.setdefault("FLEETMIX_N_JOBS", "1")
+
+# Suppress info logs for a cleaner demo output
+os.environ["FLEETMIX_EFFECTIVE_LOG_LEVEL"] = "QUIET"
 
 import dataclasses
 
 import fleetmix as fm
 
-# Plugin module import – executed for its side-effect of registering itself.
+# 2. Import the plugin module for its side-effect: registering 'round_robin'.
 import fleetmix_example_plugins.round_robin  # noqa: F401
 from fleetmix.config import load_fleetmix_params
 
 
-def main():
-    """Main execution function."""
-    demand_file = Path("tests/_assets/smoke/mini_demand.csv")
+def main() -> None:
+    # Use the standard example dataset
+    demand_file = Path("examples/bogota_demand.csv")
 
-    # Start with default config
+    # 1. Load default configuration
     params = load_fleetmix_params("src/fleetmix/config/default_config.yaml")
-    # Update clustering method using dataclasses.replace for immutable params
-    params_with_custom_clusterer = dataclasses.replace(
+
+    # 2. Switch to our custom 'round_robin' clustering method
+    # We use dataclasses.replace because FleetmixParams are immutable
+    params = dataclasses.replace(
         params,
         algorithm=dataclasses.replace(
             params.algorithm, clustering_method="round_robin"
         ),
     )
 
-    solution = fm.optimize(demand=demand_file, config=params_with_custom_clusterer)
+    print("Running optimization with custom 'round_robin' clusterer...")
+    print(f"Dataset: {demand_file}")
 
-    print("Selected clusters (ID -> customers):")
-    for cluster in solution.selected_clusters:
-        print(
-            f"  Cluster {cluster.cluster_id} (Config {cluster.config_id}): {cluster.customers} | Total Demand: {cluster.total_demand}"
+    # 3. Run optimization
+    solution = fm.optimize(demand=demand_file, config=params)
+
+    # 4. Display results
+    print("\n" + "=" * 40)
+    print("       CUSTOM CLUSTERING RESULTS       ")
+    print("=" * 40)
+
+    print(f"\nTotal Cost: ${solution.total_cost:,.2f}")
+    print(f"Vehicles Used: {len(solution.selected_clusters)}")
+
+    print("\nCluster Assignments:")
+    for i, cluster in enumerate(solution.selected_clusters):
+        print(f"  Cluster {i + 1}:")
+        print(f"    Vehicle: {cluster.vehicle_type} (Config {cluster.config_id})")
+        print(f"    Customers: {', '.join(cluster.customers)}")
+        total_demand_str = ", ".join(
+            [f"{k}={v}" for k, v in cluster.total_demand.items() if v > 0]
         )
+        print(f"    Total Demand: {total_demand_str}")
 
-    print(
-        "Optimisation complete with custom clusterer – total cost:", solution.total_cost
-    )
+    print("\n" + "-" * 40)
+    print(f"Detailed results saved to: {params.io.results_dir}")
 
 
 if __name__ == "__main__":

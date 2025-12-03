@@ -35,6 +35,8 @@ from fleetmix.experiments.fleet_composition.metrics import (
 from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.utils.logging import LogLevel, setup_logging
 
+__all__ = ["convert_numpy_types", "main"]
+
 PKG_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = PKG_DIR / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)

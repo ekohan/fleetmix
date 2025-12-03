@@ -82,7 +82,7 @@ demand_file: test_demand.csv
 light_load_penalty: 50
 light_load_threshold: 0.5
 compartment_setup_cost: 10
-format: csv
+format: json
 variable_cost_per_hour: 50
 """
         config_file = tmp_path / "test_config.yaml"
@@ -127,7 +127,7 @@ demand_file: test_demand.csv
 light_load_penalty: 50
 light_load_threshold: 0.5
 compartment_setup_cost: 10
-format: csv
+format: json
 variable_cost_per_hour: 50
 """
         config_file = tmp_path / "test_config.yaml"
@@ -177,7 +177,7 @@ demand_file: test_demand.csv
 light_load_penalty: 50
 light_load_threshold: 0.5
 compartment_setup_cost: 10
-format: csv
+format: json
 variable_cost_per_hour: 50
 """
         config_file = tmp_path / "test_config.yaml"
@@ -218,7 +218,7 @@ demand_file: test_demand.csv
 light_load_penalty: 50
 light_load_threshold: 0.5
 compartment_setup_cost: 10
-format: csv
+format: json
 variable_cost_per_hour: 50
 """
         config_file = tmp_path / "test_config.yaml"

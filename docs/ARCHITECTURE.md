@@ -209,7 +209,7 @@ Final Solution
 utils.save_results.format_solution()
     │
     ├─→ JSON
-    ├─→ Excel
+    ├─→ Xlsx
     └─→ HTML Report
 ```
 

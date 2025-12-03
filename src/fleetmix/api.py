@@ -22,6 +22,8 @@ from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
+__all__ = ["optimize"]
+
 logger = FleetmixLogger.get_logger("fleetmix.api")
 
 
@@ -185,7 +187,7 @@ def optimize(
 
     Args:
         demand: Customer demand data - can be:
-            - Path to CSV/Excel file containing customer demand data
+            - Path to CSV file containing customer demand data
             - Pandas DataFrame with demand data
         config: Configuration parameters - can be:
             - String path to YAML configuration file

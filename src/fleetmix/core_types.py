@@ -422,7 +422,6 @@ class FleetmixSolution:
     optimality_gap: float | None = (
         None  # Relative optimality gap (%) or None if unavailable
     )
-    # TODO: add list of vehicleconfigs; make run_opt return fleetmixsolution only
 
     def __post_init__(self) -> None:
         """Calculate total cost after initialization."""

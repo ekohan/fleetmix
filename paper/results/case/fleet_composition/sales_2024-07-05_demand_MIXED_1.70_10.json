@@ -1,0 +1,98 @@
+{
+  "instance": "sales_2024-07-05_demand",
+  "fleet_type": "MIXED",
+  "alpha": 1.7000000000000002,
+  "C": 10.0,
+  "alpha_pct": 70.00000000000001,
+  "C_pct_scv": 10.0,
+  "allow_split_stops": true,
+  "total_cost": 2993.9232652743076,
+  "total_vehicles": 11,
+  "vehicles_used": {
+    "MCV_A": 11
+  },
+  "scv_vehicles": 0,
+  "mcv_vehicles": 11,
+  "mcv_share": 1.0,
+  "num_customers": 177,
+  "total_demand": 17694.0,
+  "cost_per_drop": 16.91482070776445,
+  "cost_per_kg": 0.1692055648962534,
+  "split_rate": 0.011299435028248588,
+  "average_visits_per_customer": 1.0112994350282485,
+  "total_route_time_hours": 93.39232652743077,
+  "total_fixed_cost": 1870.0000000000002,
+  "total_variable_cost": 933.9232652743077,
+  "total_penalties": 189.99999999999955,
+  "total_light_load_penalties": -4.547473508864641e-13,
+  "total_compartment_penalties": 190.0,
+  "solver_runtime_sec": 0.0191497802734375,
+  "solver_status": "Optimal",
+  "optimality_gap": 0.0,
+  "time_measurements": [
+    {
+      "span_name": "vehicle_configuration",
+      "wall_time": 1.8583989003673196e-05,
+      "process_user_time": 0.0,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    {
+      "span_name": "clustering_phase1",
+      "wall_time": 3.93771579200984,
+      "process_user_time": 1.5299999999988358,
+      "process_system_time": 0.020000000000010232,
+      "children_user_time": 1.430000000000291,
+      "children_system_time": 0.27999999999974534
+    },
+    {
+      "span_name": "fsm_phase1",
+      "wall_time": 1.3854704999830574,
+      "process_user_time": 0.9099999999998545,
+      "process_system_time": 0.029999999999972715,
+      "children_user_time": 1.139999999999418,
+      "children_system_time": 0.2699999999999818
+    },
+    {
+      "span_name": "fsm_post_optimization_phase1",
+      "wall_time": 0.004297209001379088,
+      "process_user_time": 0.0,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    {
+      "span_name": "clustering_phase2",
+      "wall_time": 6.054417083010776,
+      "process_user_time": 3.360000000000582,
+      "process_system_time": 0.020000000000010232,
+      "children_user_time": 1.4400000000005093,
+      "children_system_time": 0.2800000000002001
+    },
+    {
+      "span_name": "fsm_phase2",
+      "wall_time": 3.4807645000109915,
+      "process_user_time": 2.459999999999127,
+      "process_system_time": 0.030000000000001137,
+      "children_user_time": 2.25,
+      "children_system_time": 0.5900000000001455
+    },
+    {
+      "span_name": "fsm_post_optimization_phase2",
+      "wall_time": 0.005174291000002995,
+      "process_user_time": 0.00999999999839929,
+      "process_system_time": 0.0,
+      "children_user_time": 0.0,
+      "children_system_time": 0.0
+    },
+    {
+      "span_name": "global",
+      "wall_time": 14.890124833997106,
+      "process_user_time": 8.290000000000873,
+      "process_system_time": 0.09999999999999432,
+      "children_user_time": 6.260000000000218,
+      "children_system_time": 1.4200000000000728
+    }
+  ]
+}

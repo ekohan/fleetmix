@@ -1,9 +1,9 @@
 """
-Unit tests for alpha_analysis metrics.
+Unit tests for fleet_composition metrics.
 """
 
 import pytest
-from fleetmix.experiments.alpha_analysis.metrics import cost_per_drop, cost_per_kg, split_rate, average_visits_per_customer
+from fleetmix.experiments.fleet_composition.metrics import cost_per_drop, cost_per_kg, split_rate, average_visits_per_customer
 from fleetmix.core_types import FleetmixSolution, Cluster
 
 def test_cost_per_drop():

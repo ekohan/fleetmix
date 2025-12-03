@@ -20,7 +20,7 @@ See `docs/experimental_design.md` for full methodological details.
 
 **`base_config.yaml`** - Template configuration used by experiment scripts
 
-The scripts in `src/fleetmix/experiments/alpha_analysis/` programmatically generate:
+The scripts in `src/fleetmix/experiments/fleet_composition/` programmatically generate:
 - SCV-only fleets (one specialized vehicle per product type)
 - MCV homogeneous fleets (with varying α and C)
 - Mixed fleets (SCV + MCV with endogenous selection)
@@ -28,8 +28,6 @@ The scripts in `src/fleetmix/experiments/alpha_analysis/` programmatically gener
 ## Usage
 
 This config is not meant to be run directly. It's loaded programmatically by:
-- `experiments/alpha_analysis/fleet_templates.py`
-- `experiments/alpha_analysis/run_grid.py`
-- `experiments/alpha_analysis/run_grid_mixed.py`
-- `experiments/alpha_analysis/run_day.py`
+- `experiments/fleet_composition/fleet_templates.py`
+- `experiments/fleet_composition/run_grid_mixed.py`
 

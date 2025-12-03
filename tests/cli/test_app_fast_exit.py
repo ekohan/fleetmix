@@ -38,13 +38,13 @@ def base_env() -> dict[str, str]:
 
 
 MINIMAL_CONFIG = Path("tests/_assets/configs/test_config_minimal.yaml")
-MCVRP_INSTANCE = "2015_10_3_3_1_(09)"
+MCVRP_INSTANCE = "2015_10_3_3_1_(00)_dummy"
 CVRP_INSTANCE = "X-n129-k18"
 CASE_INSTANCE = "sales_2024-06-01_demand"
 
 
 def _project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    return Path(__file__).resolve().parents[2]
 
 
 def test_optimize_fast_exit_creates_output_dir(
@@ -245,40 +245,6 @@ def test_version_command_outputs_version(runner: CliRunner) -> None:
     assert __version__ in result.stdout
 
 
-def test_experiments_run_alpha_analysis_invokes_main(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    called: dict[str, bool] = {}
-
-    def fake_main(config_path: Path | None) -> None:
-        called["run"] = True
-        assert config_path is None
-
-    monkeypatch.setattr(
-        "fleetmix.experiments.alpha_analysis.run_grid.main", fake_main
-    )
-
-    result = runner.invoke(app, ["exp", "run", "--experiment", "alpha_analysis"])
-
-    assert result.exit_code == 0
-    assert called.get("run") is True
-
-
-def test_experiments_missing_experiment_errors(runner: CliRunner, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level("ERROR"):
-        result = runner.invoke(app, ["exp", "run"])
-
-    assert result.exit_code != 0
-    assert "Missing --experiment" in caplog.text
-
-
-def test_experiments_unknown_action_errors(runner: CliRunner, caplog: pytest.LogCaptureFixture) -> None:
-    with caplog.at_level("ERROR"):
-        result = runner.invoke(app, ["exp", "unknown", "--experiment", "alpha_analysis"])
-
-    assert result.exit_code != 0
-    assert "Unknown action" in caplog.text
-
 
 def test_optimize_normal_flow_creates_results(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -293,7 +259,7 @@ def test_optimize_normal_flow_creates_results(
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "cli-normal")
     monkeypatch.setenv("FLEETMIX_SKIP_OPTIMISE", "0")
 
-    def fake_api_optimize(**kwargs):
+    def fake_optimize(**kwargs):
         out = Path(kwargs["output_dir"])
         out.mkdir(parents=True, exist_ok=True)
         (out / "summary.json").write_text("{}")
@@ -308,7 +274,7 @@ def test_optimize_normal_flow_creates_results(
             solver_runtime_sec=0.1,
         )
 
-    monkeypatch.setattr("fleetmix.app.api_optimize", fake_api_optimize)
+    monkeypatch.setattr("fleetmix.app.api.optimize", fake_optimize)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -389,7 +355,7 @@ def test_convert_cvrp_normal_flow(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     saved: dict[str, str] = {}
 
     monkeypatch.setattr("fleetmix.app.convert_to_fsm", fake_convert)
-    monkeypatch.setattr("fleetmix.app.run_optimization", lambda **kwargs: fake_run_optimization())
+    monkeypatch.setattr("fleetmix.app.api.optimize", lambda **kwargs: fake_run_optimization())
     monkeypatch.setattr("fleetmix.app.save_optimization_results", lambda **kwargs: saved.setdefault("filename", kwargs["filename"]))
     monkeypatch.setattr("fleetmix.app.FleetmixParams.apply_instance_spec", lambda self, spec: self)
 

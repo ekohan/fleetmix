@@ -141,20 +141,18 @@ def test_setup_logging_priority(mock_setup_logging):
     [
         ("mcvrp", "ut_temp_mcvrp", "mcvrp_ut_temp_mcvrp.json"),
         ("cvrp", "ut_temp_cvrp", "cvrp_ut_temp_cvrp_normal.json"),
-        ("case", "ut_temp_case", "case_default-ut_temp_case.json"),
+        ("case", "ut_temp_case", "case_ut_temp_case.json"),
     ],
 )
 @patch("fleetmix.app.save_optimization_results")
-@patch("fleetmix.app.run_optimization")
+@patch("fleetmix.app.api.optimize")
 @patch("fleetmix.app.convert_to_fsm")
-@patch("fleetmix.app.generate_vehicle_configurations", return_value=[])
 @patch("fleetmix.app.FleetmixParams.apply_instance_spec", lambda self, spec: self)
 @patch("fleetmix.app.log_success")
 @patch("fleetmix.app.log_progress")
 def test_run_single_instance_success(
     _mock_progress,
     _mock_success,
-    _mock_configs,
     mock_convert,
     mock_run,
     mock_save,
@@ -243,7 +241,7 @@ def test_run_single_instance_missing_file(suite, missing_message, tmp_path):
 
 
 @patch("fleetmix.app.log_error")
-@patch("fleetmix.app.run_optimization")
+@patch("fleetmix.app.api.optimize")
 @patch("fleetmix.app.convert_to_fsm", return_value=(pd.DataFrame(), MagicMock()))
 @patch("fleetmix.app.load_fleetmix_params")
 def test_run_all_mcvrp_instances_handles_errors(
@@ -325,8 +323,11 @@ def test_run_all_case_instances_success(
     )
 
     run_calls: list[Path] = []
-    def fake_run(customers_df: pd.DataFrame, params: FleetmixParams):
-        run_calls.append(params.io.results_dir)
+    def fake_run(**kwargs):
+        # api.optimize signature: demand, config, output_dir, format, verbose
+        params = kwargs.get("config")
+        if params:
+            run_calls.append(params.io.results_dir)
         return MagicMock(
             total_cost=1.0,
             total_fixed_cost=0.5,
@@ -340,8 +341,7 @@ def test_run_all_case_instances_success(
 
     saves: list[str] = []
 
-    monkeypatch.setattr("fleetmix.app.run_optimization", fake_run)
-    monkeypatch.setattr("fleetmix.app.generate_vehicle_configurations", lambda *args, **kwargs: [])
+    monkeypatch.setattr("fleetmix.app.api.optimize", fake_run)
     monkeypatch.setattr(
         "fleetmix.app.save_optimization_results",
         lambda **kwargs: saves.append(kwargs["filename"]),

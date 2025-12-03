@@ -273,7 +273,7 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
     ax.set_xlabel("Compartment Setup Factor (c, % of SCV fixed cost)", fontsize=12)
     ax.set_ylabel(r"Premium Factor ($\alpha$)", fontsize=12)
     ax.set_title(
-        "Values: MCV Share% | Adoption Days/70 | (Pure MCV Days*)",
+        "Values: MCV Share (%) | Adoption Days / 70 | (Pure MCV Days *)",
         fontsize=11,
         pad=12,
     )

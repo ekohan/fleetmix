@@ -36,9 +36,6 @@ def extract_optimality_gap(model: Any, solver: Any) -> float | None:
     Returns:
         Optimality gap in percentage points, or None if unavailable
     """
-    # TODO: toggle as runtime/io feature
-    import pulp
-
     # ------------------------------------------------------------------
     # Try to get gap from model attributes first
     # ------------------------------------------------------------------
@@ -110,8 +107,8 @@ class GurobiAdapter:
             params: Runtime parameters containing verbose, gap_rel, and time_limit settings.
         """
         msg = 1 if params.debug else 0
+        # keepFiles=True required to persist gurobi.log for optimality gap extraction
         kwargs: dict[str, Any] = {"msg": msg, "keepFiles": True}
-        # TODO: check if keepFiles is still needed
         # Only pass gapRel when an explicit tolerance is requested – omitting
         # it forces the solver to strive for optimality with gap = 0.
         if params.gap_rel is not None:
@@ -184,7 +181,6 @@ def pick_solver(params: RuntimeParams) -> Any:
     3. If 'auto': try GUROBI_CMD, fall back to PULP_CBC_CMD.
     """
     # Environment variable takes precedence over params
-    # TODO: check if env var still relevant
     env_choice = os.getenv("FSM_SOLVER")
     choice = (env_choice or params.solver).lower()
 

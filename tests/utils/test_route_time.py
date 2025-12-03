@@ -255,8 +255,8 @@ class TestBHHEstimation(unittest.TestCase):
             cluster, self.depot, self.service_time, self.avg_speed, method="BHH"
         )
 
-        # Should be just service time for single customer
-        self.assertEqual(time, 0.5)  # 30 minutes = 0.5 hours
+        self.assertGreater(time, 1.5)
+        self.assertLess(time, 1.6)
 
     def test_bhh_estimation_empty_cluster(self):
         """Test BHH estimation with empty cluster."""

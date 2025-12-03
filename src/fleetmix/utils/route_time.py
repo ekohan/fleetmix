@@ -293,8 +293,24 @@ class BHHEstimator:
         customers = _unique_physical_stops(cluster_customers)
         n_phys = len(customers)
 
-        if n_phys <= 1:
-            return calculate_total_service_time_hours(n_phys, context.service_time), []
+        if n_phys == 0:
+            return 0.0, []
+
+        if n_phys == 1:
+            # For a single customer, BHH reduces to:
+            # Travel time = 2 * distance(Depot, Customer) / speed
+            # + Service time
+            lat = customers["Latitude"].iloc[0]
+            lon = customers["Longitude"].iloc[0]
+            depot_dist_km = haversine(
+                (context.depot.latitude, context.depot.longitude),
+                (lat, lon),
+            )
+            travel_time = 2 * depot_dist_km / context.avg_speed
+            service_time = calculate_total_service_time_hours(
+                n_phys, context.service_time
+            )
+            return travel_time + service_time, []
 
         # Service-time component uses *all* pseudo-customers
         service_time_total = calculate_total_service_time_hours(

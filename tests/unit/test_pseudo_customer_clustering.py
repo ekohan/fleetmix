@@ -68,7 +68,7 @@ def test_estimate_clusters_with_regular_customers():
     # Create regular customers without pseudo-customer IDs
     regular_customers_data = [
         {"Customer_ID": "C1", "Dry_Demand": 100, "Chilled_Demand": 50, "Frozen_Demand": 30, "Latitude": 0, "Longitude": 0},
-        {"Customer_ID": "C2", "Dry_Demand": 80, "Chilled_Demand": 40, "Frozen_Demand": 20, "Latitude": 1, "Longitude": 1},
+        {"Customer_ID": "C2", "Dry_Demand": 80, "Chilled_Demand": 40, "Frozen_Demand": 20, "Latitude": 0.1, "Longitude": 0.1},
     ]
     
     df = pd.DataFrame(regular_customers_data)

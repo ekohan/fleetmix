@@ -516,16 +516,16 @@ def visualize_clusters(
     selected_clusters: pd.DataFrame, depot_coords: tuple, filename: str
 ) -> None:
     """
-    Create and save an interactive map visualization of the clusters in Bogotá.
+    Create and save an interactive map visualization of the clusters.
 
     Args:
         selected_clusters: DataFrame containing cluster information
         depot_coords: Tuple of (latitude, longitude) coordinates for the depot
         filename: Base filename to save the plot (will append _clusters.html)
     """
-    # Initialize the map centered on Bogotá
+    # Initialize the map centered on the depot
     m = folium.Map(
-        location=[4.65, -74.1],  # Bogotá center
+        location=depot_coords,
         zoom_start=11,
         tiles="CartoDB positron",
     )
@@ -540,6 +540,9 @@ def visualize_clusters(
         icon=folium.Icon(color="red", icon="home", prefix="fa"),
         popup="Depot",
     ).add_to(m)
+
+    # Collect points for bounds
+    points = [depot_coords]
 
     # Plot each cluster
     for idx, (_, cluster) in enumerate(selected_clusters.iterrows()):
@@ -573,9 +576,13 @@ def visualize_clusters(
             <b>Total Demand:</b> {total_demand:,.0f} kg
         """
 
+        lat = cluster["Centroid_Latitude"]
+        lon = cluster["Centroid_Longitude"]
+        points.append((lat, lon))
+
         # Plot cluster centroid with larger circle
         folium.CircleMarker(
-            location=(cluster["Centroid_Latitude"], cluster["Centroid_Longitude"]),
+            location=(lat, lon),
             radius=8,
             color=color,
             fill=True,
@@ -586,6 +593,10 @@ def visualize_clusters(
 
     # Add layer control
     folium.LayerControl().add_to(m)
+
+    # Fit bounds to show all points
+    if points:
+        m.fit_bounds(points)
 
     # Save map
     viz_filename = str(filename).rsplit(".", 1)[0] + "_clusters.html"

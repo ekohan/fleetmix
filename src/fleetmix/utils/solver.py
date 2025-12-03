@@ -188,11 +188,8 @@ def pick_solver(params: RuntimeParams) -> Any:
     env_choice = os.getenv("FSM_SOLVER")
     choice = (env_choice or params.solver).lower()
 
-    if choice == "gurobi":
-        adapter = SOLVER_ADAPTER_REGISTRY["gurobi"]()
-        return adapter.get_pulp_solver(params)
-    if choice == "cbc":
-        adapter = SOLVER_ADAPTER_REGISTRY["cbc"]()
+    if choice in SOLVER_ADAPTER_REGISTRY:
+        adapter = SOLVER_ADAPTER_REGISTRY[choice]()
         return adapter.get_pulp_solver(params)
 
     # auto: try Gurobi, fallback to CBC on instantiation errors

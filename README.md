@@ -29,14 +29,10 @@ This repository supports our paper *Designing Multi‑Compartment Last‑Mile Ve
 3. [Running Examples](#-running-examples)
 4. [📐 Specifications & Documentation](#-specifications--documentation) ⭐
 5. [🔬 Reproducing Paper Experiments](#-reproducing-paper-experiments) ⭐
-6. [Matheuristic Overview](#matheuristic-overview)
-7. [Command‑Line Usage](#command-line-usage)
-8. [Python API](#python-api)
-9. [Configuration](#configuration)
-10. [Composability & Extensibility](#composability--extensibility)
-11. [Benchmarking Suite](#benchmarking-suite)
-12. [Citation](#citation)
-13. [License](#license)
+6. [Configuration](#configuration)
+7. [Composability & Extensibility](#composability--extensibility)
+8. [Citation](#citation)
+9. [License](#license)
 
 ---
 
@@ -171,69 +167,26 @@ fleetmix reproduce-paper fleet-composition
 
 ---
 
-## 🏗️ Matheuristic Overview
-
-```mermaid
-graph LR
-    A["Customer Demand"] --> B["Vehicle Configurations"]
-    B --> C["Feasible Clusters"]
-    C --> D["MILP Fleet-Design"]
-    D --> E["Solution"]
-    B --> F["(Multiple vehicle types)"]
-    C --> G["(Capacity & time feasible)"]
-    D --> H["(Merge improvement)"]
-```
-
-*Full algorithmic details are in §4 of the paper.*
-
----
-
-
-
 ## ⚙️ Configuration
 
-FleetMix uses YAML configuration files to define fleet composition, optimization parameters, and operational constraints.
-
-### Vehicle-Specific Goods Capability
-
-Vehicles can be configured to carry only specific subsets of goods, enabling realistic modeling of specialized fleets:
+FleetMix uses YAML configuration files to define fleet composition, optimization parameters, and operational constraints:
 
 ```yaml
 vehicles:
-  # Dry goods only truck
-  DryTruck:
-    capacity: 2700
-    fixed_cost: 100
-    avg_speed: 30
-    service_time: 25
-    max_route_time: 10
-    allowed_goods: ["Dry"]  # Can only carry dry goods
-  
-  # Refrigerated truck for cold chain
-  RefrigeratedTruck:
-    capacity: 3300
-    fixed_cost: 175
-    avg_speed: 30
-    service_time: 25
-    max_route_time: 10
-    allowed_goods: ["Chilled", "Frozen"]  # No dry goods capability
-  
-  # Multi-product type truck (no allowed_goods = can carry all goods)
-  MultiProductTruck:
+  SmallVan:
+    capacity: 1800
+    fixed_cost: 80
+    compartments: 2
+  LargeTruck:
     capacity: 4500
-    fixed_cost: 225
-    avg_speed: 30
-    service_time: 25
-    max_route_time: 10
-    # No allowed_goods specified - can carry all goods
+    fixed_cost: 200
+    compartments: 3
+    allowed_goods: ["Dry", "Chilled"]  # Optional: restrict goods types
 
-goods:
-  - Dry
-  - Chilled
-  - Frozen
+goods: [Dry, Chilled, Frozen]
 ```
 
-See `src/fleetmix/config/default_config.yaml` for a complete example.
+**📖 Full reference:** [docs/specs/configuration.md](docs/specs/configuration.md) · [default_config.yaml](src/fleetmix/config/default_config.yaml)
 
 ---
 
@@ -250,16 +203,6 @@ The plugin system supports:
 - **[docs/specs/protocols.md](docs/specs/protocols.md)** for detailed interface definitions
 - **[`src/fleetmix_example_plugins/`](src/fleetmix_example_plugins/)** for working examples (`round_robin.py`, `straight_line.py`, `naive_solver.py`)
 
-
----
-
-## 📊 Benchmarking Suite
-
-Located under `src/fleetmix/benchmarking/`.
-
-* **Converters** – `.vrp` / `.dat` → FSM tables
-* **Solvers** – PyVRP wrapper providing single‑ & multi‑compartment baselines
-* **Case Studies** – real-world demand patterns from food distribution
 
 ---
 

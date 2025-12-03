@@ -1,0 +1,6 @@
+Customer_ID,Latitude,Longitude,Dry_Demand,Chilled_Demand,Frozen_Demand
+C1,4.705,-74.095,10,0,0
+C2,4.695,-74.105,5,0,0
+C3,4.715,-74.085,0,20,0
+C4,4.690,-74.110,0,0,15
+

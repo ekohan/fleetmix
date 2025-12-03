@@ -26,16 +26,17 @@ This repository supports our paper *Designing Multi‑Compartment Last‑Mile Ve
 
 1. [Installation](#installation)
 2. [Quick Start](#quick-start)
-3. [📐 Specifications & Documentation](#-specifications--documentation) ⭐
-4. [🔬 Reproducing Paper Experiments](#-reproducing-paper-experiments) ⭐
-5. [Matheuristic Overview](#matheuristic-overview)
-6. [Command‑Line Usage](#command-line-usage)
-7. [Python API](#python-api)
-8. [Configuration](#configuration)
-9. [Composability & Extensibility](#composability--extensibility)
-10. [Benchmarking Suite](#benchmarking-suite)
-11. [Citation](#citation)
-12. [License](#license)
+3. [Running Examples](#-running-examples)
+4. [📐 Specifications & Documentation](#-specifications--documentation) ⭐
+5. [🔬 Reproducing Paper Experiments](#-reproducing-paper-experiments) ⭐
+6. [Matheuristic Overview](#matheuristic-overview)
+7. [Command‑Line Usage](#command-line-usage)
+8. [Python API](#python-api)
+9. [Configuration](#configuration)
+10. [Composability & Extensibility](#composability--extensibility)
+11. [Benchmarking Suite](#benchmarking-suite)
+12. [Citation](#citation)
+13. [License](#license)
 
 ---
 
@@ -99,6 +100,28 @@ fleetmix gui
 ```
 
 The GUI provides drag‑and‑drop CSV upload, interactive parameter tweaking, real‑time optimization progress, and map‑based visual results.
+
+---
+
+## 💡 Running Examples
+
+The `examples/` directory contains standalone scripts demonstrating various features. We recommend running them using `uv run` to ensure they use the correct environment:
+
+```bash
+# Heterogeneous fleet demo
+uv run python examples/heterogeneous_fleet.py
+
+# Custom clustering plugin (Round Robin)
+uv run python examples/custom_clustering.py
+
+# Custom route-time estimator (Straight Line)
+uv run python examples/custom_route_time.py
+
+# Custom solver adapter (Naive CBC)
+uv run python examples/custom_solver_adapter.py
+```
+
+*Note: If you have already activated your virtual environment (via `source fleetmix-env/bin/activate`), you can simply use `python examples/...`.*
 
 ---
 
@@ -248,9 +271,9 @@ If using FleetMix in your research:
 @article{Kohan2025FleetMix,
   author  = {Eric Kohan and Fabricio Torres and Victor Silva-Febre and J.C. Pina-Pardo},
   title   = {Designing Multi-Compartment Last-Mile Vehicle Fleets: An Open-Source Matheuristic},
-  journal = {Computers and Industrial Engineering},
+  journal = {TBD},
   year    = {2025},
-  note    = {Submitted}
+  note    = {To be submitted}
 }
 ```
 

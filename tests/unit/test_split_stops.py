@@ -5,7 +5,7 @@ Unit tests for split-stop functionality.
 import pandas as pd
 import pytest
 
-from fleetmix.preprocess.demand import (
+from fleetmix.preprocess.split_stop import (
     explode_customer,
     maybe_explode,
 )

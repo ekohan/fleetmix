@@ -36,7 +36,7 @@ src/*.egg-info/
 .ipynb_checkpoints/
 fleet-comparision-metrics.ipynb
 
-# TODO: solve optimality gap implementation
+# Solver temp files (keepFiles=True required for optimality gap extraction)
 *-pulp.lp
 *-pulp.sol
 gurobi.log

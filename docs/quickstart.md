@@ -1,20 +1,10 @@
-# 🚀 Quick Start Guide
+# Quick Start Guide
 
-Welcome to **FleetMix**! This 5-minute tutorial will walk you through running your first optimisation on a tiny 10-customer dataset.
-
-<!-- TODO: revisar esta, hacerla bien. -->
+Welcome to **FleetMix**! This 5-minute tutorial walks you through running your first optimization.
 
 ---
 
 ## 1. Installation
-
-If you cloned the repository already, activate the environment created by `uv`:
-
-```bash
-source fleetmix-env/bin/activate  # macOS / Linux
-```
-
-Otherwise, install from source:
 
 ```bash
 git clone https://github.com/ekohan/fleetmix.git && cd fleetmix
@@ -27,57 +17,36 @@ uv sync --all-extras
 
 ---
 
-## 2. Download the Toy Dataset
+## 2. Run Your First Optimization
 
-A 10-customer CSV is provided in the test assets. Copy it to a convenient location:
-
-```bash
-cp tests/_assets/smoke/mini_demand.csv ./mini_demand.csv
-```
-
----
-
-## 3. Optimise via the Python API (recommended)
+**Via Python API:**
 
 ```python
 import fleetmix as fm
 
 solution = fm.optimize(
-    demand="mini_demand.csv",          # 10 customers
+    demand="tests/_assets/smoke/mini_demand.csv",
     config="src/fleetmix/config/default_config.yaml",
 )
 
-print(solution.summary())  # Cost, fleet composition, KPIs
+print(f"Total cost: ${solution.total_cost:,.2f}")
+print(f"Vehicles used: {solution.total_vehicles}")
 ```
 
----
-
-## 4. …or via the CLI
+**Via CLI:**
 
 ```bash
 fleetmix optimize \
-  --demand mini_demand.csv \
+  --demand tests/_assets/smoke/mini_demand.csv \
   --config src/fleetmix/config/default_config.yaml
 ```
 
-You'll find JSON/XLSX results in the newly-created `results/` folder.
-
----
-
-## 5. Visualise the Routes (optional)
-
-```bash
-fleetmix gui --results results/latest
-```
-<!-- TODO: implement this gui feature -->
-An interactive map will open in your browser, showing clusters, routes, and assigned vehicles.
+Results are saved to `results/` as JSON (or XLSX with `--format xlsx`).
 
 ---
 
 ## Next Steps
 
-* Try the examples in the `examples/` folder (heterogeneous fleets, custom clustering, split-stops).
-* Read the [Concepts](../docs/concepts/matheuristic.md) section to understand the algorithm.
-* Dive into the [API Reference](../docs/api/) for advanced usage.
-
-Happy optimising! 🚚 
+* Explore the `examples/` folder for heterogeneous fleets and custom configurations.
+* See `docs/USER_GUIDE.md` for detailed usage scenarios.
+* Review `docs/specs/` for algorithm documentation.

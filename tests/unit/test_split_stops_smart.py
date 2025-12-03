@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from fleetmix.core_types import VehicleConfiguration
-from fleetmix.preprocess.demand import (
+from fleetmix.preprocess.split_stop import (
     explode_customer_smart,
     get_feasible_goods_combinations,
     maybe_explode,

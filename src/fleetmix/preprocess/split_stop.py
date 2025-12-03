@@ -3,8 +3,6 @@ Demand preprocessing for split-stop capability.
 
 This module provides functions to handle split-stop scenarios by creating
 pseudo-customers that represent subsets of goods that a physical customer requires.
-
-TODO: rename?
 """
 
 from collections.abc import Mapping

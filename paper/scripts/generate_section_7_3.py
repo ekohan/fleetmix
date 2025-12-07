@@ -248,7 +248,7 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
             text_color = "white" if share_pct > 50 else "black"
 
             # Multi-line annotation (use default sans-serif font for cell contents)
-            text = f"{share_pct:.0f}%\n{adoption_days}/70\n({pure_days}*)"
+            text = f"{share_pct:.0f}%\n{adoption_days}/70\n({pure_days}$\\star$)"
             ax.text(
                 j,
                 i,
@@ -272,7 +272,7 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
     ax.set_xlabel("Compartment Setup Factor (c, % of SCV fixed cost)", fontsize=12)
     ax.set_ylabel(r"Premium Factor ($\alpha$)", fontsize=12)
     ax.set_title(
-        "Values: MCV Share (%) | Adoption Days / 70 | (Pure MCV Days *)",
+        r"Values: MCV Share (%) | Adoption Days / 70 | (Pure MCV Days $\star$)",
         fontsize=11,
         pad=12,
     )

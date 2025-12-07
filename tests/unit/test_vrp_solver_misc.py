@@ -1,12 +1,10 @@
 import pandas as pd
-import numpy as np
 import pytest
 import dataclasses
 
 from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver, BenchmarkType
 from fleetmix.core_types import DepotLocation, VehicleSpec
 from fleetmix.config import load_fleetmix_params
-from fleetmix.config.params import FleetmixParams
 
 
 @pytest.fixture()

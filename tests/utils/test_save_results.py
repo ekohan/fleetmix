@@ -12,16 +12,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from fleetmix.config import load_fleetmix_params
 from fleetmix.config.params import FleetmixParams, IOParams, AlgorithmParams, ProblemParams, RuntimeParams
 from fleetmix.core_types import (
-    BenchmarkType,
     Cluster,
     DepotLocation,
     FleetmixSolution,
     VehicleConfiguration,
     VehicleSpec,
-    VRPSolution,
 )
 from fleetmix.utils.save_results import (
     _write_to_excel,

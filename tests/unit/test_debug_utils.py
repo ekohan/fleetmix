@@ -4,7 +4,6 @@ import tempfile
 from pathlib import Path
 
 import pulp
-import pytest
 
 from fleetmix.utils.debug import ModelDebugger
 
@@ -73,7 +72,7 @@ class TestModelDebugger:
             
             ModelDebugger.dump(model, "test_model")
             
-            mps_file = Path(tmpdir) / "test_model.mps"
+            Path(tmpdir) / "test_model.mps"
             # MPS writing may fail for some models, so we just check if the method was called
             # without raising exceptions
             

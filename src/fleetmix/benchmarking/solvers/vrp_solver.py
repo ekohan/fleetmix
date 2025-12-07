@@ -3,7 +3,7 @@ Single-compartment VRP solver module using PyVRP.
 Provides baseline comparison for multi-compartment vehicle solutions.
 """
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd

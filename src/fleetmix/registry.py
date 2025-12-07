@@ -2,11 +2,8 @@
 
 from typing import Callable, TypeVar
 
-import pandas as pd
-
 from fleetmix.utils.logging import FleetmixLogger
 
-from .core_types import CapacitatedClusteringContext
 from .interfaces import Clusterer, RouteTimeEstimator, SolverAdapter
 
 logger = FleetmixLogger.get_logger(__name__)

@@ -29,10 +29,7 @@ import seaborn as sns
 
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
-    BenchmarkType,
     FleetmixSolution,
-    VehicleConfiguration,
-    VRPSolution,
 )
 from fleetmix.utils.cluster_conversion import clusters_to_dataframe
 from fleetmix.utils.logging import FleetmixLogger

@@ -5,7 +5,6 @@ import pytest
 from dataclasses import replace
 
 from fleetmix.config.loader import load_yaml
-from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.optimization import optimize_fleet
 
@@ -351,7 +350,6 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
     # Ensure all customers mentioned in clusters are in customers_df
     # Create a comprehensive list of all customers that need coordinates
     # This ensures customers_df is built correctly even if a customer isn't in the first cluster
-    customer_data_for_df = []
 
     # Get all unique customer IDs from all clusters in the current scenario
     # This was populated in the loop above. If a cluster had no customers,
@@ -408,10 +406,8 @@ def test_fsm_scenarios(name, clusters, configs, upd, exp):
 
         # This part becomes redundant if we reconstruct customers_df as original, then add lat/lon.
         # For now, let's keep the original structure for customer_df creation for demands, then merge/add lat/lon.
-        pass
 
     # Customers=index of clusters - Rebuild customers_df as original for demands, then add lat/lon
-    customers_list_for_df = []
     # The 'clusters' variable here is the one modified with Centroids.
     # We should use the 'clusters' variable as passed into the function for demand consistency.
     # Let's rename the input parameter to avoid confusion

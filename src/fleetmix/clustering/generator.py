@@ -20,13 +20,11 @@ from fleetmix.core_types import (
     Cluster,
     Customer,
     CustomerBase,
-    DepotLocation,
     VehicleConfiguration,
 )
 from fleetmix.merging.core import generate_merge_phase_clusters
 from fleetmix.utils.common import to_cfg_key
 from fleetmix.utils.logging import FleetmixLogger
-from fleetmix.utils.route_time import estimate_route_time
 
 from .heuristics import (
     create_initial_clusters,

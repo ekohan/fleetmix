@@ -1,7 +1,6 @@
 """Test the debug module for MILP model debugging."""
 
-from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 import pytest
 import pulp
 
@@ -84,7 +83,7 @@ def test_model_debugger_dump_mps_file(tmp_path, reset_debugger):
     ModelDebugger.dump(model, "test_model")
     
     # MPS file might be created depending on PuLP version
-    mps_file = tmp_path / "test_model.mps"
+    tmp_path / "test_model.mps"
     # Don't assert existence since it may fail silently (lines 85-87)
 
 

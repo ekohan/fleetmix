@@ -1,8 +1,6 @@
 """Test vehicle-specific goods capability."""
 
 import pytest
-import yaml
-from pathlib import Path
 from fleetmix.config.loader import load_yaml as load_fleetmix_params
 from fleetmix.core_types import FleetmixSolution, VehicleSpec
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations

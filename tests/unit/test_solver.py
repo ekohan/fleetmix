@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 from fleetmix.config.params import RuntimeParams
 from fleetmix.utils.solver import pick_solver
-import pytest
 
 
 def test_pick_solver_default(monkeypatch):

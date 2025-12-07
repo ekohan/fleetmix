@@ -3,7 +3,6 @@ Script to generate Section 7.2 (Benefits of Using Multi-Compartment Vehicles) of
 Replicates the analysis in "Benefits of Using Multi-Compartment Vehicles" of @paper/main.tex.
 """
 
-import csv
 import json
 import os
 import sys
@@ -239,6 +238,7 @@ def generate_plots(df, output_dir):
 
     params = ["Capacity", "Max Route Duration", "Service Time"]
     fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+    plot_data_list = []
 
     # Include baseline data (variation = 0) for all parameters
     baseline_mcv = df[
@@ -284,6 +284,11 @@ def generate_plots(df, output_dir):
             [summary, baseline_summary_mcv, baseline_summary_scv], ignore_index=True
         )
         summary = summary.sort_values("Variation Value")
+
+        # Save data for table
+        summary_copy = summary.copy()
+        summary_copy["Parameter"] = param
+        plot_data_list.append(summary_copy)
 
         # Fleet Size Plot (Top Row)
         ax_fleet = axes[0, i]
@@ -358,6 +363,23 @@ def generate_plots(df, output_dir):
 
     # Also save as PNG for README
     plt.savefig(output_dir / "figure_3_replicated.png", bbox_inches="tight", dpi=300)
+
+    # Save table with Figure 3 values
+    if plot_data_list:
+        figure_3_df = pd.concat(plot_data_list, ignore_index=True)
+        # Reorder columns
+        cols = [
+            "Parameter",
+            "Variation Value",
+            "Vehicle Type",
+            "Vehicles Used",
+            "Total Cost ($)",
+        ]
+        figure_3_df = figure_3_df[cols]
+
+        output_csv = output_dir / "figure_3_values.csv"
+        figure_3_df.to_csv(output_csv, index=False)
+        print(f"Figure 3 values saved to {output_csv}")
 
 
 def generate_table(df, output_dir):

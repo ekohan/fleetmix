@@ -1,15 +1,10 @@
 """Integration test for vehicle-specific goods capability."""
 
 import pytest
-import pandas as pd
-from pathlib import Path
-import tempfile
-import yaml
 
 from fleetmix import generate_feasible_clusters
-from fleetmix.api import optimize
-from fleetmix.config import load_fleetmix_params, FleetmixParams
-from fleetmix.core_types import Customer, VehicleSpec
+from fleetmix.config import load_fleetmix_params
+from fleetmix.core_types import Customer
 from fleetmix.optimization.core import optimize_fleet
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 

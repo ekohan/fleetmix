@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from fleetmix.benchmarking.converters.mcvrp import convert_mcvrp_to_fsm
-from fleetmix.benchmarking.models import InstanceSpec
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
 
 

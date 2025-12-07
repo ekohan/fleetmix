@@ -1,8 +1,5 @@
 """Test the data_processing module for loading customer demand."""
 
-import pandas as pd
-import pytest
-from pathlib import Path
 
 from fleetmix.utils.data_processing import load_customer_demand
 
@@ -134,7 +131,7 @@ def test_load_customer_demand_with_filename_only(tmp_path, monkeypatch):
     # When file doesn't exist in current dir, it will search datasets dir
     # This tests line 40 - searching in default datasets dir
     try:
-        df = load_customer_demand("nonexistent.csv")
+        load_customer_demand("nonexistent.csv")
         # If it doesn't raise an error, the test passed (found in datasets dir)
         # If it does raise FileNotFoundError, that's also OK for coverage
     except (FileNotFoundError, Exception):

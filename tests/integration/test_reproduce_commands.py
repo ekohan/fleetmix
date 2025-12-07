@@ -1,6 +1,5 @@
 """Integration tests for 'fleetmix reproduce-paper' commands."""
 
-import shutil
 from pathlib import Path
 from typer.testing import CliRunner
 from fleetmix.app import app

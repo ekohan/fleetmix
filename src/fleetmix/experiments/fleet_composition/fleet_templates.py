@@ -8,7 +8,7 @@ import dataclasses
 from pathlib import Path
 
 from fleetmix.config import load_fleetmix_params
-from fleetmix.config.params import FleetmixParams, ProblemParams
+from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleSpec
 from fleetmix.utils.logging import FleetmixLogger
 

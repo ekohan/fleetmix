@@ -23,7 +23,7 @@ from fleetmix.experiments.reproduce_paper.utils import (
     skip_if_exists,
 )
 from fleetmix.utils.data_processing import load_customer_demand
-from fleetmix.utils.logging import log_error, log_success
+from fleetmix.utils.logging import log_error
 from fleetmix.utils.save_results import save_optimization_results
 
 __all__ = [

@@ -42,7 +42,6 @@ import pandas as pd
 
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import (
-    Cluster,
     Customer,
     CustomerBase,
     FleetmixSolution,

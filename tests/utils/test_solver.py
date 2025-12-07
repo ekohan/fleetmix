@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 from fleetmix.config.params import RuntimeParams
 from fleetmix.utils.solver import pick_solver
-import pytest
 
 
 class TestPickSolver(unittest.TestCase):

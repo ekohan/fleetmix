@@ -5,8 +5,6 @@ Tests focus on parsing, conversion, and basic solving with minimal fixtures.
 
 import tempfile
 from pathlib import Path
-import dataclasses
-import pytest
 
 from fleetmix.benchmarking import (
     CVRPBenchmarkType,

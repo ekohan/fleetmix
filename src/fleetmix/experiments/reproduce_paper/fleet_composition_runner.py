@@ -10,12 +10,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
 from rich.console import Console
-from tqdm import tqdm
 
-from fleetmix.config import load_fleetmix_params
 from fleetmix.experiments.fleet_composition.config import (
     ALPHA_GRID as DEFAULT_ALPHA_GRID,
 )
@@ -26,7 +23,6 @@ from fleetmix.experiments.fleet_composition.fleet_templates import (
 )
 from fleetmix.experiments.fleet_composition.run_grid_mixed import (
     _collect_day_summary,
-    convert_numpy_types,
 )
 from fleetmix.experiments.reproduce_paper.utils import (
     ProgressTracker,
@@ -34,7 +30,7 @@ from fleetmix.experiments.reproduce_paper.utils import (
     print_summary_stats,
     skip_if_exists,
 )
-from fleetmix.utils.logging import LogLevel, log_error, log_info, setup_logging
+from fleetmix.utils.logging import log_error
 
 __all__ = [
     "aggregate_results",

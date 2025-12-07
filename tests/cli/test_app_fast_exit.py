@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
-import pandas as pd
 import pytest
 from typer.testing import CliRunner
 

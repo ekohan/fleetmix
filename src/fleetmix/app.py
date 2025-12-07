@@ -2,13 +2,9 @@
 Command-line interface for Fleetmix using Typer.
 """
 
-import dataclasses
-import importlib
-import pathlib
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Optional
 
-import pandas as pd
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -19,14 +15,11 @@ from fleetmix.config import FleetmixParams, load_fleetmix_params
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.utils.logging import (
     LogLevel,
-    log_debug,
     log_error,
     log_info,
-    log_progress,
     log_success,
     setup_logging,
 )
-from fleetmix.utils.save_results import save_optimization_results
 
 app = typer.Typer(
     help="Fleetmix: Fleet Size and Mix optimizer for heterogeneous fleets",

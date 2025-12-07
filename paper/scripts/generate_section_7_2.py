@@ -43,8 +43,6 @@ mpl.rcParams.update(
 
 
 def extract_additional_metrics(data, row):
-    """Extract additional metrics from JSON data"""
-
     selected_clusters = data.get("Selected Clusters", [])
     load_percentages = []
     customers_per_cluster = []
@@ -52,49 +50,38 @@ def extract_additional_metrics(data, row):
     compartment_counts = []
 
     for cluster in selected_clusters:
-        # Load percentage
         load_pct = cluster.get("Load_total_pct", 0) * 100
         if load_pct > 0:
             load_percentages.append(load_pct)
 
-        # Customers per cluster
         num_customers = cluster.get("Num_Customers", 0)
         if num_customers > 0:
             customers_per_cluster.append(num_customers)
 
-        # Route time
         route_time = cluster.get("Route_Time", 0)
         if route_time > 0:
             route_times.append(route_time)
 
-        # Count compartments for MCV
         goods_in_config = cluster.get("Goods_In_Config", [])
         compartment_counts.append(len(goods_in_config))
 
-    # Load statistics
     if load_percentages:
-        # Match parse_benchmarking_results.py rounding behavior (early rounding)
         row["Avg Load %"] = float(f"{np.mean(load_percentages):.1f}")
     else:
         row["Avg Load %"] = 0.0
 
-    # Customer distribution
     if customers_per_cluster:
-        # Match parse_benchmarking_results.py rounding behavior (early rounding)
         row["Avg Customers per Vehicle"] = float(
             f"{np.mean(customers_per_cluster):.1f}"
         )
     else:
         row["Avg Customers per Vehicle"] = 0.0
 
-    # Route time statistics
     if route_times:
-        # Match parse_benchmarking_results.py rounding behavior (early rounding)
         row["Avg Route Time (hours)"] = float(f"{np.mean(route_times):.2f}")
     else:
         row["Avg Route Time (hours)"] = 0.0
 
-    # Vehicle type counters
     row["Vehicles Type A"] = 0
     row["Vehicles Type B"] = 0
     row["Vehicles Type C"] = 0
@@ -111,20 +98,16 @@ def extract_additional_metrics(data, row):
         elif vehicle_type.startswith("C") or vehicle_type == "C":
             row["Vehicles Type C"] = row.get("Vehicles Type C", 0) + count
 
-    # MCV compartment analysis
     if compartment_counts:
-        # Match parse_benchmarking_results.py rounding behavior (early rounding)
         row["Avg Compartments per Vehicle"] = float(
             f"{np.mean(compartment_counts):.2f}"
         )
     else:
         row["Avg Compartments per Vehicle"] = 0.0
 
-    # Configuration parsing
     summary = data.get("Solution Summary", {})
     config_file = summary.get("Config File", "")
 
-    # Determine vehicle type
     if "mcv" in config_file.lower():
         row["Vehicle Type"] = "MCV"
     elif "scv" in config_file.lower():
@@ -132,7 +115,6 @@ def extract_additional_metrics(data, row):
     else:
         row["Vehicle Type"] = "Unknown"
 
-    # Determine parameter type and variation
     if "baseline" in config_file.lower():
         row["Parameter Type"] = "Baseline"
         row["Variation Value"] = 0
@@ -186,7 +168,6 @@ def parse_results(results_dir: Path):
     rows = []
     json_files = []
 
-    # Walk through directory recursively
     for root, dirs, files in os.walk(results_dir):
         for file in files:
             if file.endswith(".json"):
@@ -195,40 +176,35 @@ def parse_results(results_dir: Path):
     print(f"Found {len(json_files)} JSON files to parse.")
 
     for json_file in sorted(json_files):
-        try:
-            content = json_file.read_text()
-            if not content.strip():
-                continue
-
-            data = json.loads(content)
-            summary = data.get("Solution Summary", {})
-
-            instance = json_file.stem
-            used = int(summary.get("Total Vehicles", 0))
-
-            total_cost = (
-                summary.get("Total Cost ($)", "0").replace("$", "").replace(",", "")
-            )
-            try:
-                total_cost = float(total_cost)
-            except (ValueError, TypeError):
-                total_cost = 0.0
-
-            config_file = summary.get("Config File", "")
-
-            row = {
-                "Instance": instance,
-                "Vehicles Used": used,
-                "Total Cost ($)": total_cost,
-                "Config File": config_file,
-            }
-
-            row = extract_additional_metrics(data, row)
-            rows.append(row)
-
-        except Exception as e:
-            print(f"Error parsing {json_file}: {e}")
+        content = json_file.read_text()
+        if not content.strip():
             continue
+
+        data = json.loads(content)
+        summary = data.get("Solution Summary", {})
+
+        instance = json_file.stem
+        used = int(summary.get("Total Vehicles", 0))
+
+        total_cost = (
+            summary.get("Total Cost ($)", "0").replace("$", "").replace(",", "")
+        )
+        try:
+            total_cost = float(total_cost)
+        except (ValueError, TypeError):
+            total_cost = 0.0
+
+        config_file = summary.get("Config File", "")
+
+        row = {
+            "Instance": instance,
+            "Vehicles Used": used,
+            "Total Cost ($)": total_cost,
+            "Config File": config_file,
+        }
+
+        row = extract_additional_metrics(data, row)
+        rows.append(row)
 
     return rows
 
@@ -240,7 +216,6 @@ def generate_plots(df, output_dir):
     fig, axes = plt.subplots(2, 3, figsize=(20, 12))
     plot_data_list = []
 
-    # Include baseline data (variation = 0) for all parameters
     baseline_mcv = df[
         (df["Parameter Type"] == "Baseline") & (df["Vehicle Type"] == "MCV")
     ]
@@ -251,14 +226,12 @@ def generate_plots(df, output_dir):
     for i, param in enumerate(params):
         param_data = df[df["Parameter Type"] == param].copy()
 
-        # Group by variation and vehicle type
         summary = (
             param_data.groupby(["Variation Value", "Vehicle Type"])
             .agg({"Vehicles Used": "mean", "Total Cost ($)": "mean"})
             .reset_index()
         )
 
-        # Add baseline point
         baseline_summary_mcv = pd.DataFrame(
             [
                 {
@@ -285,12 +258,10 @@ def generate_plots(df, output_dir):
         )
         summary = summary.sort_values("Variation Value")
 
-        # Save data for table
         summary_copy = summary.copy()
         summary_copy["Parameter"] = param
         plot_data_list.append(summary_copy)
 
-        # Fleet Size Plot (Top Row)
         ax_fleet = axes[0, i]
         mcv_data = summary[summary["Vehicle Type"] == "MCV"]
         scv_data = summary[summary["Vehicle Type"] == "SCV"]
@@ -326,7 +297,6 @@ def generate_plots(df, output_dir):
         ax_fleet.axvline(x=0, color="lightgrey", linestyle="-", alpha=0.5)
         ax_fleet.legend(loc="lower right")
 
-        # Total Cost Plot (Bottom Row)
         ax_cost = axes[1, i]
 
         ax_cost.plot(
@@ -361,13 +331,10 @@ def generate_plots(df, output_dir):
     plt.savefig(output_file, bbox_inches="tight")
     print(f"Plot saved to {output_file}")
 
-    # Also save as PNG for README
     plt.savefig(output_dir / "figure_3_replicated.png", bbox_inches="tight", dpi=300)
 
-    # Save table with Figure 3 values
     if plot_data_list:
         figure_3_df = pd.concat(plot_data_list, ignore_index=True)
-        # Reorder columns
         cols = [
             "Parameter",
             "Variation Value",
@@ -474,7 +441,6 @@ def main():
 
     df = pd.DataFrame(rows)
 
-    # Generate outputs
     generate_plots(df, results_dir)
     table_df = generate_table(df, results_dir)
     create_readme(results_dir, table_df)

@@ -13,14 +13,12 @@ def parse_filename(filename):
     Expected format: mcvrp_<YEAR>_<CATEGORY>_(<ID>).json
     Example: mcvrp_2015_10_3_3_1_(01).json
     """
-    # Remove extension
     base = os.path.splitext(filename)[0]
     parts = base.split("_")
 
     if len(parts) < 4:
         return None, None
 
-    # Check prefix
     if parts[0] != "mcvrp":
         return None, None
 
@@ -43,35 +41,30 @@ def get_benchmark_label(year):
 
 
 def process_file(filepath):
-    try:
-        with open(filepath, "r") as f:
-            data = json.load(f)
+    with open(filepath, "r") as f:
+        data = json.load(f)
 
-        summary = data.get("Solution Summary", {})
-        exec_details = data.get("Execution Details", {})
-        time_measurements = data.get("Time Measurements", {})
+    summary = data.get("Solution Summary", {})
+    exec_details = data.get("Execution Details", {})
+    time_measurements = data.get("Time Measurements", {})
 
-        total_vehicles = summary.get("Total Vehicles")
-        expected_vehicles = summary.get("Expected Vehicles")
+    total_vehicles = summary.get("Total Vehicles")
+    expected_vehicles = summary.get("Expected Vehicles")
 
-        # Try to get runtime
-        runtime = exec_details.get("Execution Time (s)")
-        if runtime is None:
-            runtime = time_measurements.get("global", {}).get("wall_time")
+    runtime = exec_details.get("Execution Time (s)")
+    if runtime is None:
+        runtime = time_measurements.get("global", {}).get("wall_time")
 
-        if (
-            total_vehicles is not None
-            and expected_vehicles is not None
-            and runtime is not None
-        ):
-            return {
-                "total_vehicles": int(total_vehicles),
-                "expected_vehicles": int(expected_vehicles),
-                "runtime": float(runtime),
-            }
-    except Exception as e:
-        print(f"Error processing {filepath}: {e}", file=sys.stderr)
-        return None
+    if (
+        total_vehicles is not None
+        and expected_vehicles is not None
+        and runtime is not None
+    ):
+        return {
+            "total_vehicles": int(total_vehicles),
+            "expected_vehicles": int(expected_vehicles),
+            "runtime": float(runtime),
+        }
     return None
 
 
@@ -115,7 +108,6 @@ def main():
     output_path = os.path.join(target_dir, "README.md")
 
     with open(output_path, "w") as f:
-        # Print Markdown Table to file
         f.write(
             "| Benchmark | Category | Instances | # Same vehicles | # Fewer vehicles | Run time (s) |\n"
         )

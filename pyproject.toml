@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fleetmix"
-version = "0.1.0b1"
+version = "1.0.0"
 description = "Fleet Size and Mix optimizer for heterogeneous fleets of multi-compartment vehicles"
 readme = "README.md"
 requires-python = ">=3.12"

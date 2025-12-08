@@ -17,7 +17,7 @@ from fleetmix.post_optimization import improve_solution
 from fleetmix.preprocess.split_stop import maybe_explode
 from fleetmix.utils.common import baseline_is_valid
 from fleetmix.utils.data_processing import load_customer_demand
-from fleetmix.utils.logging import FleetmixLogger, log_warning
+from fleetmix.utils.logging import FleetmixLogger
 from fleetmix.utils.save_results import save_optimization_results
 from fleetmix.utils.time_measurement import TimeRecorder
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
@@ -165,13 +165,7 @@ def _load_config(config: str | FleetmixParams | None) -> FleetmixParams:
             f"Configuration file not found: {config_path}\n"
             "Please check the file path and ensure it exists."
         )
-    try:
-        return load_fleetmix_params(config_path)
-    except Exception as e:
-        raise ValueError(
-            f"Error loading configuration from {config_path}:\n{e!s}\n"
-            "Please check the YAML syntax and required fields."
-        )
+    return load_fleetmix_params(config_path)
 
 
 def optimize(
@@ -320,15 +314,9 @@ def optimize(
             )
 
         # Step 3: Generate vehicle configurations
-        try:
-            with time_recorder.measure("vehicle_configuration"):
-                configs = generate_vehicle_configurations(
-                    params.problem.vehicles, params.problem.goods
-                )
-        except Exception as e:
-            raise ValueError(
-                f"Error generating vehicle configurations:\n{e!s}\n"
-                f"Please check your vehicle and goods definitions in the config."
+        with time_recorder.measure("vehicle_configuration"):
+            configs = generate_vehicle_configurations(
+                params.problem.vehicles, params.problem.goods
             )
 
         # Step 4: Solve optimization problem
@@ -350,16 +338,9 @@ def optimize(
             customers = Customer.from_dataframe(customers_df)
 
             # Step 4a: Generate clusters
-            try:
-                with time_recorder.measure("clustering"):
-                    clusters = generate_feasible_clusters(
-                        customers=customers, configurations=configs, params=params
-                    )
-            except Exception as e:
-                raise ValueError(
-                    f"Error generating customer clusters:\n{e!s}\n"
-                    f"This could be due to incompatible vehicle capacities, "
-                    f"time constraints, or compartment configurations."
+            with time_recorder.measure("clustering"):
+                clusters = generate_feasible_clusters(
+                    customers=customers, configurations=configs, params=params
                 )
 
             # Check if clustering generated any valid clusters
@@ -374,42 +355,30 @@ def optimize(
                 )
 
             # Step 4b: Solve optimization
-            try:
-                with time_recorder.measure("fsm_initial"):
-                    solution = optimize_fleet(
-                        clusters=clusters,
-                        configurations=configs,
-                        customers=customers,
-                        parameters=params,
-                        time_recorder=time_recorder,
-                    )
-
-                # Step 5: Post-optimization improvement if enabled
-                if params.algorithm.post_optimization:
-                    with time_recorder.measure("fsm_post_optimization"):
-                        solution = improve_solution(
-                            solution, configs, customers, params
-                        )
-            except Exception as e:
-                raise ValueError(
-                    f"Error during optimization:\n{e!s}\n"
-                    f"This could be due to infeasible problem constraints "
-                    f"or insufficient cluster coverage."
+            with time_recorder.measure("fsm_initial"):
+                solution = optimize_fleet(
+                    clusters=clusters,
+                    configurations=configs,
+                    customers=customers,
+                    parameters=params,
+                    time_recorder=time_recorder,
                 )
+
+            # Step 5: Post-optimization improvement if enabled
+            if params.algorithm.post_optimization:
+                with time_recorder.measure("fsm_post_optimization"):
+                    solution = improve_solution(solution, configs, customers, params)
 
     # Add time measurements to solution
     solution.time_measurements = time_recorder.measurements
 
     # Step 6: Save results if output directory is specified
     if output_dir:
-        try:
-            save_optimization_results(
-                solution=solution,
-                parameters=params,
-                format=format,
-            )
-            FleetmixLogger.progress(f"Results saved to {output_dir}")
-        except Exception as e:
-            log_warning(f"Failed to save results: {e!s}")
+        save_optimization_results(
+            solution=solution,
+            parameters=params,
+            format=format,
+        )
+        FleetmixLogger.progress(f"Results saved to {output_dir}")
 
     return solution

@@ -298,8 +298,6 @@ def _create_model(
     """
     Create the optimization model M aligning with the mathematical formulation.
     """
-    import pulp
-
     # Create the optimization model
     model = pulp.LpProblem("FSM-MCV_Model2", pulp.LpMinimize)
 

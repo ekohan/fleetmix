@@ -391,27 +391,22 @@ def save_optimization_results(
             time_measurements_for_json  # Used by _write_to_json
         )
 
-    try:
-        if format == "json":
-            _write_to_json(
-                str(output_filename), data
-            )  # _write_to_json will use data['time_measurements_json']
-        else:  # xlsx format
-            _write_to_excel(
-                str(output_filename), data
-            )  # _write_to_excel will use data['time_measurements_excel']
+    if format == "json":
+        _write_to_json(
+            str(output_filename), data
+        )  # _write_to_json will use data['time_measurements_json']
+    else:  # xlsx format
+        _write_to_excel(
+            str(output_filename), data
+        )  # _write_to_excel will use data['time_measurements_excel']
 
-        # Only create visualization for optimization results
-        if not is_benchmark:
-            depot_coords = (
-                parameters.problem.depot.latitude,
-                parameters.problem.depot.longitude,
-            )
-            visualize_clusters(clusters_df, depot_coords, str(output_filename))
-
-    except Exception as e:
-        print(f"Error saving results to {output_filename}: {e!s}")
-        raise
+    # Only create visualization for optimization results
+    if not is_benchmark:
+        depot_coords = (
+            parameters.problem.depot.latitude,
+            parameters.problem.depot.longitude,
+        )
+        visualize_clusters(clusters_df, depot_coords, str(output_filename))
 
 
 def _write_to_excel(filename: str, data: dict) -> None:

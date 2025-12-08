@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pandas as pd
 import pytest
-import typer
 
 from fleetmix.app import (
     _find_config_by_id,
     _setup_logging_from_flags,
 )
-from fleetmix.utils.data_processing import load_customer_demand
 from fleetmix.config import load_fleetmix_params
 from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleConfiguration

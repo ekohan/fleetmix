@@ -1,10 +1,8 @@
 import math
 import warnings
 
-import numpy as np
-import pytest
 
-from fleetmix.utils.coordinate_converter import CoordinateConverter, GeoBounds
+from fleetmix.utils.coordinate_converter import CoordinateConverter
 
 
 def _simple_coords():

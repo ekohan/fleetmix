@@ -7,7 +7,6 @@ import pulp
 import pytest
 
 from fleetmix.config import load_fleetmix_params
-from fleetmix.config.params import FleetmixParams
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.optimization.core import (
     _calculate_cluster_cost,

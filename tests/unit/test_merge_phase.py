@@ -1,6 +1,6 @@
 """Test the merge_phase module for post-optimization improvements."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import pytest
 import pandas as pd
 

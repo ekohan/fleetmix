@@ -68,17 +68,14 @@ class CustomerBase(ABC):
     @abstractmethod
     def is_pseudo_customer(self) -> bool:
         """Return True if this is a pseudo-customer."""
-        pass
 
     @abstractmethod
     def get_origin_id(self) -> str:
         """Return the original customer ID (for pseudo-customers) or self ID (for regular customers)."""
-        pass
 
     @abstractmethod
     def get_goods_subset(self) -> tuple[str, ...]:
         """Return the goods subset this customer represents."""
-        pass
 
     def total_demand(self) -> float:
         """Return total demand across all goods."""
@@ -275,7 +272,6 @@ class RouteTimeContext(VehicleOperationContext):
     def __post_init__(self) -> None:
         """Allow max_route_time to be optional for route time estimation."""
         # For route time estimation, max_route_time might be None during estimation
-        pass
 
 
 @dataclass

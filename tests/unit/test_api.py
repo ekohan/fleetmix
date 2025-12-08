@@ -308,7 +308,6 @@ def test_optimize_save_results_error(simple_demand_df, base_config_path, tmp_pat
     output_dir = tmp_path / "results"
     
     # Mock save_optimization_results to raise an exception
-    from unittest.mock import Mock
     with patch("fleetmix.api.save_optimization_results") as mock_save:
         mock_save.side_effect = Exception("Save failed")
         

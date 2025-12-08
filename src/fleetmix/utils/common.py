@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fleetmix.core_types import FleetmixSolution
 
 __all__ = [

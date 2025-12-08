@@ -18,7 +18,7 @@ import pytest
 
 # Try to import streamlit and gui module
 try:
-    import streamlit as st
+    pass
 
     from fleetmix import gui
     from fleetmix.config import load_fleetmix_params, FleetmixParams

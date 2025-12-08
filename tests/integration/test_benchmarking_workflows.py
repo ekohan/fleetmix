@@ -3,11 +3,9 @@ Integration tests for FleetMix benchmarking workflows.
 Tests real VRP instance processing and benchmark suite functionality.
 """
 
-import json
 import shutil
 import tempfile
 from pathlib import Path
-import dataclasses
 import pandas as pd
 import pytest
 
@@ -16,8 +14,7 @@ from fleetmix.benchmarking.converters.mcvrp import convert_mcvrp_to_fsm
 from fleetmix.benchmarking.models.models import CVRPInstance, MCVRPInstance
 from fleetmix.benchmarking.parsers.cvrp import CVRPParser
 from fleetmix.benchmarking.parsers.mcvrp import parse_mcvrp
-from fleetmix.benchmarking.solvers.vrp_solver import VRPSolver
-from fleetmix.core_types import FleetmixSolution, VehicleConfiguration, VRPSolution
+from fleetmix.core_types import VehicleConfiguration
 from fleetmix.benchmarking.converters.vrp import VRPType, convert_vrp_to_fsm as convert_to_fsm
 from fleetmix import api
 from fleetmix.config.params import AlgorithmParams, FleetmixParams, IOParams, RuntimeParams, ProblemParams

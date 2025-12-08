@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, TypeAlias, cast
 import numpy as np
 import pandas as pd
 from haversine import haversine
-from numpy.typing import NDArray
 from pyvrp import (
     Client,
     Depot,

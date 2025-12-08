@@ -1,5 +1,4 @@
 import pandas as pd
-import pytest
 
 from fleetmix.clustering.heuristics import estimate_num_initial_clusters
 from fleetmix.core_types import CapacitatedClusteringContext, DepotLocation, VehicleConfiguration

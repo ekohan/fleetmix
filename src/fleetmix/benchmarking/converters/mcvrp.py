@@ -4,7 +4,6 @@ Converter for MCVRP instances into FSM format.
 
 __all__ = ["convert_mcvrp_to_fsm"]
 
-import dataclasses
 from pathlib import Path
 
 import pandas as pd

@@ -1,7 +1,5 @@
 """Test the solver utilities module."""
 
-import os
-from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
 
@@ -98,7 +96,7 @@ def test_gurobi_adapter_with_gap_rel(tmp_path):
         mock_solver = Mock()
         MockGurobiCmd.return_value = mock_solver
         
-        solver = adapter.get_pulp_solver(params)
+        adapter.get_pulp_solver(params)
         
         # Should pass gapRel
         call_kwargs = MockGurobiCmd.call_args[1]
@@ -125,7 +123,7 @@ def test_gurobi_adapter_with_time_limit(tmp_path):
         mock_solver = Mock()
         MockGurobiCmd.return_value = mock_solver
         
-        solver = adapter.get_pulp_solver(params)
+        adapter.get_pulp_solver(params)
         
         # Should pass TimeLimit in options
         call_kwargs = MockGurobiCmd.call_args[1]
@@ -176,7 +174,7 @@ def test_cbc_adapter_with_gap_rel(tmp_path):
         mock_solver = Mock()
         MockCbcCmd.return_value = mock_solver
         
-        solver = adapter.get_pulp_solver(params)
+        adapter.get_pulp_solver(params)
         
         # Should pass gapRel
         call_kwargs = MockCbcCmd.call_args[1]
@@ -203,7 +201,7 @@ def test_cbc_adapter_with_time_limit(tmp_path):
         mock_solver = Mock()
         MockCbcCmd.return_value = mock_solver
         
-        solver = adapter.get_pulp_solver(params)
+        adapter.get_pulp_solver(params)
         
         # Should pass timeLimit
         call_kwargs = MockCbcCmd.call_args[1]
@@ -238,7 +236,7 @@ def test_pick_solver_gurobi_explicit(tmp_path, monkeypatch):
         mock_solver = Mock()
         MockGurobiCmd.return_value = mock_solver
         
-        solver = pick_solver(params)
+        pick_solver(params)
         
         MockGurobiCmd.assert_called_once()
 
@@ -261,7 +259,7 @@ def test_pick_solver_cbc_explicit(tmp_path):
         mock_solver = Mock()
         MockCbcCmd.return_value = mock_solver
         
-        solver = pick_solver(params)
+        pick_solver(params)
         
         MockCbcCmd.assert_called_once()
 
@@ -317,7 +315,7 @@ def test_pick_solver_env_var_override(tmp_path, monkeypatch):
         mock_solver = Mock()
         MockCbcCmd.return_value = mock_solver
         
-        solver = pick_solver(params)
+        pick_solver(params)
         
         # Should use CBC (from env var)
         MockCbcCmd.assert_called_once()

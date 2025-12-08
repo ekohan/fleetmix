@@ -17,10 +17,6 @@ from fleetmix.core_types import Customer, FleetmixSolution, VehicleConfiguration
 from fleetmix.optimization.core import optimize_fleet
 from fleetmix.post_optimization.merge_phase import improve_solution
 from fleetmix.utils.coordinate_converter import CoordinateConverter
-from fleetmix.utils.route_time import (
-    calculate_total_service_time_hours,
-    estimate_route_time,
-)
 from fleetmix.utils.vehicle_configurations import generate_vehicle_configurations
 
 try:
@@ -29,7 +25,7 @@ try:
     HAVERSINE_AVAILABLE = True
 except ImportError:
     HAVERSINE_AVAILABLE = False
-from fleetmix.config import load_fleetmix_params, FleetmixParams
+from fleetmix.config import load_fleetmix_params
 
 
 class TestCoreAlgorithms:
@@ -417,7 +413,6 @@ class TestCoreAlgorithms:
                 import warnings
 
                 warnings.warn(f"Post-optimization failed: {e}")
-                pass
 
     def test_large_scale_clustering(self, realistic_config):
         """Test clustering with larger customer set."""

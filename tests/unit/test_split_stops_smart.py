@@ -1,7 +1,6 @@
 """Test smart split-stop functionality with vehicle-specific goods constraints."""
 
 import pandas as pd
-import pytest
 
 from fleetmix.core_types import VehicleConfiguration
 from fleetmix.preprocess.split_stop import (

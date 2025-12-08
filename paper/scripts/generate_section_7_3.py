@@ -86,7 +86,7 @@ def load_data(results_dir: Path) -> pd.DataFrame:
         "total_vehicles",
         "average_visits_per_customer",
     ]
-    
+
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         print(f"Warning: Missing columns: {missing_cols}")
@@ -172,7 +172,7 @@ def plot_heatmap(metrics: pd.DataFrame, output_dir: Path) -> None:
 
             text_color = "white" if share_pct > 50 else "black"
             text = f"{share_pct:.0f}%\n{adoption_days}/70\n({pure_days}$\\star$)"
-            
+
             ax.text(
                 j,
                 i,

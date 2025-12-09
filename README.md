@@ -31,8 +31,7 @@ This repository supports our paper *Designing Multi‑Compartment Last‑Mile Ve
 5. [🔬 Reproducing Paper Experiments](#-reproducing-paper-experiments) ⭐
 6. [Configuration](#configuration)
 7. [Composability & Extensibility](#composability--extensibility)
-8. [Citation](#citation)
-9. [License](#license)
+8. [License](#license)
 
 ---
 
@@ -203,24 +202,6 @@ The plugin system supports:
 - **[docs/specs/protocols.md](docs/specs/protocols.md)** for detailed interface definitions
 - **[`src/fleetmix_example_plugins/`](src/fleetmix_example_plugins/)** for working examples (`round_robin.py`, `straight_line.py`, `naive_solver.py`)
 
-
----
-
-## 📚 Citation
-
-If using FleetMix in your research:
-
-```bibtex
-@article{Kohan2025FleetMix,
-  author  = {Eric Kohan and Fabricio Torres and Victor Silva-Febre and J.C. Pina-Pardo},
-  title   = {Designing Multi-Compartment Last-Mile Vehicle Fleets: An Open-Source Matheuristic},
-  journal = {TBD},
-  year    = {2025},
-  note    = {To be submitted}
-}
-```
-
-**Repository**: [github.com/ekohan/fleetmix](https://github.com/ekohan/fleetmix)  
 
 ---
 

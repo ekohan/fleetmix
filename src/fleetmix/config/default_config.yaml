@@ -89,6 +89,6 @@ format: 'json'  # Output format (xlsx or json)
 
 verbose: false       # Enable verbose output
 debug: false        # Enable debug mode for solver and model
-solver: gurobi      # auto | gurobi | cbc
+solver: auto      # auto | gurobi | cbc. Change to "cbc" or "auto" if gurobi is not available.
 gap_rel: 0.005        # relative MIP gap
 time_limit: 60     # seconds; None = no limit

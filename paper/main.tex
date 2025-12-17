@@ -74,8 +74,6 @@
 \usepackage[left=1in,right=1in,top=1in,bottom=1in,margin=1in]{geometry} % Consolidated geometry options
 \usepackage{etoc} % For the Appendices mini TOC
 \usepackage[colorlinks = true, linkcolor=CITE, citecolor=CITE, urlcolor=CITE]{hyperref}
-\usepackage[T1]{fontenc}
-\usepackage{lmodern}
 \usepackage{microtype}
 \renewcommand{\sectionautorefname}{Section}
 \renewcommand{\subsectionautorefname}{Subsection}
@@ -91,38 +89,24 @@
 \makeatother
 
 \begin{document}
-
 % \newpageafter{author}
 
 \begin{frontmatter}
 
 \title{Designing Multi-Compartment Last-Mile Vehicle Fleets: An Open-Source Matheuristic}
 
-% \author[ERIC-UTDT]{Eric Kohan}
-% \author[FABRICIO-UFMG]{Fabricio Torres}
-% \author[UNAB-Address,MIT-Address]{Victor Silva-Febre}
-% \author[PUCV-Address,MIT-Address]{J.C. Pina-Pardo\corref{mycorrespondingauthor}}
-% \cortext[mycorrespondingauthor]{Corresponding author}
-% \ead{juan.pina@pucv.cl, juanpina@mit.edu}
-
-% \address[ERIC-UTDT]{Universidad Torcuato Di Tella, Buenos Aires, Argentina}
-% \address[FABRICIO-UFMG]{Universidade Federal de Minas Gerais, Belo Horizonte, Brazil}
-% \address[UNAB-Address]{Universidad Nacional Andrés Bello, Santiago, Chile}
-% \address[MIT-Address]{Massachusetts Institute of Technology, Cambridge, USA}
-% \address[PUCV-Address]{Pontificia Universidad Católica de Valparaíso, Valparaíso, Chile}
-
 \onehalfspacing
 
-% \begin{highlights}
-% \item We study a fleet size and mix problem with heterogeneous multi-compartment vehicles.
-% \item We propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme.
-% \item We present \textsc{FleetMix}, a spec-driven, open-source implementation of our matheuristic.
-% \item We show the effectiveness of \textsc{FleetMix} compared to existing solution approaches.
-% \item We derive several managerial insights for a real-world case study.
-% \end{highlights}
+\begin{highlights}
+\item We study a fleet size and mix problem with heterogeneous multi-compartment vehicles.
+\item We propose a novel matheuristic approach based on a cluster-first, fleet design-second scheme.
+\item We present \textsc{FleetMix}, a spec-driven, open-source implementation of our matheuristic.
+\item We show the effectiveness of \textsc{FleetMix} compared to existing solution approaches.
+\item We derive several managerial insights for a real-world case study.
+\end{highlights}
 
 \begin{abstract}	
-Urban food distributors are increasingly relying on flexible, multi-compartment vehicle fleets to handle diverse product mixes and challenging urban environments. While recent research on multi-compartment vehicle routing problems has explored a range of heuristics and constraints, to our knowledge, none has directly addressed fleet size and mix optimization for heterogeneous vehicles with flexible compartments in food distribution systems. Motivated by our collaboration with a major food distributor operating in Colombia, we close this practical and methodological gap by proposing a novel cluster-first, fleet design-second matheuristic approach that quickly produces cost-effective fleet size and mix solutions. 
+Urban food distributors are increasingly relying on flexible, multi-compartment vehicle fleets to handle diverse product mixes and challenging urban environments. While recent research on multi-compartment vehicle routing problems has explored a range of heuristics and constraints, to our knowledge, none has directly addressed fleet size and mix optimization for heterogeneous vehicles with flexible compartments in last-mile food distribution systems. Motivated by our collaboration with a major food distributor operating in Colombia, we close this practical and methodological gap by proposing a novel cluster-first, fleet design-second matheuristic approach that quickly produces cost-effective fleet size and mix solutions. 
 To support practitioners and researchers in applying and replicating our results, we make our matheuristic publicly available through \textsc{FleetMix}, an open-source Python package freely available under the MIT license and distributed via PyPI.
 We show the effectiveness of \textsc{FleetMix} in finding high-quality solutions compared to existing solution approaches on available benchmark instances. Based on a real-world case study from our industry partner, which serves hundreds of customers daily, we also show the value of utilizing multi-compartment vehicles to reduce fleet sizes and total logistics costs.
 \end{abstract} 
@@ -167,7 +151,7 @@ In this section, we review three fields of work related to \acp{MCV}. We begin b
 \subsection{Vehicle Routing Problems}
 \ac{VRP} is a long-lasting topic that has been researched for over 60 years \citep{Laporte2009}. The canonical \ac{VRP} aims to find routes from a depot to geographically scattered customers at minimal cost. Its basic assumptions are that vehicles are homogeneous, there is a single depot, customer demand is completely known at the time of delivery planning, and there is a symmetric cost matrix \citep{Laporte2009}. 
 
-The \ac{VRP} is mathematically classified as an NP-hard problem, meaning that optimal solutions are often very hard to achieve, especially when considering large instance sizes. To address this challenge, most literature has focused on developing heuristic approaches that can yield near-optimal solutions with much less computational power and time (see, e.g., \cite{prins2014order} and \cite{braekers2016vehicle}). A popular heuristic framework is the so-called cluster-first, route-second approach, where demand/customer locations are first grouped while respecting the capacity constraints. Then, a route is determined separately for each cluster by solving a \ac{TSP} \citep{Laporte2009}. The most popular examples are the sweep heuristics proposed by \cite{gillett1974heuristic} and \cite{fisher1981generalized}, where the customers served by each route are determined according to the polar coordinate angle of each location. We refer the reader to \cite{miranda2017cluster}, \cite{comert2018cluster}, and \cite{alesiani2022constrained} for recent works proposing cluster-first, route-second heuristics.
+The \ac{VRP} is mathematically classified as an NP-hard problem, meaning that optimal solutions are often very hard to achieve, especially when considering large instance sizes. To address this challenge, most literature has focused on developing heuristic approaches that can yield near-optimal solutions with much less computational power and time (see, e.g., \cite{prins2014order} and \cite{braekers2016vehicle}). A popular heuristic framework is the so-called cluster-first, route-second approach, where demand/customer locations are first grouped while respecting vehicle capacity constraints. Then, a route is determined separately for each cluster by solving a \ac{TSP} \citep{Laporte2009}. The most popular examples are the sweep heuristics proposed by \cite{gillett1974heuristic} and \cite{fisher1981generalized}, where the customers served by each route are determined according to the polar coordinate angle of each location. We refer the reader to \cite{miranda2017cluster}, \cite{comert2018cluster}, and \cite{alesiani2022constrained} for recent works proposing cluster-first, route-second heuristics.
 
 Current \ac{VRP} models have evolved to incorporate practical challenges such as traffic influences on time, time windows, and dynamic demand \citep{braekers2016vehicle}. There are several variants of the \ac{VRP} that have been extensively discussed in the literature, such as the capacitated \ac{VRP}, which considers vehicle capacity constraints; the \ac{VRP} with time windows, where customers must be visited within specific time windows; dynamic \acp{VRP}, where customer information is revealed over time; and multi-depot \acp{VRP}, among others \citep{braekers2016vehicle}. The interested reader can refer to \cite{vidal2020concise} for a concise review of existing and emerging \ac{VRP} variants.
 

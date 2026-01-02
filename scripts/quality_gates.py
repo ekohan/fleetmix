@@ -3,6 +3,7 @@
 FleetMix Quality Gates - Pre-commit automation
 Run before each commit to ensure code quality standards.
 """
+
 import ast
 import subprocess
 import sys
@@ -17,14 +18,14 @@ def get_modified_python_files() -> List[Path]:
     result = subprocess.run(
         ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
         capture_output=True,
-        text=True
+        text=True,
     )
     if not result.stdout.strip():
         return []
 
     files = []
-    for line in result.stdout.strip().split('\n'):
-        if line.endswith('.py') and Path(line).exists():
+    for line in result.stdout.strip().split("\n"):
+        if line.endswith(".py") and Path(line).exists():
             files.append(Path(line))
     return files
 
@@ -41,18 +42,18 @@ def check_type_hints(file_path: Path) -> List[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             # Skip private functions and test functions
-            if node.name.startswith('_') or node.name.startswith('test_'):
+            if node.name.startswith("_") or node.name.startswith("test_"):
                 continue
 
             # Check return type hint
-            if node.returns is None and node.name != '__init__':
+            if node.returns is None and node.name != "__init__":
                 issues.append(
                     f"{file_path}:{node.lineno} - Function '{node.name}' missing return type hint"
                 )
 
             # Check parameter type hints
             for arg in node.args.args:
-                if arg.annotation is None and arg.arg != 'self':
+                if arg.annotation is None and arg.arg != "self":
                     issues.append(
                         f"{file_path}:{node.lineno} - Parameter '{arg.arg}' in '{node.name}' missing type hint"
                     )
@@ -65,21 +66,19 @@ def check_test_coverage(file_path: Path) -> List[str]:
     issues = []
 
     # Skip test files themselves
-    if 'test' in file_path.parts or file_path.name.startswith('test_'):
+    if "test" in file_path.parts or file_path.name.startswith("test_"):
         return []
 
     # Skip non-source files
-    if 'src' not in file_path.parts:
+    if "src" not in file_path.parts:
         return []
 
     # Construct expected test file path
-    relative_path = file_path.relative_to(Path('src'))
-    test_file = Path('tests/unit') / f"test_{relative_path.name}"
+    relative_path = file_path.relative_to(Path("src"))
+    test_file = Path("tests/unit") / f"test_{relative_path.name}"
 
     if not test_file.exists():
-        issues.append(
-            f"No test file found for {file_path} (expected: {test_file})"
-        )
+        issues.append(f"No test file found for {file_path} (expected: {test_file})")
 
     return issues
 
@@ -87,11 +86,11 @@ def check_test_coverage(file_path: Path) -> List[str]:
 def check_yaml_configs() -> List[str]:
     """Validate YAML configuration files."""
     issues = []
-    config_files = [f for f in Path('.').rglob('*') if f.suffix in {'.yaml', '.yml'}]
+    config_files = [f for f in Path(".").rglob("*") if f.suffix in {".yaml", ".yml"}]
 
     for config_file in config_files:
         # Skip CI configs
-        if '.github' in config_file.parts:
+        if ".github" in config_file.parts:
             continue
 
         try:
@@ -99,13 +98,11 @@ def check_yaml_configs() -> List[str]:
                 data = yaml.safe_load(f)
 
             # Check for FleetMix-specific config structure
-            if config_file.name in ['config.yaml', 'fleetmix.yaml']:
-                required_keys = {'vehicles', 'goods', 'optimization'}
+            if config_file.name in ["config.yaml", "fleetmix.yaml"]:
+                required_keys = {"vehicles", "goods", "optimization"}
                 missing = required_keys - set(data.keys())
                 if missing:
-                    issues.append(
-                        f"{config_file}: Missing required keys: {missing}"
-                    )
+                    issues.append(f"{config_file}: Missing required keys: {missing}")
         except yaml.YAMLError as e:
             issues.append(f"{config_file}: Invalid YAML - {e}")
 
@@ -124,12 +121,12 @@ def check_docstrings(file_path: Path) -> List[str]:
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
             # Skip private and test items
-            if node.name.startswith('_') or node.name.startswith('Test'):
+            if node.name.startswith("_") or node.name.startswith("Test"):
                 continue
 
             # Check for docstring
             if not ast.get_docstring(node):
-                item_type = 'Class' if isinstance(node, ast.ClassDef) else 'Function'
+                item_type = "Class" if isinstance(node, ast.ClassDef) else "Function"
                 issues.append(
                     f"{file_path}:{node.lineno} - {item_type} '{node.name}' missing docstring"
                 )
@@ -145,12 +142,12 @@ def run_incremental_tests(modified_files: List[Path]) -> Tuple[bool, str]:
     # Find test files to run
     test_files = []
     for file in modified_files:
-        if 'test' in str(file):
+        if "test" in str(file):
             test_files.append(str(file))
         else:
             # Try to find corresponding test
             test_name = f"test_{file.stem}.py"
-            test_path = Path('tests/unit') / test_name
+            test_path = Path("tests/unit") / test_name
             if test_path.exists():
                 test_files.append(str(test_path))
 
@@ -161,7 +158,7 @@ def run_incremental_tests(modified_files: List[Path]) -> Tuple[bool, str]:
     result = subprocess.run(
         ["uv", "run", "pytest"] + test_files + ["--quiet"],
         capture_output=True,
-        text=True
+        text=True,
     )
 
     return result.returncode == 0, result.stdout + result.stderr

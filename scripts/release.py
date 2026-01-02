@@ -3,6 +3,7 @@
 FleetMix Release Automation
 Handles versioning, changelog generation, and release process.
 """
+
 import re
 import subprocess
 import sys
@@ -35,15 +36,15 @@ def analyze_commits_since_tag(tag: Optional[str] = None) -> dict:
         "fixes": [],
         "perf": [],
         "docs": [],
-        "other": []
+        "other": [],
     }
 
-    for line in result.stdout.strip().split('\n'):
+    for line in result.stdout.strip().split("\n"):
         if not line:
             continue
 
         commit_hash = line.split()[0]
-        message = ' '.join(line.split()[1:])
+        message = " ".join(line.split()[1:])
 
         # Conventional commit parsing
         if message.startswith("BREAKING:") or "BREAKING CHANGE:" in message:
@@ -64,7 +65,7 @@ def analyze_commits_since_tag(tag: Optional[str] = None) -> dict:
 
 def determine_version_bump(commits: dict, current: str) -> Tuple[str, str]:
     """Determine new version based on conventional commits."""
-    major, minor, patch = map(int, current.split('.'))
+    major, minor, patch = map(int, current.split("."))
 
     if commits["breaking"]:
         return f"{major + 1}.0.0", "major"
@@ -123,7 +124,7 @@ def update_version_in_files(old_version: str, new_version: str) -> None:
 
         data["project"]["version"] = new_version
 
-        with open(pyproject_path, 'w') as f:
+        with open(pyproject_path, "w") as f:
             toml.dump(data, f)
         print(f"  ✅ Updated {pyproject_path}")
 
@@ -133,12 +134,12 @@ def update_version_in_files(old_version: str, new_version: str) -> None:
         old_text = f'__version__ = "{old_version}"'
         new_text = f'__version__ = "{new_version}"'
 
-        with open(init_path, 'r') as f:
+        with open(init_path, "r") as f:
             content = f.read()
 
         if old_text in content:
             content = content.replace(old_text, new_text)
-            with open(init_path, 'w') as f:
+            with open(init_path, "w") as f:
                 f.write(content)
             print(f"  ✅ Updated {init_path}")
         else:
@@ -156,21 +157,13 @@ def update_citation_file(version: str) -> None:
         content = f.read()
 
     # Update version
-    content = re.sub(
-        r'version: .*',
-        f'version: {version}',
-        content
-    )
+    content = re.sub(r"version: .*", f"version: {version}", content)
 
     # Update date
     date = datetime.now().strftime("%Y-%m-%d")
-    content = re.sub(
-        r'date-released: .*',
-        f'date-released: {date}',
-        content
-    )
+    content = re.sub(r"date-released: .*", f"date-released: {date}", content)
 
-    with open(citation_file, 'w') as f:
+    with open(citation_file, "w") as f:
         f.write(content)
 
     print("  ✅ Updated CITATION.cff")
@@ -179,19 +172,13 @@ def update_citation_file(version: str) -> None:
 def run_tests() -> bool:
     """Run full test suite."""
     print("\n🧪 Running full test suite...")
-    result = subprocess.run(
-        ["uv", "run", "pytest", "--quiet"],
-        capture_output=True
-    )
+    result = subprocess.run(["uv", "run", "pytest", "--quiet"], capture_output=True)
     return result.returncode == 0
 
 
 def create_git_tag(version: str, message: str) -> None:
     """Create annotated git tag."""
-    subprocess.run(
-        ["git", "tag", "-a", f"v{version}", "-m", message],
-        check=True
-    )
+    subprocess.run(["git", "tag", "-a", f"v{version}", "-m", message], check=True)
     print(f"  ✅ Created tag v{version}")
 
 
@@ -213,9 +200,7 @@ def main(dry_run: bool = False) -> int:
 
     # Get last tag
     result = subprocess.run(
-        ["git", "describe", "--tags", "--abbrev=0"],
-        capture_output=True,
-        text=True
+        ["git", "describe", "--tags", "--abbrev=0"], capture_output=True, text=True
     )
     last_tag = result.stdout.strip() if result.returncode == 0 else None
 
@@ -238,7 +223,7 @@ def main(dry_run: bool = False) -> int:
 
     # Confirm with user
     response = input("\n⚠️  Proceed with release? [y/N]: ")
-    if response.lower() != 'y':
+    if response.lower() != "y":
         print("❌ Release cancelled")
         return 1
 
@@ -266,19 +251,25 @@ def main(dry_run: bool = False) -> int:
         else:
             new_content = f"# Changelog\n\n{changelog}\n{existing}"
 
-        with open(changelog_file, 'w') as f:
+        with open(changelog_file, "w") as f:
             f.write(new_content)
         print("  ✅ Updated CHANGELOG.md")
 
     # Commit changes
     print("\n📝 Committing changes...")
     subprocess.run(
-        ["git", "add", "pyproject.toml", "CHANGELOG.md", "CITATION.cff", "src/fleetmix/__init__.py"],
-        check=True
+        [
+            "git",
+            "add",
+            "pyproject.toml",
+            "CHANGELOG.md",
+            "CITATION.cff",
+            "src/fleetmix/__init__.py",
+        ],
+        check=True,
     )
     subprocess.run(
-        ["git", "commit", "-m", f"Release v{new_version}\n\n{changelog}"],
-        check=True
+        ["git", "commit", "-m", f"Release v{new_version}\n\n{changelog}"], check=True
     )
 
     # Create tag

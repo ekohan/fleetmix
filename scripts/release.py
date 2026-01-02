@@ -3,20 +3,21 @@
 FleetMix Release Automation
 Handles versioning, changelog generation, and release process.
 """
-import subprocess
 import re
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple, Optional
-import toml
+from typing import List, Optional, Tuple
+
+import toml  # type: ignore
 
 
 def get_current_version() -> str:
     """Extract current version from pyproject.toml."""
     with open("pyproject.toml") as f:
         data = toml.load(f)
-        return data["project"]["version"]
+        return str(data["project"]["version"])
 
 
 def analyze_commits_since_tag(tag: Optional[str] = None) -> dict:
@@ -28,7 +29,7 @@ def analyze_commits_since_tag(tag: Optional[str] = None) -> dict:
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
-    commits = {
+    commits: dict[str, list[tuple[str, str]]] = {
         "breaking": [],
         "features": [],
         "fixes": [],
@@ -112,28 +113,39 @@ def generate_changelog(commits: dict, version: str) -> str:
     return changelog
 
 
-def update_version_in_files(old_version: str, new_version: str):
+def update_version_in_files(old_version: str, new_version: str) -> None:
     """Update version in all relevant files."""
-    files_to_update = [
-        ("pyproject.toml", f'version = "{old_version}"', f'version = "{new_version}"'),
-        ("src/fleetmix/__init__.py", f'__version__ = "{old_version}"', f'__version__ = "{new_version}"'),
-    ]
+    # Update pyproject.toml using TOML parsing
+    pyproject_path = Path("pyproject.toml")
+    if pyproject_path.exists():
+        with open(pyproject_path) as f:
+            data = toml.load(f)
 
-    for filepath, old_text, new_text in files_to_update:
-        if Path(filepath).exists():
-            with open(filepath, 'r') as f:
-                content = f.read()
+        data["project"]["version"] = new_version
 
-            if old_text in content:
-                content = content.replace(old_text, new_text)
-                with open(filepath, 'w') as f:
-                    f.write(content)
-                print(f"  ✅ Updated {filepath}")
-            else:
-                print(f"  ⚠️  Could not find version string in {filepath}")
+        with open(pyproject_path, 'w') as f:
+            toml.dump(data, f)
+        print(f"  ✅ Updated {pyproject_path}")
+
+    # Update __init__.py using string replacement (appropriate for Python files)
+    init_path = Path("src/fleetmix/__init__.py")
+    if init_path.exists():
+        old_text = f'__version__ = "{old_version}"'
+        new_text = f'__version__ = "{new_version}"'
+
+        with open(init_path, 'r') as f:
+            content = f.read()
+
+        if old_text in content:
+            content = content.replace(old_text, new_text)
+            with open(init_path, 'w') as f:
+                f.write(content)
+            print(f"  ✅ Updated {init_path}")
+        else:
+            print(f"  ⚠️  Could not find version string in {init_path}")
 
 
-def update_citation_file(version: str):
+def update_citation_file(version: str) -> None:
     """Update CITATION.cff with new version and date."""
     citation_file = Path("CITATION.cff")
     if not citation_file.exists():
@@ -161,7 +173,7 @@ def update_citation_file(version: str):
     with open(citation_file, 'w') as f:
         f.write(content)
 
-    print(f"  ✅ Updated CITATION.cff")
+    print("  ✅ Updated CITATION.cff")
 
 
 def run_tests() -> bool:
@@ -174,7 +186,7 @@ def run_tests() -> bool:
     return result.returncode == 0
 
 
-def create_git_tag(version: str, message: str):
+def create_git_tag(version: str, message: str) -> None:
     """Create annotated git tag."""
     subprocess.run(
         ["git", "tag", "-a", f"v{version}", "-m", message],
@@ -183,14 +195,14 @@ def create_git_tag(version: str, message: str):
     print(f"  ✅ Created tag v{version}")
 
 
-def build_package():
+def build_package() -> None:
     """Build Python package."""
     print("\n📦 Building package...")
     subprocess.run(["uv", "build"], check=True)
     print("  ✅ Package built")
 
 
-def main(dry_run: bool = False):
+def main(dry_run: bool = False) -> int:
     """Run the release process."""
     print("🚀 FleetMix Release Automation")
     print("=" * 40)

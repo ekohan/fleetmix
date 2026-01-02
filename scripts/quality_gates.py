@@ -3,12 +3,13 @@
 FleetMix Quality Gates - Pre-commit automation
 Run before each commit to ensure code quality standards.
 """
+import ast
 import subprocess
 import sys
 from pathlib import Path
-import ast
+from typing import List, Tuple
+
 import yaml
-from typing import Set, List, Tuple
 
 
 def get_modified_python_files() -> List[Path]:
@@ -18,6 +19,9 @@ def get_modified_python_files() -> List[Path]:
         capture_output=True,
         text=True
     )
+    if not result.stdout.strip():
+        return []
+
     files = []
     for line in result.stdout.strip().split('\n'):
         if line.endswith('.py') and Path(line).exists():
@@ -83,7 +87,7 @@ def check_test_coverage(file_path: Path) -> List[str]:
 def check_yaml_configs() -> List[str]:
     """Validate YAML configuration files."""
     issues = []
-    config_files = list(Path('.').glob('**/*.yaml')) + list(Path('.').glob('**/*.yml'))
+    config_files = [f for f in Path('.').rglob('*') if f.suffix in {'.yaml', '.yml'}]
 
     for config_file in config_files:
         # Skip CI configs
@@ -163,7 +167,7 @@ def run_incremental_tests(modified_files: List[Path]) -> Tuple[bool, str]:
     return result.returncode == 0, result.stdout + result.stderr
 
 
-def main():
+def main() -> int:
     """Run all quality checks."""
     print("🔍 FleetMix Quality Gates")
     print("-" * 40)

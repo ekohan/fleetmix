@@ -10,27 +10,29 @@ FleetMix is a **production-ready, research-grade Python library** for multi-comp
 
 ## Quick Reference
 
-```bash
-# Environment setup
-source fleetmix-env/bin/activate
-uv sync --all-extras --active
+**Always use `uv run` to execute commands** — it handles the virtual environment automatically.
 
+```bash
 # Run tests (ALWAYS run before concluding changes)
-pytest                              # Full test suite
-pytest tests/unit/                  # Unit tests only
-pytest -k "test_name" -x            # Single test, stop on failure
+uv run pytest                              # Full test suite
+uv run pytest tests/unit/                  # Unit tests only  
+uv run pytest -k "test_name" -x            # Single test, stop on failure
+uv run pytest --cov=src --cov-report=term-missing  # With coverage
 
 # Type checking
-mypy src/fleetmix/
+uv run mypy src/fleetmix/
 
 # Linting and formatting
-ruff check src/
-ruff format src/
+uv run ruff check src/
+uv run ruff format src/
 
 # Run the CLI
-fleetmix --help
-fleetmix optimize --demand examples/bogota_demand.csv
-fleetmix gui                        # Web interface
+uv run fleetmix --help
+uv run fleetmix optimize --demand examples/bogota_demand.csv
+uv run fleetmix gui                        # Web interface
+
+# Sync dependencies (when pyproject.toml changes)
+uv sync --all-extras
 ```
 
 ## Engineering Philosophy
@@ -243,14 +245,15 @@ FleetmixLogger.detail("Progress message")  # For verbose mode
 
 ## Dependencies
 
-**Package manager**: Use `uv` (not pip directly)
+**Package manager**: Use `uv` exclusively.
 
 ```bash
 uv add package-name                    # Add dependency
-uv sync --all-extras --active          # Sync environment
+uv sync --all-extras                   # Sync environment
+uv run <command>                       # Run any command in the environment
 ```
 
-If pip is needed: `pip install --index-url https://pypi.org/simple/ package`
+If pip is absolutely needed: `uv run pip install --index-url https://pypi.org/simple/ package`
 
 **Key libraries**:
 - `numpy`, `pandas`, `scipy` — numerics
@@ -279,6 +282,10 @@ If pip is needed: `pip install --index-url https://pypi.org/simple/ package`
 
 - Branch naming: `feature/`, `fix/`, `refactor/`
 - Commits: Clear, atomic, imperative mood
-- Run full test suite before any commit
-- mypy and ruff must pass
+- Before any commit, run:
+  ```bash
+  uv run pytest
+  uv run mypy src/fleetmix/
+  uv run ruff check src/
+  ```
 

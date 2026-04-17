@@ -100,11 +100,36 @@ def run_single_gap_instance(
     """
     instance_name = dat_path.stem
     try:
+        # Clear module-level caches that leak across instances when benchmark
+        # suites reuse customer IDs with different coordinates (Henke's pattern).
+        from fleetmix.merging.core import _merged_route_time_cache
+        from fleetmix.utils.route_time import (
+            clear_matrix_cache,
+            clear_tsp_result_cache,
+        )
+        _merged_route_time_cache.clear()
+        clear_tsp_result_cache()
+        clear_matrix_cache()
+
         # ---- Convert instance ----
         customers_df, instance_spec = convert_vrp_to_fsm(
             VRPType.MCVRP, instance_path=dat_path
         )
         params = config.apply_instance_spec(instance_spec)
+
+        # Restore YAML fleet when it is heterogeneous. `apply_instance_spec`
+        # replaces `problem.vehicles` with whatever the MCVRP converter hands
+        # back (a single hardcoded "MCVRP" vehicle); for the heterogeneous
+        # experiment we want the YAML's A+B fleet.
+        if len(config.problem.vehicles) > 1:
+            params = dataclasses.replace(
+                params,
+                problem=dataclasses.replace(
+                    params.problem,
+                    vehicles=config.problem.vehicles,
+                    goods=config.problem.goods,
+                ),
+            )
 
         # Disable split-stops for this analysis
         params = dataclasses.replace(
@@ -166,11 +191,13 @@ def run_single_gap_instance(
             "heuristic_cost": round(h_cost, 2),
             "heuristic_clusters": len(heuristic_clusters),
             "heuristic_time_sec": round(heuristic_time, 2),
+            "heuristic_fleet_composition": dict(heuristic_solution.vehicles_used),
             # Exhaustive (optimal)
             "exhaustive_vehicles": e_vehicles,
             "exhaustive_cost": round(e_cost, 2),
             "exhaustive_clusters": len(exhaustive_clusters),
             "exhaustive_time_sec": round(exhaustive_time, 2),
+            "exhaustive_fleet_composition": dict(exhaustive_solution.vehicles_used),
             # Gap
             "vehicle_gap": vehicle_gap,
             "cost_gap_pct": round(cost_gap_pct, 2),

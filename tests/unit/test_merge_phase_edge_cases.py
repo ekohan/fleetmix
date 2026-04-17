@@ -350,3 +350,53 @@ def test_get_merged_route_time_caching(simple_params):
     assert time1 == time2
     assert seq1 == seq2
     assert len(_merged_route_time_cache) == 1  # Still only one entry
+
+
+def test_merged_route_time_cache_keyed_by_coordinates(simple_params):
+    """Cross-instance regression: same IDs + different coordinates must not
+    share cache entries.
+
+    Before the 2026-04-16 fix, _merged_route_time_cache was keyed by customer
+    IDs alone; benchmark suites like Henke that reuse IDs (``1..10``) across
+    instances with different coordinates silently received stale route times
+    from earlier instances. This made the matheuristic's post-opt report
+    fake-low costs and appear to beat the exhaustive enumeration.
+    """
+    from fleetmix.merging.core import _merged_route_time_cache
+
+    _merged_route_time_cache.clear()
+
+    config = VehicleConfiguration(
+        config_id=1,
+        vehicle_type="Test",
+        capacity=100,
+        fixed_cost=50,
+        compartments={"Dry": True},
+        avg_speed=30.0,
+        service_time=25.0,
+        max_route_time=10.0,
+    )
+
+    # Instance A: customers 1, 2 near (0.10, 0.10)
+    customers_a = pd.DataFrame({
+        "Customer_ID": ["1", "2"],
+        "Latitude": [0.10, 0.11],
+        "Longitude": [0.10, 0.11],
+    })
+    time_a, _ = _get_merged_route_time(customers_a, config, simple_params)
+
+    # Instance B: same IDs, very different coordinates
+    customers_b = pd.DataFrame({
+        "Customer_ID": ["1", "2"],
+        "Latitude": [10.00, 10.20],
+        "Longitude": [10.00, 10.20],
+    })
+    time_b, _ = _get_merged_route_time(customers_b, config, simple_params)
+
+    # The two instances' customers are far apart → tour times must differ.
+    # If the cache were ID-keyed (old bug), time_b would equal time_a.
+    assert time_a != time_b, (
+        "Cache leaked across instances with same IDs but different coordinates. "
+        f"time_a={time_a}, time_b={time_b}"
+    )
+    assert len(_merged_route_time_cache) == 2

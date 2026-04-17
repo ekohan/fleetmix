@@ -20,9 +20,11 @@ from fleetmix.utils.route_time import (
 
 logger = FleetmixLogger.get_logger(__name__)
 
-# Cache for merged cluster route times
+# Cache for merged cluster route times.
+# Keyed by (customer-coord tuples, context tuple) so that benchmark sweeps over
+# multiple instances that reuse customer IDs cannot produce stale hits.
 _merged_route_time_cache: dict[
-    tuple[tuple[str, ...], tuple[str, float, float, float, bool, float, float]],
+    tuple[tuple[tuple[str, float, float], ...], tuple[str, float, float, float, bool, float, float]],
     tuple[float, list | None],
 ] = {}
 
@@ -56,8 +58,19 @@ def _get_merged_route_time(
     """
     Estimate (and cache) the route time and sequence for a merged cluster of customers.
     Uses the vehicle configuration's timing parameters.
+
+    The cache key includes customer coordinates (not just IDs) so that running
+    multiple instances in the same process (e.g., benchmark sweeps over many
+    instances that reuse IDs like ``1, 2, 3, ...``) cannot produce stale hits.
     """
-    customers_key: tuple[str, ...] = tuple(sorted(customers["Customer_ID"]))
+    customers_key: tuple[tuple[str, float, float], ...] = tuple(sorted(
+        (str(cid), round(float(lat), 6), round(float(lon), 6))
+        for cid, lat, lon in zip(
+            customers["Customer_ID"].tolist(),
+            customers["Latitude"].tolist(),
+            customers["Longitude"].tolist(),
+        )
+    ))
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(

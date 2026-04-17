@@ -1,0 +1,70 @@
+# ---------------------------------------------------------------------------
+# Henke 2019 n=15 heterogeneous-fleet experiment.
+#
+# Same setup as base_config.yaml (n=10) but with Vehicle A capacity matched
+# to Henke 2019's capacity of 1125 units. Vehicle B is half of A.
+# Fixed costs follow the same Bogotá case-study cost-vs-capacity curve
+# (power-fit, rounded to a clean integer):
+#     cost(1125) ≈ 109  → rounded to 110
+#     cost(562)  ≈ 69   → rounded to 70
+# Cost per unit capacity remains strictly higher for the smaller vehicle
+# (0.098 for A, 0.124 for B), preserving economies of scale.
+# All other parameters unchanged from the n=10 run.
+# ---------------------------------------------------------------------------
+
+vehicles:
+  A:  # replicates Henke 2019 capacity
+    capacity: 1125
+    fixed_cost: 110
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 10
+  B:  # half of A
+    capacity: 562
+    fixed_cost: 70
+    avg_speed: 30
+    service_time: 25
+    max_route_time: 10
+
+variable_cost_per_hour: 10.00
+
+depot:
+  latitude: 4.7
+  longitude: -74.1
+
+goods:
+  - Dry
+  - Chilled
+  - Frozen
+
+light_load_penalty: 0
+light_load_threshold: 0
+compartment_setup_cost: 10
+
+allow_split_stops: false
+
+clustering:
+  max_depth: 20
+  method: combine
+  distance: euclidean
+  geo_weight: 0.7
+  demand_weight: 0.3
+  route_time_estimation: 'BHH'
+
+prune_tsp: true
+
+post_optimization: true
+small_cluster_size: 1000
+nearest_merge_candidates: 1000
+max_improvement_iterations: 20
+
+pre_small_cluster_size: 5
+pre_nearest_merge_candidates: 50
+
+format: 'json'
+
+verbose: false
+debug: false
+solver: auto
+gap_rel: 0.005
+time_limit: 60

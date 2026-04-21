@@ -399,19 +399,23 @@ class TSPEstimator:
         # instances may reuse customer IDs across different instances with
         # different coordinates.
         cache_key = (
-            tuple(sorted(
-                (str(cid), round(float(lat), 6), round(float(lon), 6))
-                for cid, lat, lon in zip(
-                    customers["Customer_ID"].tolist(),
-                    customers["Latitude"].tolist(),
-                    customers["Longitude"].tolist(),
+            tuple(
+                sorted(
+                    (str(cid), round(float(lat), 6), round(float(lon), 6))
+                    for cid, lat, lon in zip(
+                        customers["Customer_ID"].tolist(),
+                        customers["Latitude"].tolist(),
+                        customers["Longitude"].tolist(),
+                    )
                 )
-            )),
+            ),
             round(float(context.depot.latitude), 6),
             round(float(context.depot.longitude), 6),
             float(context.avg_speed),
             float(context.service_time),
-            float(context.max_route_time) if context.max_route_time is not None else -1.0,
+            float(context.max_route_time)
+            if context.max_route_time is not None
+            else -1.0,
         )
         cached = _tsp_result_cache.get(cache_key)
         if cached is not None:
@@ -425,7 +429,7 @@ class TSPEstimator:
             # Use 5% margin - BHH underestimates actual route time, so if BHH
             # is already close to max_route_time, TSP will almost certainly exceed it
             if bhh_time > context.max_route_time * 1.05:
-                pruned = (context.max_route_time * 1.01, [])
+                pruned: tuple[float, list[str]] = (context.max_route_time * 1.01, [])
                 _tsp_result_cache[cache_key] = pruned
                 return pruned
 

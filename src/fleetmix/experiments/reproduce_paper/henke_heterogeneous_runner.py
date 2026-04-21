@@ -33,11 +33,7 @@ def _project_paths() -> tuple[Path, Path, Path]:
 
     pkg_root = Path(fleetmix_app.__file__).parent
     config_path = (
-        pkg_root
-        / "config"
-        / "experiments"
-        / "henke_heterogeneous"
-        / "base_config.yaml"
+        pkg_root / "config" / "experiments" / "henke_heterogeneous" / "base_config.yaml"
     )
     datasets_dir = pkg_root / "benchmarking" / "datasets" / "mcvrp"
     default_output = Path("results/henke_heterogeneous")
@@ -123,9 +119,7 @@ def _run_instance(
             goods=config.problem.goods,
             allow_split_stops=False,
         ),
-        algorithm=dataclasses.replace(
-            params.algorithm, route_time_estimation=method
-        ),
+        algorithm=dataclasses.replace(params.algorithm, route_time_estimation=method),
     )
 
     cfgs = generate_vehicle_configurations(
@@ -291,9 +285,7 @@ def run_tsp_of_all(output_dir: Path | None = None) -> None:
     print(f"Computing TSP-of-all on {len(instances)} instances...")
     for idx, inst in enumerate(instances, 1):
         dat_path = datasets_dir / f"{inst}.dat"
-        customers_df, spec = convert_vrp_to_fsm(
-            VRPType.MCVRP, instance_path=dat_path
-        )
+        customers_df, spec = convert_vrp_to_fsm(VRPType.MCVRP, instance_path=dat_path)
         customers = Customer.from_dataframe(customers_df)
         depot = {
             "latitude": spec.depot.latitude,

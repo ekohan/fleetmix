@@ -10,6 +10,7 @@ from fleetmix.utils.route_time import (
     _matrix_cache,
     build_distance_duration_matrices,
     calculate_total_service_time_hours,
+    clear_tsp_result_cache,
     estimate_route_time,
 )
 
@@ -300,6 +301,7 @@ class TestPyVRPTSPEstimation(unittest.TestCase):
 
         # Clear matrix cache
         _matrix_cache.clear()
+        clear_tsp_result_cache()
 
     def test_tsp_estimation_empty_cluster(self):
         """Test TSP estimation with empty cluster."""

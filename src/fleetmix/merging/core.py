@@ -24,7 +24,10 @@ logger = FleetmixLogger.get_logger(__name__)
 # Keyed by (customer-coord tuples, context tuple) so that benchmark sweeps over
 # multiple instances that reuse customer IDs cannot produce stale hits.
 _merged_route_time_cache: dict[
-    tuple[tuple[tuple[str, float, float], ...], tuple[str, float, float, float, bool, float, float]],
+    tuple[
+        tuple[tuple[str, float, float], ...],
+        tuple[str, float, float, float, bool, float, float],
+    ],
     tuple[float, list | None],
 ] = {}
 
@@ -63,14 +66,16 @@ def _get_merged_route_time(
     multiple instances in the same process (e.g., benchmark sweeps over many
     instances that reuse IDs like ``1, 2, 3, ...``) cannot produce stale hits.
     """
-    customers_key: tuple[tuple[str, float, float], ...] = tuple(sorted(
-        (str(cid), round(float(lat), 6), round(float(lon), 6))
-        for cid, lat, lon in zip(
-            customers["Customer_ID"].tolist(),
-            customers["Latitude"].tolist(),
-            customers["Longitude"].tolist(),
+    customers_key: tuple[tuple[str, float, float], ...] = tuple(
+        sorted(
+            (str(cid), round(float(lat), 6), round(float(lon), 6))
+            for cid, lat, lon in zip(
+                customers["Customer_ID"].tolist(),
+                customers["Latitude"].tolist(),
+                customers["Longitude"].tolist(),
+            )
         )
-    ))
+    )
 
     # Create RouteTimeContext using the factory
     rt_context = make_rt_context(

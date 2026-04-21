@@ -69,18 +69,14 @@ def generate_exhaustive_clusters(
     )
 
     # Pre-build customer lookup and DataFrame rows for fast slicing
-    customer_lookup: dict[str, CustomerBase] = {
-        c.customer_id: c for c in customers
-    }
+    customer_lookup: dict[str, CustomerBase] = {c.customer_id: c for c in customers}
     customers_df = Customer.to_dataframe(customers)
     customers_df = customers_df.set_index("Customer_ID", drop=False)
 
     # Pre-compute per-customer demands for fast subset aggregation
     customer_demands: dict[str, dict[str, float]] = {}
     for c in customers:
-        customer_demands[c.customer_id] = {
-            g: c.demands.get(g, 0.0) for g in goods
-        }
+        customer_demands[c.customer_id] = {g: c.demands.get(g, 0.0) for g in goods}
 
     # Route-time estimator
     estimator_class = ROUTE_TIME_ESTIMATOR_REGISTRY.get(rt_method)

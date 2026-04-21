@@ -14,7 +14,6 @@ number of subsets grows as 2^n.
 from __future__ import annotations
 
 import itertools
-from typing import Any
 
 import pandas as pd
 

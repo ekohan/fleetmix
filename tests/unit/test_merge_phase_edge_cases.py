@@ -356,11 +356,10 @@ def test_merged_route_time_cache_keyed_by_coordinates(simple_params):
     """Cross-instance regression: same IDs + different coordinates must not
     share cache entries.
 
-    Before the 2026-04-16 fix, _merged_route_time_cache was keyed by customer
-    IDs alone; benchmark suites like Henke that reuse IDs (``1..10``) across
-    instances with different coordinates silently received stale route times
-    from earlier instances. This made the matheuristic's post-opt report
-    fake-low costs and appear to beat the exhaustive enumeration.
+    The cache must key on customer coordinates (not just IDs), because
+    benchmark suites reuse IDs (e.g. ``1..10``) across instances with
+    different coordinates. Keying by ID alone yields stale hits that silently
+    corrupt route-time estimates.
     """
     from fleetmix.merging.core import _merged_route_time_cache
 

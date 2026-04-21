@@ -32,6 +32,11 @@ _merged_route_time_cache: dict[
 ] = {}
 
 
+def clear_merged_route_time_cache() -> None:
+    """Clear the merged-cluster route-time cache (used between benchmark runs)."""
+    _merged_route_time_cache.clear()
+
+
 # Helper functions for working with List[VehicleConfiguration]
 def _find_config_by_id(
     configurations: list[VehicleConfiguration], config_id: str

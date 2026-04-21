@@ -22,7 +22,10 @@ import dataclasses
 import statistics
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from fleetmix.config.params import FleetmixParams
 
 __all__ = ["run_henke_heterogeneous", "run_tsp_of_all"]
 
@@ -85,7 +88,7 @@ def _parse_supply(instance_name: str) -> int:
 def _run_instance(
     instance_name: str,
     method: str,
-    config: Any,
+    config: FleetmixParams,
     datasets_dir: Path,
 ) -> dict[str, str]:
     """Run matheuristic + exhaustive on one (instance, method); return CSV row."""
@@ -93,7 +96,7 @@ def _run_instance(
     from fleetmix.clustering import generate_feasible_clusters
     from fleetmix.clustering.exhaustive_enumerator import generate_exhaustive_clusters
     from fleetmix.core_types import Customer
-    from fleetmix.merging.core import _merged_route_time_cache
+    from fleetmix.merging.core import clear_merged_route_time_cache
     from fleetmix.optimization import optimize_fleet
     from fleetmix.post_optimization import improve_solution
     from fleetmix.utils.route_time import clear_matrix_cache, clear_tsp_result_cache
@@ -101,7 +104,7 @@ def _run_instance(
 
     # Clear module-level caches that would otherwise leak state between
     # benchmark instances that reuse customer IDs (Henke's "1..10" pattern).
-    _merged_route_time_cache.clear()
+    clear_merged_route_time_cache()
     clear_tsp_result_cache()
     clear_matrix_cache()
 
@@ -265,7 +268,6 @@ MAX_ROUTE_TIME = 10.0  # hours — the threshold checked
 def run_tsp_of_all(output_dir: Path | None = None) -> None:
     """Single-vehicle TSP over all customers per Henke 2015 n=10 instance."""
     from fleetmix.benchmarking.converters.vrp import VRPType, convert_vrp_to_fsm
-    from fleetmix.core_types import Customer
     from fleetmix.utils.route_time import estimate_route_time
 
     _, datasets_dir, default_output = _project_paths()
@@ -286,7 +288,6 @@ def run_tsp_of_all(output_dir: Path | None = None) -> None:
     for idx, inst in enumerate(instances, 1):
         dat_path = datasets_dir / f"{inst}.dat"
         customers_df, spec = convert_vrp_to_fsm(VRPType.MCVRP, instance_path=dat_path)
-        customers = Customer.from_dataframe(customers_df)
         depot = {
             "latitude": spec.depot.latitude,
             "longitude": spec.depot.longitude,
@@ -309,7 +310,7 @@ def run_tsp_of_all(output_dir: Path | None = None) -> None:
             {
                 "instance": inst,
                 "supply": str(int(inst.split("_")[4])),
-                "n_customers": str(len(customers)),
+                "n_customers": str(len(customers_df)),
                 "tsp_tour_hours": f"{tour_time_hours:.3f}",
                 "exceeds_10h": "1" if exceeds else "0",
             }

@@ -2,6 +2,7 @@
 Command-line interface for Fleetmix using Typer.
 """
 
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -502,6 +503,54 @@ def reproduce_fleet_composition(
         demand_days=demand_days,
         skip_existing=skip_existing,
     )
+
+
+class HeterogeneousHenkeMode(str, Enum):
+    experiment = "experiment"
+    tsp_of_all = "tsp-of-all"
+
+
+@reproduce_paper_app.command("heterogeneous-henke")
+def reproduce_heterogeneous_henke(
+    mode: HeterogeneousHenkeMode = typer.Option(
+        HeterogeneousHenkeMode.experiment,
+        "--mode",
+        "-m",
+        help="Which mode to run: 'experiment' (matheuristic vs exhaustive, 300 runs) "
+        "or 'tsp-of-all' (TSP-of-all justification, 150 runs).",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory (default: results/henke_heterogeneous/)",
+    ),
+    limit: int | None = typer.Option(
+        None,
+        "--limit",
+        help="Only run the first N pending (instance, method) pairs (experiment mode).",
+    ),
+) -> None:
+    """
+    Run the Henke 2015 n=10 heterogeneous-fleet experiments (paper Section 6.3).
+
+    Examples:
+
+        # Matheuristic vs exhaustive over all 150 instances × {BHH, TSP}
+        fleetmix reproduce-paper heterogeneous-henke
+
+        # TSP-of-all justification for the 10h max-route-duration choice
+        fleetmix reproduce-paper heterogeneous-henke --mode tsp-of-all
+    """
+    from fleetmix.experiments.reproduce_paper.henke_heterogeneous_runner import (
+        run_henke_heterogeneous,
+        run_tsp_of_all,
+    )
+
+    if mode is HeterogeneousHenkeMode.experiment:
+        run_henke_heterogeneous(output_dir=output, limit=limit)
+    else:
+        run_tsp_of_all(output_dir=output)
 
 
 if __name__ == "__main__":

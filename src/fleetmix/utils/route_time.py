@@ -93,6 +93,32 @@ def calculate_total_service_time_hours(
 _matrix_cache: dict[float, dict[str, Any]] = {}
 
 
+# Module-level cache of TSP tour results, keyed by a deterministic tuple of the
+# inputs to the TSP solve. Used by TSPEstimator.estimate_route_time to make
+# PyVRP output consistent across pipelines: the matheuristic and exhaustive
+# enumeration evaluate many of the same clusters, and without this cache
+# PyVRP's genetic-algorithm randomness returns slightly different tour times
+# across calls, which can make the matheuristic appear cheaper than exhaustive
+# even when they pick the same fleet.
+_tsp_result_cache: dict[tuple, tuple[float, list[str]]] = {}
+
+
+def clear_tsp_result_cache() -> None:
+    """Clear the module-level TSP tour-result cache. For long-running processes."""
+    _tsp_result_cache.clear()
+
+
+def clear_matrix_cache() -> None:
+    """Clear the module-level distance/duration matrix cache.
+
+    Use this between benchmark instances when customer IDs may repeat with
+    different coordinates (e.g. Henke's synthetic suite). The matrix cache is
+    keyed by ``avg_speed`` only, so without clearing it reuses the first
+    instance's geometry for every subsequent same-speed run.
+    """
+    _matrix_cache.clear()
+
+
 def build_distance_duration_matrices(
     customers_df: pd.DataFrame, depot: dict[str, float], avg_speed: float
 ) -> None:
@@ -364,6 +390,37 @@ class TSPEstimator:
                 )
                 return context.max_route_time * 1.01, []
 
+        # --- Cache lookup: same cluster + same context → same tour. Without
+        # this, PyVRP's genetic-algorithm randomness returns different tours on
+        # repeated calls, which breaks the "matheuristic's pool ⊂ exhaustive's
+        # pool ⇒ cost(math) ≥ cost(exh)" guarantee.
+        #
+        # Key includes customer *coordinates* (not just IDs) because benchmark
+        # instances may reuse customer IDs across different instances with
+        # different coordinates.
+        cache_key = (
+            tuple(
+                sorted(
+                    (str(cid), round(float(lat), 6), round(float(lon), 6))
+                    for cid, lat, lon in zip(
+                        customers["Customer_ID"].tolist(),
+                        customers["Latitude"].tolist(),
+                        customers["Longitude"].tolist(),
+                    )
+                )
+            ),
+            round(float(context.depot.latitude), 6),
+            round(float(context.depot.longitude), 6),
+            float(context.avg_speed),
+            float(context.service_time),
+            float(context.max_route_time)
+            if context.max_route_time is not None
+            else -1.0,
+        )
+        cached = _tsp_result_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         # --- Optional BHH pruning ------------------------------------------------
         if context.prune_tsp and context.max_route_time is not None:
             bhh_estimator = BHHEstimator()
@@ -372,12 +429,16 @@ class TSPEstimator:
             # Use 5% margin - BHH underestimates actual route time, so if BHH
             # is already close to max_route_time, TSP will almost certainly exceed it
             if bhh_time > context.max_route_time * 1.05:
-                return context.max_route_time * 1.01, []
+                pruned: tuple[float, list[str]] = (context.max_route_time * 1.01, [])
+                _tsp_result_cache[cache_key] = pruned
+                return pruned
 
         # Solve TSP on physical stops only
         base_time, sequence = self._pyvrp_tsp_estimation(customers, context)
 
-        return base_time, sequence
+        result = (base_time, sequence)
+        _tsp_result_cache[cache_key] = result
+        return result
 
     def _pyvrp_tsp_estimation(
         self,

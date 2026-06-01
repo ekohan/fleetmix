@@ -1,0 +1,10 @@
+# Code owners for FleetMix
+#
+# These owners are automatically requested for review on every PR, and — with
+# "Require review from Code Owners" enabled in the main branch protection —
+# their approval is required before a PR can be merged.
+#
+# See: https://docs.github.com/en/repositories/managing-your-repos-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo.
+* @ekohan
